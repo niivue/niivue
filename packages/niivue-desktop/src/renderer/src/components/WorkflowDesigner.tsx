@@ -25,10 +25,19 @@ import {
   CodeIcon,
   MixerHorizontalIcon,
   LayersIcon,
-  EyeOpenIcon
+  EyeOpenIcon,
+  LightningBoltIcon,
+  ExclamationTriangleIcon,
+  InfoCircledIcon,
+  MagicWandIcon,
+  CheckCircledIcon,
+  CrossCircledIcon
 } from '@radix-ui/react-icons'
-import type { ToolDefinition, ContextFieldDef, FormSectionDef, WorkflowDefinition } from '../../../common/workflowTypes'
-import { AutoField } from './Wizard/AutoField'
+import type { ToolDefinition, ContextFieldDef, ToolParameterDef } from '../../../common/workflowTypes.js'
+import { AutoField } from './Wizard/AutoField.js'
+import { getAvailableSources, getAutoWireSuggestions, type StepInfo } from '../../../common/typeCompatibility.js'
+import { generateContextFieldFromParam, generateFormSections } from '../../../common/bindingAnalyzer.js'
+import { validateWorkflowDraft, type ValidationResult } from '../../../common/workflowValidator.js'
 
 const electron = window.electron
 
@@ -435,21 +444,43 @@ function StepEditor({
   index,
   total,
   tools,
+  allSteps,
+  draft,
   onUpdate,
   onRemove,
   onMoveUp,
-  onMoveDown
+  onMoveDown,
+  onCreateContextField
 }: {
   step: StepDraft
   index: number
   total: number
   tools: ToolDefinition[]
+  allSteps: StepDraft[]
+  draft: WorkflowDraft
   onUpdate: (step: StepDraft) => void
   onRemove: () => void
   onMoveUp: () => void
   onMoveDown: () => void
+  onCreateContextField: (name: string, field: ContextFieldDraft) => void
 }): React.ReactElement {
+  const [showToolInfo, setShowToolInfo] = useState(false)
   const selectedTool = tools.find((t) => t.name === step.tool)
+
+  // Build tools map and step info for type-aware suggestions
+  const toolsMap = new Map(tools.map((t) => [t.name, t]))
+  const stepInfos: StepInfo[] = allSteps.map((s) => ({
+    name: s.name,
+    tool: s.tool,
+    inputs: Object.fromEntries(
+      Object.entries(s.inputs)
+        .filter(([, b]) => b.value.trim())
+        .map(([k, b]) => [k, b.mode === 'ref' ? { ref: b.value } : { constant: b.value }])
+    )
+  }))
+  const wfInputs = Object.fromEntries(
+    Object.entries(draft.workflowInputs).map(([k, v]) => [k, { type: v.type }])
+  )
 
   const setToolName = (toolName: string): void => {
     const tool = tools.find((t) => t.name === toolName)
@@ -460,12 +491,67 @@ function StepEditor({
         inputs[key] = step.inputs[key] || { mode: 'ref', value: '' }
       }
     }
-    onUpdate({ ...step, tool: toolName, inputs })
+    const updated = { ...step, tool: toolName, inputs, name: step.name || toolName.replace(/[^a-z0-9]/gi, '_') }
+
+    // Auto-wire after tool selection
+    if (tool) {
+      const stepInfo: StepInfo = {
+        name: updated.name,
+        tool: toolName,
+        inputs: {}
+      }
+      const suggestions = getAutoWireSuggestions(stepInfo, index, stepInfos, toolsMap, wfInputs)
+      for (const [inputName, ref] of Object.entries(suggestions)) {
+        updated.inputs[inputName] = { mode: 'ref', value: ref }
+      }
+    }
+    onUpdate(updated)
   }
 
   const updateInput = (key: string, binding: BindingDraft): void => {
     onUpdate({ ...step, inputs: { ...step.inputs, [key]: binding } })
   }
+
+  const handleAutoWire = (): void => {
+    const stepInfo: StepInfo = {
+      name: step.name,
+      tool: step.tool,
+      inputs: {}  // treat all as unbound to re-suggest
+    }
+    const suggestions = getAutoWireSuggestions(stepInfo, index, stepInfos, toolsMap, wfInputs)
+    const newInputs = { ...step.inputs }
+    let count = 0
+    for (const [inputName, ref] of Object.entries(suggestions)) {
+      if (!newInputs[inputName]?.value?.trim()) {
+        newInputs[inputName] = { mode: 'ref', value: ref }
+        count++
+      }
+    }
+    if (count > 0) onUpdate({ ...step, inputs: newInputs })
+  }
+
+  const handleCreateFormField = (paramName: string): void => {
+    if (!selectedTool) return
+    const param = selectedTool.inputs[paramName]
+    if (!param) return
+    const generated = generateContextFieldFromParam(paramName, param)
+    onCreateContextField(paramName, {
+      type: generated.type,
+      label: generated.label,
+      description: generated.description,
+      heuristic: '',
+      default: generated.default !== undefined ? JSON.stringify(generated.default) : ''
+    })
+    // Also bind the step input to the new context field
+    updateInput(paramName, { mode: 'ref', value: `context.${paramName}` })
+  }
+
+  // Compute unbound required inputs
+  const unboundInputs: Array<[string, ToolParameterDef]> = selectedTool
+    ? (Object.entries(selectedTool.inputs) as Array<[string, ToolParameterDef]>)
+        .filter(([name, param]) => !param.optional && (!step.inputs[name] || !step.inputs[name].value.trim()))
+        .filter(([name]) => !(name in draft.contextFields))  // don't warn if already a context field
+    : []
 
   const addOutputMapping = (): void => {
     onUpdate({
@@ -502,6 +588,13 @@ function StepEditor({
             className="flex-1 font-mono"
           />
           <div className="flex items-center gap-1">
+            {selectedTool && (
+              <Tooltip content="Auto-wire unbound inputs">
+                <IconButton variant="ghost" color="blue" size="1" onClick={handleAutoWire}>
+                  <LightningBoltIcon />
+                </IconButton>
+              </Tooltip>
+            )}
             <IconButton variant="ghost" color="gray" size="1" onClick={onMoveUp} disabled={index === 0}>
               <ChevronUpIcon />
             </IconButton>
@@ -527,7 +620,49 @@ function StepEditor({
               ))}
             </Select.Content>
           </Select.Root>
+          {selectedTool && (
+            <Tooltip content="Show tool info">
+              <IconButton variant="ghost" color="gray" size="1" onClick={() => setShowToolInfo(!showToolInfo)}>
+                <InfoCircledIcon />
+              </IconButton>
+            </Tooltip>
+          )}
         </div>
+
+        {/* Inline tool documentation */}
+        {showToolInfo && selectedTool && (
+          <Card size="1" className="bg-[var(--blue-2)]">
+            <div className="flex flex-col gap-2">
+              <Text size="1" weight="medium" className="text-neutral-12">{selectedTool.name}</Text>
+              <Text size="1" className="text-neutral-10">{selectedTool.description}</Text>
+              {Object.keys(selectedTool.inputs).length > 0 && (
+                <div>
+                  <Text size="1" weight="medium" className="text-neutral-11">Inputs:</Text>
+                  {(Object.entries(selectedTool.inputs) as Array<[string, ToolParameterDef]>).map(([name, p]) => (
+                    <div key={name} className="flex items-center gap-2 ml-2">
+                      <Text size="1" className="font-mono text-neutral-10">{name}</Text>
+                      <Badge variant="soft" size="1" color="gray">{p.type}</Badge>
+                      {p.optional && <Badge variant="soft" size="1" color="green">optional</Badge>}
+                      <Text size="1" className="text-neutral-8 truncate">{p.description}</Text>
+                    </div>
+                  ))}
+                </div>
+              )}
+              {Object.keys(selectedTool.outputs).length > 0 && (
+                <div>
+                  <Text size="1" weight="medium" className="text-neutral-11">Outputs:</Text>
+                  {(Object.entries(selectedTool.outputs) as Array<[string, ToolParameterDef]>).map(([name, p]) => (
+                    <div key={name} className="flex items-center gap-2 ml-2">
+                      <Text size="1" className="font-mono text-neutral-10">{name}</Text>
+                      <Badge variant="soft" size="1" color="gray">{p.type}</Badge>
+                      <Text size="1" className="text-neutral-8 truncate">{p.description}</Text>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
 
         {/* Condition */}
         <div className="flex items-center gap-2">
@@ -541,40 +676,131 @@ function StepEditor({
           />
         </div>
 
-        {/* Input bindings */}
+        {/* Input bindings with autocomplete */}
         {selectedTool && Object.keys(selectedTool.inputs).length > 0 && (
           <div className="flex flex-col gap-1.5">
             <Text size="1" weight="medium" className="text-neutral-11">Inputs:</Text>
-            {Object.entries(selectedTool.inputs).map(([key, paramDef]) => {
+            {(Object.entries(selectedTool.inputs) as Array<[string, ToolParameterDef]>).map(([key, paramDef]) => {
               const binding = step.inputs[key] || { mode: 'ref' as const, value: '' }
+              const suggestions = binding.mode === 'ref'
+                ? getAvailableSources(index, key, paramDef.type, stepInfos, toolsMap, wfInputs)
+                : []
               return (
-                <div key={key} className="flex items-center gap-2">
-                  <Tooltip content={paramDef.description}>
-                    <Text size="1" className="text-neutral-10 shrink-0 font-mono w-28 truncate">
-                      {key}
-                    </Text>
-                  </Tooltip>
-                  <Select.Root
-                    value={binding.mode}
-                    onValueChange={(v) => updateInput(key, { ...binding, mode: v as 'ref' | 'constant' })}
-                    size="1"
-                  >
-                    <Select.Trigger className="w-24" />
-                    <Select.Content>
-                      <Select.Item value="ref">ref</Select.Item>
-                      <Select.Item value="constant">constant</Select.Item>
-                    </Select.Content>
-                  </Select.Root>
-                  <TextField.Root
-                    value={binding.value}
-                    onChange={(e) => updateInput(key, { ...binding, value: e.target.value })}
-                    placeholder={binding.mode === 'ref' ? 'inputs.X or context.Y' : 'value'}
-                    size="1"
-                    className="flex-1 font-mono"
-                  />
+                <div key={key} className="flex flex-col gap-1">
+                  <div className="flex items-center gap-2">
+                    <Tooltip content={`${paramDef.description}${paramDef.optional ? ' (optional)' : ''}`}>
+                      <Text size="1" className={`shrink-0 font-mono w-28 truncate ${paramDef.optional ? 'text-neutral-8' : 'text-neutral-10'}`}>
+                        {key}
+                      </Text>
+                    </Tooltip>
+                    <Select.Root
+                      value={binding.mode}
+                      onValueChange={(v) => updateInput(key, { ...binding, mode: v as 'ref' | 'constant' })}
+                      size="1"
+                    >
+                      <Select.Trigger className="w-24" />
+                      <Select.Content>
+                        <Select.Item value="ref">ref</Select.Item>
+                        <Select.Item value="constant">constant</Select.Item>
+                      </Select.Content>
+                    </Select.Root>
+                    {binding.mode === 'ref' && suggestions.length > 0 ? (
+                      <Select.Root
+                        value={binding.value || '__custom__'}
+                        onValueChange={(v) => {
+                          if (v !== '__custom__') updateInput(key, { ...binding, value: v })
+                        }}
+                        size="1"
+                      >
+                        <Select.Trigger className="flex-1 font-mono" placeholder="Select source..." />
+                        <Select.Content>
+                          {suggestions.map((s) => (
+                            <Select.Item key={s.ref} value={s.ref}>
+                              <div className="flex items-center gap-2">
+                                <span>{s.label}</span>
+                                {s.exact && <Badge variant="soft" size="1" color="green">exact</Badge>}
+                              </div>
+                            </Select.Item>
+                          ))}
+                          <Select.Item value="__custom__">Custom ref...</Select.Item>
+                        </Select.Content>
+                      </Select.Root>
+                    ) : (
+                      <TextField.Root
+                        value={binding.value}
+                        onChange={(e) => updateInput(key, { ...binding, value: e.target.value })}
+                        placeholder={binding.mode === 'ref' ? 'inputs.X or context.Y' : 'value'}
+                        size="1"
+                        className="flex-1 font-mono"
+                      />
+                    )}
+                  </div>
+                  {/* Show text field for custom ref when dropdown is in custom mode */}
+                  {binding.mode === 'ref' && suggestions.length > 0 && (binding.value === '__custom__' || (binding.value && !suggestions.find((s) => s.ref === binding.value))) && binding.value !== '' && (
+                    <div className="ml-32 pl-2">
+                      <TextField.Root
+                        value={binding.value === '__custom__' ? '' : binding.value}
+                        onChange={(e) => updateInput(key, { ...binding, value: e.target.value })}
+                        placeholder="inputs.X or context.Y or steps.Z.outputs.W"
+                        size="1"
+                        className="font-mono"
+                        autoFocus
+                      />
+                    </div>
+                  )}
                 </div>
               )
             })}
+          </div>
+        )}
+
+        {/* Unbound input warnings */}
+        {unboundInputs.length > 0 && (
+          <Card size="1" className="bg-[var(--yellow-2)] border border-[var(--yellow-6)]">
+            <div className="flex flex-col gap-1.5">
+              <div className="flex items-center gap-1.5">
+                <ExclamationTriangleIcon className="text-[var(--yellow-9)]" />
+                <Text size="1" weight="medium" className="text-[var(--yellow-11)]">
+                  {unboundInputs.length} required input{unboundInputs.length > 1 ? 's' : ''} not bound
+                </Text>
+              </div>
+              {unboundInputs.map(([name, param]) => (
+                <div key={name} className="flex items-center gap-2 ml-5">
+                  <Text size="1" className="font-mono text-[var(--yellow-11)]">{name}</Text>
+                  <Badge variant="soft" size="1" color="yellow">{param.type}</Badge>
+                  <Button
+                    variant="ghost"
+                    size="1"
+                    color="yellow"
+                    onClick={() => handleCreateFormField(name)}
+                  >
+                    <PlusIcon /> Create form field
+                  </Button>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Data flow badges showing where inputs come from */}
+        {selectedTool && Object.keys(step.inputs).some((k) => step.inputs[k]?.value?.trim()) && (
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(step.inputs)
+              .filter(([, b]) => b.value.trim())
+              .map(([key, b]) => {
+                const isStepRef = b.mode === 'ref' && b.value.startsWith('steps.')
+                const isContextRef = b.mode === 'ref' && b.value.startsWith('context.')
+                const isInputRef = b.mode === 'ref' && b.value.startsWith('inputs.')
+                const color = isStepRef ? 'green' : isContextRef ? 'yellow' : isInputRef ? 'blue' : 'gray'
+                const source = b.mode === 'ref' ? b.value.split('.').slice(-1)[0] : '(const)'
+                return (
+                  <Tooltip key={key} content={`${key} ← ${b.value}`}>
+                    <Badge variant="soft" size="1" color={color}>
+                      {key} ← {source}
+                    </Badge>
+                  </Tooltip>
+                )
+              })}
           </div>
         )}
 
@@ -829,6 +1055,154 @@ function FormPreview({
   )
 }
 
+// ── Pipeline View ──────────────────────────────────────────────────
+
+function PipelineView({
+  draft,
+  tools
+}: {
+  draft: WorkflowDraft
+  tools: ToolDefinition[]
+}): React.ReactElement {
+  const toolsMap = new Map(tools.map((t) => [t.name, t]))
+
+  if (draft.steps.length === 0) {
+    return (
+      <Text size="2" className="text-neutral-8 py-8 text-center">
+        Add steps in the Steps tab to see the pipeline view.
+      </Text>
+    )
+  }
+
+  // Layout constants
+  const nodeW = 200
+  const nodeH = 80
+  const gapX = 100
+  const startX = 60
+  const startY = 40
+  const inputNodeW = 140
+
+  // Calculate positions
+  const stepPositions = draft.steps.map((_, i) => ({
+    x: startX + inputNodeW + gapX + i * (nodeW + gapX),
+    y: startY
+  }))
+
+  const svgW = startX + inputNodeW + gapX + draft.steps.length * (nodeW + gapX) + 40
+  const svgH = startY + nodeH + 60
+
+  // Build connections
+  const connections: Array<{ fromX: number; fromY: number; toX: number; toY: number; color: string; label: string }> = []
+
+  draft.steps.forEach((step, i) => {
+    const pos = stepPositions[i]
+    Object.entries(step.inputs).forEach(([inputName, binding]) => {
+      if (!binding.value.trim() || binding.mode !== 'ref') return
+      const ref = binding.value
+      const parts = ref.split('.')
+
+      if (parts[0] === 'inputs') {
+        connections.push({
+          fromX: startX + inputNodeW,
+          fromY: startY + nodeH / 2,
+          toX: pos.x,
+          toY: pos.y + nodeH / 2,
+          color: 'var(--blue-9)',
+          label: inputName
+        })
+      } else if (parts[0] === 'steps' && parts.length === 4) {
+        const srcIdx = draft.steps.findIndex((s) => s.name === parts[1])
+        if (srcIdx >= 0 && srcIdx < i) {
+          const srcPos = stepPositions[srcIdx]
+          connections.push({
+            fromX: srcPos.x + nodeW,
+            fromY: srcPos.y + nodeH / 2,
+            toX: pos.x,
+            toY: pos.y + nodeH / 2,
+            color: 'var(--green-9)',
+            label: inputName
+          })
+        }
+      } else if (parts[0] === 'context') {
+        connections.push({
+          fromX: startX + inputNodeW,
+          fromY: startY + nodeH / 2 + 20,
+          toX: pos.x,
+          toY: pos.y + nodeH / 2 + 10,
+          color: 'var(--yellow-9)',
+          label: inputName
+        })
+      }
+    })
+  })
+
+  return (
+    <div className="overflow-x-auto">
+      <svg width={svgW} height={svgH} className="block">
+        {/* Input node */}
+        <rect x={startX} y={startY} width={inputNodeW} height={nodeH} rx={8} fill="var(--blue-3)" stroke="var(--blue-7)" strokeWidth={1.5} />
+        <text x={startX + inputNodeW / 2} y={startY + 20} textAnchor="middle" fill="var(--blue-11)" fontSize={12} fontWeight={600}>Inputs</text>
+        {Object.keys(draft.workflowInputs).map((name, i) => (
+          <text key={name} x={startX + inputNodeW / 2} y={startY + 36 + i * 14} textAnchor="middle" fill="var(--blue-9)" fontSize={10}>
+            {name}
+          </text>
+        ))}
+
+        {/* Connections */}
+        {connections.map((c, i) => {
+          const midX = (c.fromX + c.toX) / 2
+          return (
+            <g key={i}>
+              <path
+                d={`M${c.fromX},${c.fromY} C${midX},${c.fromY} ${midX},${c.toY} ${c.toX},${c.toY}`}
+                fill="none"
+                stroke={c.color}
+                strokeWidth={1.5}
+                opacity={0.6}
+              />
+              <circle cx={c.toX} cy={c.toY} r={3} fill={c.color} />
+            </g>
+          )
+        })}
+
+        {/* Step nodes */}
+        {draft.steps.map((step, i) => {
+          const pos = stepPositions[i]
+          const tool = toolsMap.get(step.tool)
+          const outCount = tool ? Object.keys(tool.outputs).length : 0
+          const inCount = Object.values(step.inputs).filter((b) => b.value.trim()).length
+          const totalIn = tool ? Object.keys(tool.inputs).length : 0
+          const hasUnbound = tool && Object.entries(tool.inputs).some(([name, p]) => !p.optional && (!step.inputs[name] || !step.inputs[name].value.trim()))
+          return (
+            <g key={i}>
+              <rect
+                x={pos.x} y={pos.y} width={nodeW} height={nodeH} rx={8}
+                fill={hasUnbound ? 'var(--yellow-3)' : 'var(--gray-3)'}
+                stroke={hasUnbound ? 'var(--yellow-7)' : 'var(--gray-7)'}
+                strokeWidth={1.5}
+              />
+              <text x={pos.x + nodeW / 2} y={pos.y + 20} textAnchor="middle" fill="var(--gray-12)" fontSize={12} fontWeight={600}>
+                {step.name || '(unnamed)'}
+              </text>
+              <text x={pos.x + nodeW / 2} y={pos.y + 36} textAnchor="middle" fill="var(--gray-9)" fontSize={10}>
+                {step.tool || '(no tool)'}
+              </text>
+              <text x={pos.x + nodeW / 2} y={pos.y + 54} textAnchor="middle" fill="var(--gray-8)" fontSize={9}>
+                {inCount}/{totalIn} inputs · {outCount} outputs
+              </text>
+              {hasUnbound && (
+                <text x={pos.x + nodeW / 2} y={pos.y + 68} textAnchor="middle" fill="var(--yellow-9)" fontSize={9}>
+                  ⚠ unbound inputs
+                </text>
+              )}
+            </g>
+          )
+        })}
+      </svg>
+    </div>
+  )
+}
+
 // ── Main Component ─────────────────────────────────────────────────
 
 /**
@@ -913,6 +1287,9 @@ export function WorkflowDesigner({
   const [tools, setTools] = useState<ToolDefinition[]>([])
   const [heuristics, setHeuristics] = useState<string[]>([])
   const [previewContext, setPreviewContext] = useState<Record<string, unknown>>({})
+  const [validation, setValidation] = useState<ValidationResult>({ errors: [], warnings: [] })
+  const [showToolSelector, setShowToolSelector] = useState(false)
+  const [toolSearch, setToolSearch] = useState('')
 
   useEffect(() => {
     if (!open) {
@@ -944,6 +1321,81 @@ export function WorkflowDesigner({
     }
     setPreviewContext(ctx)
   }, [draft.contextFields, previewContext])
+
+  // Live validation — debounced on draft changes
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      const toolsMap = new Map(tools.map((t) => [t.name, t]))
+      setValidation(validateWorkflowDraft(draft, toolsMap))
+    }, 300)
+    return () => clearTimeout(timer)
+  }, [draft, tools])
+
+  // Auto-generate form fields for all unbound required inputs
+  const handleAutoGenerate = useCallback((): void => {
+    const toolsMap = new Map(tools.map((t) => [t.name, t]))
+    const stepsForAnalysis = draft.steps.map((s) => ({
+      name: s.name,
+      tool: s.tool,
+      inputs: Object.fromEntries(
+        Object.entries(s.inputs)
+          .filter(([, b]) => b.value.trim())
+          .map(([k, b]) => [k, b.value])
+      )
+    }))
+    const { fields, sections } = generateFormSections(stepsForAnalysis, toolsMap)
+
+    // Merge generated fields (don't overwrite existing)
+    const newContextFields = { ...draft.contextFields }
+    for (const [name, field] of Object.entries(fields)) {
+      if (!(name in newContextFields)) {
+        newContextFields[name] = {
+          type: field.type,
+          label: field.label,
+          description: field.description,
+          heuristic: '',
+          default: field.default !== undefined ? JSON.stringify(field.default) : ''
+        }
+      }
+    }
+
+    // Merge generated sections
+    const newSections = [...draft.sections]
+    for (const section of sections) {
+      // Only add fields that aren't already in any existing section
+      const existingSectionFields = new Set(newSections.flatMap((s) => s.fields))
+      const newFields = section.fields.filter((f) => !existingSectionFields.has(f))
+      if (newFields.length > 0) {
+        newSections.push({
+          title: section.title,
+          description: section.description,
+          fields: newFields,
+          component: '',
+          buttonText: ''
+        })
+      }
+    }
+
+    // Auto-bind step inputs to context fields
+    const newSteps = draft.steps.map((step) => {
+      const tool = toolsMap.get(step.tool)
+      if (!tool) return step
+      const newInputs = { ...step.inputs }
+      for (const [inputName] of Object.entries(tool.inputs)) {
+        if (!newInputs[inputName]?.value?.trim() && inputName in newContextFields) {
+          newInputs[inputName] = { mode: 'ref', value: `context.${inputName}` }
+        }
+      }
+      return { ...step, inputs: newInputs }
+    })
+
+    setDraft((prev) => ({
+      ...prev,
+      contextFields: newContextFields,
+      sections: newSections,
+      steps: newSteps
+    }))
+  }, [draft, tools])
 
   const buildSchema = useCallback((): Record<string, unknown> => {
     const schema: Record<string, unknown> = {
@@ -1117,12 +1569,7 @@ export function WorkflowDesigner({
     })
   }
 
-  const addStep = (): void => {
-    setDraft((prev) => ({
-      ...prev,
-      steps: [...prev.steps, { ...EMPTY_STEP, name: `step_${prev.steps.length + 1}` }]
-    }))
-  }
+  // addStep is now handled by the tool selector popover in the Steps tab
 
   if (!open) return null
 
@@ -1166,6 +1613,9 @@ export function WorkflowDesigner({
                 </Tabs.Trigger>
                 <Tabs.Trigger value="preview">
                   <EyeOpenIcon className="mr-1.5" /> Form Preview
+                </Tabs.Trigger>
+                <Tabs.Trigger value="pipeline">
+                  <LightningBoltIcon className="mr-1.5" /> Pipeline
                 </Tabs.Trigger>
                 <Tabs.Trigger value="json">
                   <CodeIcon className="mr-1.5" /> JSON
@@ -1279,15 +1729,108 @@ export function WorkflowDesigner({
                     <div className="flex flex-col gap-4">
                       <div className="flex items-center justify-between">
                         <Heading size="3" className="text-neutral-12">Pipeline Steps</Heading>
-                        <Button variant="soft" size="1" onClick={addStep}>
-                          <PlusIcon /> Add Step
-                        </Button>
+                        <div className="flex items-center gap-2">
+                          {draft.steps.length > 0 && (
+                            <Tooltip content="Auto-generate form fields for unbound inputs">
+                              <Button variant="soft" color="blue" size="1" onClick={handleAutoGenerate}>
+                                <MagicWandIcon /> Auto-generate forms
+                              </Button>
+                            </Tooltip>
+                          )}
+                          <Button variant="soft" size="1" onClick={() => setShowToolSelector(true)}>
+                            <PlusIcon /> Add Step
+                          </Button>
+                        </div>
                       </div>
 
                       <Text size="2" className="text-neutral-9">
                         Steps execute tools in order. Each step can map its outputs to context fields
                         and can be conditionally skipped.
                       </Text>
+
+                      {/* Tool selector popover */}
+                      {showToolSelector && (
+                        <Card size="2" className="border border-[var(--blue-6)]">
+                          <div className="flex flex-col gap-3">
+                            <div className="flex items-center justify-between">
+                              <Text size="2" weight="medium" className="text-neutral-12">Select a tool</Text>
+                              <IconButton variant="ghost" color="gray" size="1" onClick={() => { setShowToolSelector(false); setToolSearch('') }}>
+                                <Cross1Icon />
+                              </IconButton>
+                            </div>
+                            <TextField.Root
+                              value={toolSearch}
+                              onChange={(e) => setToolSearch(e.target.value)}
+                              placeholder="Search tools..."
+                              size="2"
+                              autoFocus
+                            />
+                            <div className="flex flex-col gap-1.5 max-h-60 overflow-y-auto">
+                              {tools
+                                .filter((t) => !toolSearch || t.name.includes(toolSearch.toLowerCase()) || t.description.toLowerCase().includes(toolSearch.toLowerCase()))
+                                .map((t) => (
+                                  <button
+                                    key={t.name}
+                                    className="flex items-center gap-3 p-2 rounded hover:bg-[var(--blue-3)] text-left transition-colors cursor-pointer"
+                                    onClick={() => {
+                                      const toolsMap = new Map(tools.map((tool) => [tool.name, tool]))
+                                      const stepName = t.name.replace(/[^a-z0-9]/gi, '_')
+                                      const stepInfos: StepInfo[] = draft.steps.map((s) => ({
+                                        name: s.name,
+                                        tool: s.tool,
+                                        inputs: Object.fromEntries(
+                                          Object.entries(s.inputs)
+                                            .filter(([, b]) => b.value.trim())
+                                            .map(([k, b]) => [k, b.mode === 'ref' ? { ref: b.value } : { constant: b.value }])
+                                        )
+                                      }))
+                                      const newStepInfo: StepInfo = { name: stepName, tool: t.name, inputs: {} }
+                                      const wfInputs = Object.fromEntries(
+                                        Object.entries(draft.workflowInputs).map(([k, v]) => [k, { type: v.type }])
+                                      )
+                                      const suggestions = getAutoWireSuggestions(
+                                        newStepInfo,
+                                        draft.steps.length,
+                                        [...stepInfos, newStepInfo],
+                                        toolsMap,
+                                        wfInputs
+                                      )
+                                      const inputs: Record<string, BindingDraft> = {}
+                                      for (const key of Object.keys(t.inputs)) {
+                                        inputs[key] = suggestions[key]
+                                          ? { mode: 'ref', value: suggestions[key] }
+                                          : { mode: 'ref', value: '' }
+                                      }
+                                      setDraft((prev) => ({
+                                        ...prev,
+                                        steps: [...prev.steps, {
+                                          ...EMPTY_STEP,
+                                          name: stepName,
+                                          tool: t.name,
+                                          inputs
+                                        }]
+                                      }))
+                                      setShowToolSelector(false)
+                                      setToolSearch('')
+                                    }}
+                                  >
+                                    <div className="flex-1">
+                                      <Text size="2" weight="medium" className="text-neutral-12">{t.name}</Text>
+                                      <Text size="1" className="text-neutral-9 block">{t.description}</Text>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <Badge variant="soft" size="1" color="blue">{Object.keys(t.inputs).length} in</Badge>
+                                      <Badge variant="soft" size="1" color="green">{Object.keys(t.outputs).length} out</Badge>
+                                    </div>
+                                  </button>
+                                ))}
+                              {tools.filter((t) => !toolSearch || t.name.includes(toolSearch.toLowerCase()) || t.description.toLowerCase().includes(toolSearch.toLowerCase())).length === 0 && (
+                                <Text size="2" className="text-neutral-8 py-2 text-center">No matching tools</Text>
+                              )}
+                            </div>
+                          </div>
+                        </Card>
+                      )}
 
                       {draft.steps.map((step, i) => (
                         <StepEditor
@@ -1296,17 +1839,70 @@ export function WorkflowDesigner({
                           index={i}
                           total={draft.steps.length}
                           tools={tools}
+                          allSteps={draft.steps}
+                          draft={draft}
                           onUpdate={(s) => updateStep(i, s)}
                           onRemove={() => removeStep(i)}
                           onMoveUp={() => moveStep(i, -1)}
                           onMoveDown={() => moveStep(i, 1)}
+                          onCreateContextField={(name, field) => {
+                            setDraft((prev) => ({
+                              ...prev,
+                              contextFields: { ...prev.contextFields, [name]: field },
+                              // Also add to first section if one exists
+                              sections: prev.sections.length > 0
+                                ? prev.sections.map((s, si) =>
+                                    si === 0 && !s.fields.includes(name)
+                                      ? { ...s, fields: [...s.fields, name] }
+                                      : s
+                                  )
+                                : [{ title: 'Configuration', description: '', fields: [name], component: '', buttonText: '' }]
+                            }))
+                          }}
                         />
                       ))}
 
                       {draft.steps.length === 0 && (
                         <Text size="2" className="text-neutral-8 py-8 text-center">
-                          No steps defined. Add steps to build your processing pipeline.
+                          No steps defined. Click "Add Step" to build your processing pipeline.
                         </Text>
+                      )}
+
+                      {/* Validation bar */}
+                      {draft.steps.length > 0 && (validation.errors.length > 0 || validation.warnings.length > 0) && (
+                        <Card size="1" className={validation.errors.length > 0 ? 'bg-[var(--red-2)] border border-[var(--red-6)]' : 'bg-[var(--yellow-2)] border border-[var(--yellow-6)]'}>
+                          <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center gap-2">
+                              {validation.errors.length > 0 && (
+                                <Badge variant="soft" color="red" size="1">
+                                  <CrossCircledIcon /> {validation.errors.length} error{validation.errors.length !== 1 ? 's' : ''}
+                                </Badge>
+                              )}
+                              {validation.warnings.length > 0 && (
+                                <Badge variant="soft" color="yellow" size="1">
+                                  <ExclamationTriangleIcon /> {validation.warnings.length} warning{validation.warnings.length !== 1 ? 's' : ''}
+                                </Badge>
+                              )}
+                            </div>
+                            {validation.errors.map((e, i) => (
+                              <Text key={`e${i}`} size="1" className="text-[var(--red-11)] ml-2">
+                                {e.message}
+                              </Text>
+                            ))}
+                            {validation.warnings.map((w, i) => (
+                              <Text key={`w${i}`} size="1" className="text-[var(--yellow-11)] ml-2">
+                                {w.message}
+                              </Text>
+                            ))}
+                          </div>
+                        </Card>
+                      )}
+
+                      {draft.steps.length > 0 && validation.errors.length === 0 && validation.warnings.length === 0 && (
+                        <div className="flex items-center gap-1.5 py-1">
+                          <CheckCircledIcon className="text-[var(--green-9)]" />
+                          <Text size="1" className="text-[var(--green-11)]">Workflow is valid</Text>
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1321,6 +1917,11 @@ export function WorkflowDesigner({
                       setPreviewContext((prev) => ({ ...prev, [fieldName]: value }))
                     }}
                   />
+                </Tabs.Content>
+
+                {/* ── Pipeline Tab ── */}
+                <Tabs.Content value="pipeline">
+                  <PipelineView draft={draft} tools={tools} />
                 </Tabs.Content>
 
                 {/* ── JSON Tab ── */}

@@ -5,8 +5,9 @@ import type {
   StepDef,
   Binding
 } from '../../common/workflowTypes.js'
-import { getWorkflowDefinitions } from './workflowLoader.js'
+import { getWorkflowDefinitions, getToolDefinitions } from './workflowLoader.js'
 import { getToolExecutor } from './toolRegistry.js'
+import { inferFormSections } from '../../common/bindingAnalyzer.js'
 import { getHeuristic } from './heuristicRegistry.js'
 import {
   computeInputHash,
@@ -59,6 +60,50 @@ function applyOutputMappings(
   }
 }
 
+import * as path from 'node:path'
+
+/**
+ * Apply smart defaults for context fields that have no explicit default.
+ * - For directory-type fields (output_dir, etc.): suggest a sibling of the first directory input
+ * - For number fields with min but no default: use the min value
+ */
+function applySmartDefaults(
+  definition: WorkflowDefinition,
+  inputs: Record<string, unknown>,
+  context: Record<string, unknown>
+): void {
+  if (!definition.context?.fields) return
+
+  // Find a directory-like input to derive output paths from
+  let inputDir: string | undefined
+  for (const [, inputDef] of Object.entries(definition.inputs)) {
+    if (inputDef.type === 'dicom-folder' || inputDef.type === 'directory') {
+      const val = Object.values(inputs).find((v) => typeof v === 'string' && v.length > 0) as string | undefined
+      if (val) {
+        inputDir = val
+        break
+      }
+    }
+  }
+
+  for (const [key, field] of Object.entries(definition.context.fields)) {
+    // Skip if already has a value
+    if (context[key] !== undefined) continue
+
+    // Smart default for directory/output_dir fields
+    if ((field.type === 'directory' || key.includes('output_dir') || key.includes('out_dir')) && inputDir) {
+      const parentDir = path.dirname(inputDir)
+      context[key] = path.join(parentDir, `${definition.name}_output`)
+      continue
+    }
+
+    // Smart default for numbers with min defined
+    if (field.type === 'number' && field.min !== undefined && field.default === undefined) {
+      context[key] = field.min
+    }
+  }
+}
+
 export function startWorkflow(
   name: string,
   inputs: Record<string, unknown>
@@ -66,6 +111,24 @@ export function startWorkflow(
   const definition = getWorkflowDefinitions().get(name)
   if (!definition) {
     throw new Error(`Unknown workflow: ${name}`)
+  }
+
+  // Infer form sections if the workflow has no explicit form definition
+  if (!definition.form) {
+    const tools = getToolDefinitions()
+    const { sections, extraContextFields } = inferFormSections(definition, tools)
+
+    if (sections.length > 0) {
+      definition.form = { sections }
+    }
+
+    // Merge any discovered unbound-input fields into context
+    if (Object.keys(extraContextFields).length > 0) {
+      if (!definition.context) {
+        definition.context = { fields: {} }
+      }
+      Object.assign(definition.context.fields, extraContextFields)
+    }
   }
 
   // Initialize context from field defaults
@@ -77,6 +140,9 @@ export function startWorkflow(
       }
     }
   }
+
+  // Apply smart defaults for fields without explicit defaults
+  applySmartDefaults(definition, inputs, context)
 
   const runState: WorkflowRunState = {
     workflowName: name,
