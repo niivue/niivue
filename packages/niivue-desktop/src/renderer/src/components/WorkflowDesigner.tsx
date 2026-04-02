@@ -34,6 +34,7 @@ import {
   CrossCircledIcon
 } from '@radix-ui/react-icons'
 import type { ToolDefinition, ContextFieldDef, ToolParameterDef } from '../../../common/workflowTypes.js'
+import { WorkflowTutorial } from './Tutorial/index.js'
 import { AutoField } from './Wizard/AutoField.js'
 import { getAvailableSources, getAutoWireSuggestions, type StepInfo } from '../../../common/typeCompatibility.js'
 import { generateContextFieldFromParam, generateFormSections } from '../../../common/bindingAnalyzer.js'
@@ -89,6 +90,7 @@ interface WorkflowDesignerProps {
   onClose: () => void
   onSave?: (schema: Record<string, unknown>) => void
   initialDefinition?: Record<string, unknown> | null
+  startWithTutorial?: boolean
 }
 
 // ── Constants ──────────────────────────────────────────────────────
@@ -870,7 +872,7 @@ function ContextFieldsEditor({
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" data-tutorial-id="designer-context-fields">
       <div className="flex items-center justify-between">
         <Heading size="3" className="text-neutral-12">Context Fields</Heading>
         <Button variant="soft" size="1" onClick={addField}>
@@ -1278,7 +1280,8 @@ export function WorkflowDesigner({
   open,
   onClose,
   onSave,
-  initialDefinition
+  initialDefinition,
+  startWithTutorial
 }: WorkflowDesignerProps): React.ReactElement | null {
   const [draft, setDraft] = useState<WorkflowDraft>({ ...DEFAULT_DRAFT })
   const [jsonSource, setJsonSource] = useState('')
@@ -1290,6 +1293,14 @@ export function WorkflowDesigner({
   const [validation, setValidation] = useState<ValidationResult>({ errors: [], warnings: [] })
   const [showToolSelector, setShowToolSelector] = useState(false)
   const [toolSearch, setToolSearch] = useState('')
+  const [tutorialOpen, setTutorialOpen] = useState(false)
+
+  // Open tutorial automatically when startWithTutorial prop changes
+  useEffect(() => {
+    if (open && startWithTutorial) {
+      setTutorialOpen(true)
+    }
+  }, [open, startWithTutorial])
 
   useEffect(() => {
     if (!open) {
@@ -1587,7 +1598,10 @@ export function WorkflowDesigner({
             </Text>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="soft" size="2" onClick={handleSave}>
+            <Button variant="ghost" color="blue" size="2" onClick={() => setTutorialOpen(true)}>
+              <InfoCircledIcon /> Tutorial
+            </Button>
+            <Button variant="soft" size="2" onClick={handleSave} data-tutorial-id="designer-save">
               Save
             </Button>
             <Button variant="soft" color="gray" size="2" onClick={onClose}>
@@ -1604,7 +1618,7 @@ export function WorkflowDesigner({
               if (t === 'preview') syncPreviewDefaults()
               setTab(t)
             }}>
-              <Tabs.List size="2">
+              <Tabs.List size="2" data-tutorial-id="designer-tabs">
                 <Tabs.Trigger value="visual">
                   <MixerHorizontalIcon className="mr-1.5" /> Visual
                 </Tabs.Trigger>
@@ -1627,7 +1641,7 @@ export function WorkflowDesigner({
                 <Tabs.Content value="visual">
                   <div className="flex flex-col gap-6">
                     {/* Workflow metadata */}
-                    <div className="flex flex-col gap-3">
+                    <div className="flex flex-col gap-3" data-tutorial-id="designer-metadata">
                       <Heading size="3" className="text-neutral-12">Metadata</Heading>
                       <div className="grid grid-cols-2 gap-3">
                         <div className="flex flex-col gap-1">
@@ -1687,7 +1701,7 @@ export function WorkflowDesigner({
                     <Separator size="4" />
 
                     {/* Form sections */}
-                    <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-4" data-tutorial-id="designer-form-sections">
                       <div className="flex items-center justify-between">
                         <Heading size="3" className="text-neutral-12">Form Sections</Heading>
                         <Button variant="soft" size="1" onClick={addSection}>
@@ -1725,14 +1739,14 @@ export function WorkflowDesigner({
 
                 {/* ── Steps Tab ── */}
                 <Tabs.Content value="steps">
-                  <div className="flex flex-col gap-6">
+                  <div className="flex flex-col gap-6" data-tutorial-id="designer-steps-tab">
                     <div className="flex flex-col gap-4">
                       <div className="flex items-center justify-between">
                         <Heading size="3" className="text-neutral-12">Pipeline Steps</Heading>
                         <div className="flex items-center gap-2">
                           {draft.steps.length > 0 && (
                             <Tooltip content="Auto-generate form fields for unbound inputs">
-                              <Button variant="soft" color="blue" size="1" onClick={handleAutoGenerate}>
+                              <Button variant="soft" color="blue" size="1" onClick={handleAutoGenerate} data-tutorial-id="designer-auto-generate">
                                 <MagicWandIcon /> Auto-generate forms
                               </Button>
                             </Tooltip>
@@ -1953,6 +1967,7 @@ export function WorkflowDesigner({
           </div>
         </div>
       </Theme>
+      <WorkflowTutorial open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
     </div>
   )
 }

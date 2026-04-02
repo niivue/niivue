@@ -102,6 +102,7 @@ function MainApp(): JSX.Element {
   // Workflow designer state
   const [workflowDesignerOpen, setWorkflowDesignerOpen] = useState(false)
   const [designerInitialDefinition, setDesignerInitialDefinition] = useState<Record<string, unknown> | null>(null)
+  const [designerStartWithTutorial, setDesignerStartWithTutorial] = useState(false)
 
   // Heuristic designer state
   const [heuristicDesignerOpen, setHeuristicDesignerOpen] = useState(false)
@@ -121,9 +122,17 @@ function MainApp(): JSX.Element {
 
     const handleOpenDesigner = (): void => {
       setDesignerInitialDefinition(null)
+      setDesignerStartWithTutorial(false)
       setWorkflowDesignerOpen(true)
     }
     electron.ipcRenderer.on('workflow:open-designer', handleOpenDesigner)
+
+    const handleOpenDesignerTutorial = (): void => {
+      setDesignerInitialDefinition(null)
+      setDesignerStartWithTutorial(true)
+      setWorkflowDesignerOpen(true)
+    }
+    electron.ipcRenderer.on('workflow:open-designer-tutorial', handleOpenDesignerTutorial)
 
     const handleEditDesigner = (_evt: unknown, workflowName: string): void => {
       electron.ipcRenderer.invoke('workflow:get-definition', workflowName).then(
@@ -156,6 +165,7 @@ function MainApp(): JSX.Element {
     return (): void => {
       electron.ipcRenderer.removeAllListeners('workflow:open')
       electron.ipcRenderer.removeAllListeners('workflow:open-designer')
+      electron.ipcRenderer.removeAllListeners('workflow:open-designer-tutorial')
       electron.ipcRenderer.removeAllListeners('workflow:edit-designer')
       electron.ipcRenderer.removeAllListeners('heuristic:open-designer')
       electron.ipcRenderer.removeAllListeners('heuristic:edit-designer')
@@ -1568,13 +1578,16 @@ function MainApp(): JSX.Element {
         onClose={() => {
           setWorkflowDesignerOpen(false)
           setDesignerInitialDefinition(null)
+          setDesignerStartWithTutorial(false)
         }}
         onSave={(schema) => {
           console.log('Workflow saved:', schema)
           setWorkflowDesignerOpen(false)
           setDesignerInitialDefinition(null)
+          setDesignerStartWithTutorial(false)
         }}
         initialDefinition={designerInitialDefinition}
+        startWithTutorial={designerStartWithTutorial}
       />
       <HeuristicDesigner
         open={heuristicDesignerOpen}

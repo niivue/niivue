@@ -953,6 +953,12 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
             win.webContents.send('heuristic:open-designer')
           }
         },
+        {
+          label: 'Workflow Tutorial...',
+          click: (): void => {
+            win.webContents.send('workflow:open-designer-tutorial')
+          }
+        },
         { type: 'separator' },
         ...buildAllWorkflowMenuItems(win),
         ...buildHeuristicMenuItems(win)
