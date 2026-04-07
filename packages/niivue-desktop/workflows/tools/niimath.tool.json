@@ -1,0 +1,88 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "niimath",
+  "version": "1.0.0",
+  "description": "General-purpose NIfTI image calculator — smoothing, thresholding, masking, math operations, and more",
+  "inputs": {
+    "nifti_path": {
+      "type": "string",
+      "description": "Path to a single input NIfTI volume",
+      "optional": true
+    },
+    "nifti_paths": {
+      "type": "volume[]",
+      "description": "Array of input NIfTI volume paths",
+      "optional": true
+    },
+    "operation": {
+      "type": "string",
+      "description": "The niimath operation to apply",
+      "enum": [
+        "-s", "-thr", "-uthr", "-bin", "-mul", "-add", "-sub", "-div",
+        "-mas", "-edge", "-ero", "-dil", "-fillh", "-inm", "-ing",
+        "-nan", "-abs", "-sqr", "-sqrt", "-recip", "-log", "-exp",
+        "-max", "-min", "-rem", "-tpi", "-Tmean", "-Tstd", "-Tmax",
+        "-Tmin", "-pval", "-ztop", "-ptoz", "-rank"
+      ],
+      "default": "-s"
+    },
+    "operand": {
+      "type": "string",
+      "description": "Operand for the operation (e.g. sigma value for smoothing, threshold value, path to mask volume)",
+      "optional": true,
+      "default": ""
+    },
+    "output_dir": {
+      "type": "string",
+      "description": "Output directory for processed files",
+      "optional": true
+    }
+  },
+  "outputs": {
+    "output_paths": {
+      "type": "volume[]",
+      "description": "Paths to processed NIfTI volumes"
+    },
+    "output_dir": {
+      "type": "string",
+      "description": "Directory containing output files"
+    }
+  },
+  "exec": {
+    "binary": {
+      "name": "niimath",
+      "paths": {
+        "darwin": "native-binaries/darwin/niimath",
+        "linux": "native-binaries/linux/niimath",
+        "win32": "native-binaries/win32/niimath.exe"
+      },
+      "packagedPaths": {
+        "darwin": "native/niimath-macos",
+        "linux": "native/niimath-linux",
+        "win32": "native/niimath.exe"
+      }
+    },
+    "outputDir": {
+      "input": "output_dir",
+      "tempPrefix": "wf-niimath-"
+    },
+    "forEach": "nifti_paths",
+    "iterationVar": "nifti_path",
+    "parallel": true,
+    "outputFile": {
+      "template": "{{inputBasename}}_niimath.nii.gz",
+      "stripExtensions": [".nii.gz", ".nii"]
+    },
+    "args": [
+      { "input": "nifti_path" },
+      { "input": "operation" },
+      { "input": "operand", "omitIfEmpty": true },
+      { "value": "{{outputFile}}" }
+    ],
+    "exitCodes": [0],
+    "outputs": {
+      "output_paths": { "collect": "outputFiles" },
+      "output_dir": { "value": "{{outputDir}}" }
+    }
+  }
+}

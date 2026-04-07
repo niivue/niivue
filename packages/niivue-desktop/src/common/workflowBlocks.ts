@@ -233,6 +233,24 @@ export const WORKFLOW_BLOCKS: WorkflowBlock[] = [
     exposedFields: ['nifti_path', 'atlas'],
     hiddenFields: []
   },
+  {
+    id: 'niimath',
+    label: 'NiiMath',
+    description: 'General-purpose image calculator — smoothing, thresholding, masking, and math ops',
+    category: 'Processing',
+    icon: 'GearIcon',
+    tool: 'niimath',
+    defaultInputs: {
+      operation: { constant: '-s' },
+      operand: { constant: '2' }
+    },
+    defaultOutputMappings: {
+      output_paths: '_stepOutputs_niimath_output_paths',
+      output_dir: '_stepOutputs_niimath_output_dir'
+    },
+    exposedFields: ['nifti_paths', 'operation', 'operand', 'output_dir'],
+    hiddenFields: ['nifti_path']
+  },
 
   // ── Quality ─────────────────────────────────────────────────────────
   {
