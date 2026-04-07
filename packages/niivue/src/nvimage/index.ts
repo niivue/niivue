@@ -427,10 +427,29 @@ export class NVImage {
         return ImageOrientation.computeObliqueAngle(mtx44)
     }
 
+    /**
+     * Convert vector field from Float32 to RGBA representation.
+     * Note: We use RGBA rather than RGB and use least significant bits to store vector polarity.
+     * This allows a single bitmap to store BOTH (unsigned) color magnitude and signed vector direction.
+     *
+     * @param nvImage - The NVImage instance
+     * @param inImg - Input Float32Array containing vector field data
+     * @returns Uint8Array with RGBA encoded vector data
+     */
     float32V1asRGBA(inImg: Float32Array): Uint8Array {
         return TensorProcessing.float32V1asRGBA(this, inImg)
     }
 
+    /**
+     * Load and process V1 vector data with optional flips.
+     * Modifies the nvImage.img property with the processed RGBA data.
+     *
+     * @param nvImage - The NVImage instance
+     * @param isFlipX - Flip X component (default: false)
+     * @param isFlipY - Flip Y component (default: false)
+     * @param isFlipZ - Flip Z component (default: false)
+     * @returns true if successful, false if V1 data is not available
+     */
     loadImgV1(isFlipX: boolean = false, isFlipY: boolean = false, isFlipZ: boolean = false): boolean {
         return TensorProcessing.loadImgV1(this, isFlipX, isFlipY, isFlipZ)
     }
