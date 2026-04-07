@@ -436,6 +436,7 @@ export interface DrawImage3DParams {
     crosshairPos: number[] | vec3
     clipPlaneDepthAziElevs: number[][]
     isClipPlanesCutaway: boolean
+    isClipAllVolumes: boolean
     obliqueRAS?: mat4 | null
 }
 
@@ -466,6 +467,7 @@ export function drawImage3D(params: DrawImage3DParams): void {
         crosshairPos,
         clipPlaneDepthAziElevs,
         isClipPlanesCutaway,
+        isClipAllVolumes,
         obliqueRAS
     } = params
 
@@ -523,6 +525,7 @@ export function drawImage3D(params: DrawImage3DParams): void {
         }
         gl.uniform1f(shader.uniforms.drawOpacity, 1.0)
         gl.uniform1i(shader.uniforms.isClipCutaway, isClipPlanesCutaway ? 1 : 0)
+        gl.uniform1i(shader.uniforms.isClipAllVolumes, isClipAllVolumes ? 1 : 0)
         gl.bindVertexArray(object3D.vao)
         gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0)
         gl.bindVertexArray(unusedVAO)

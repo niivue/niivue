@@ -10220,6 +10220,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             crosshairPos: this.scene.crosshairPos,
             clipPlaneDepthAziElevs: this.scene.clipPlaneDepthAziElevs,
             isClipPlanesCutaway: this.opts.isClipPlanesCutaway,
+            isClipAllVolumes: this.opts.isClipAllVolumes,
             obliqueRAS: this.back?.obliqueRAS
         })
     }

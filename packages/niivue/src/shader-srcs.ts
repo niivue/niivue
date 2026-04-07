@@ -179,6 +179,8 @@ const kRenderInit = `void main() {
 		samplePos += deltaDir * ran * 1.41; //jitter ray
 	else
 		samplePos += deltaDir * ran; //jitter ray
+	vec2 overlaySampleRange = isClipAllVolumes ? sampleRange : vec2(0.0, len);
+	bool overlayIsClipCutaway = isClipAllVolumes && isClipCutaway;
 `
 
 const kRenderTail = `
@@ -250,6 +252,10 @@ const kRenderTail = `
 	stepSizeFast = sliceSize * 1.0;
 	deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
+		if (skipSample(samplePos.a, overlaySampleRange) ^^ overlayIsClipCutaway) {
+			samplePos += deltaDirFast;
+			continue;
+		}
 		float val = texture(overlay, samplePos.xyz).a;
 		if (drawOpacity > 0.0)
 			val = max(val, texture(drawing, samplePos.xyz).r);
@@ -275,6 +281,10 @@ const kRenderTail = `
 		samplePos = firstHit;
 	bool firstDraw = true;
 	while (samplePos.a <= len) {
+		if (skipSample(samplePos.a, overlaySampleRange) ^^ overlayIsClipCutaway) {
+			samplePos += deltaDirFast;
+			continue;
+		}
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		if ((colorSample.a < 0.01) && (drawOpacity > 0.0)) {
 			float val = texture(drawing, samplePos.xyz).r;
@@ -382,6 +392,7 @@ uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
 uniform vec2 renderDrawAmbientOcclusionXY;
+uniform bool isClipAllVolumes;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -436,10 +447,12 @@ out vec4 fColor;
 	bool isColorPlaneInVolume = false;
 	bool isClip = false;
 	bool isClipCutaway = false;
-	vec2 sampleRange;
+	vec2 sampleRange = vec2(0.0, len);
 	// vec4 clipPos = applyClip(dir, samplePos, len, isClip);
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
+	vec2 overlaySampleRange = vec2(0.0, len);
+	bool overlayIsClipCutaway = false;
 	if (samplePos.a < 0.0)
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
@@ -472,6 +485,7 @@ uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
 uniform highp sampler2D colormap;
 uniform vec2 renderDrawAmbientOcclusionXY;
+uniform bool isClipAllVolumes;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -531,6 +545,7 @@ uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
 uniform float silhouettePower;
 uniform float gradientOpacity[${gradientOpacityLutCount}];
+uniform bool isClipAllVolumes;
 in vec3 vColor;
 out vec4 fColor;
 `

@@ -122,6 +122,7 @@ export type NVConfigOptions = {
     selectionBoxColor: number[]
     clipPlaneColor: number[]
     isClipPlanesCutaway: boolean
+    isClipAllVolumes: boolean
     paqdUniforms: number[]
     rulerColor: number[]
     colorbarMargin: number
@@ -239,6 +240,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     selectionBoxColor: [1, 1, 1, 0.5],
     clipPlaneColor: [0.7, 0, 0.7, 0.5],
     isClipPlanesCutaway: false,
+    isClipAllVolumes: false,
     paqdUniforms: [0.3, 0.5, 0.5, 1.0],
     rulerColor: [1, 0, 0, 0.8],
     colorbarMargin: 0.05,

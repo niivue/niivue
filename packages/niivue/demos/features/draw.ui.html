@@ -155,6 +155,7 @@
           <a class="viewBtn" id="Radiological">Radiological</a>
           <a class="viewBtn dropdown-item-checked" id="Crosshair">Render Crosshair</a>
           <a class="viewBtn" id="ClipPlane">Render Clip Plane</a>
+          <a class="viewBtn" id="ClipAllVolumes">Clip All Volumes</a>
           <a class="viewBtn dropdown-item-checked" id="WorldSpace">World Space</a>
           <a class="viewBtn dropdown-item-checked" id="Interpolate">Smooth Interpolation</a>
           <a class="viewBtn" id="RemoveHaze">Remove Haze</a>
@@ -294,6 +295,7 @@
     updateCheckmark('Colorbar', nv1.opts.isColorbar)
     updateCheckmark('Radiological', nv1.opts.isRadiologicalConvention)
     updateCheckmark('Crosshair', nv1.opts.show3Dcrosshair)
+    updateCheckmark('ClipAllVolumes', nv1.opts.isClipAllVolumes)
     updateCheckmark('WorldSpace', nv1.opts.isSliceMM)
     updateCheckmark('Interpolate', !nv1.opts.isNearestInterpolation) // Interpolation is !Nearest
     updateCheckmark('BackColor', nv1.opts.backColor[0] > 0.5)
@@ -525,6 +527,12 @@
       case 'ClipPlane':
         if (nv1.scene.clipPlaneDepthAziElevs[0] > 1.8) nv1.setClipPlane([0.3, 270, 0])
         else nv1.setClipPlane([2, 270, 0])
+        handled = true
+        break
+      case 'ClipAllVolumes':
+        nv1.opts.isClipAllVolumes = !nv1.opts.isClipAllVolumes
+        buttonElement.classList.toggle('dropdown-item-checked')
+        nv1.drawScene()
         handled = true
         break
       case 'WorldSpace':
