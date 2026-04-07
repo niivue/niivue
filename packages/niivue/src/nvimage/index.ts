@@ -441,14 +441,17 @@ export class NVImage {
     }
 
     /**
-     * Load and process V1 vector data with optional flips.
+     * Load and process diffusion tensor vector (V1) data with optional flips.
+     * The vectors must be of unit length.
      * Modifies the nvImage.img property with the processed RGBA data.
      *
      * @param nvImage - The NVImage instance
      * @param isFlipX - Flip X component (default: false)
      * @param isFlipY - Flip Y component (default: false)
      * @param isFlipZ - Flip Z component (default: false)
+     * @example nv1.loadVolumes(volumeList); nv1.volumes[1].loadImgV1();
      * @returns true if successful, false if V1 data is not available
+     * @see {@link https://niivue.com/demos/features/modulate.html | live demo usage}
      */
     loadImgV1(isFlipX: boolean = false, isFlipY: boolean = false, isFlipZ: boolean = false): boolean {
         return TensorProcessing.loadImgV1(this, isFlipX, isFlipY, isFlipZ)
