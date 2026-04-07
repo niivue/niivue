@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import {
   Button,
   Heading,
@@ -31,7 +31,9 @@ import {
   InfoCircledIcon,
   MagicWandIcon,
   CheckCircledIcon,
-  CrossCircledIcon
+  CrossCircledIcon,
+  ChevronRightIcon,
+  GearIcon
 } from '@radix-ui/react-icons'
 import type { ToolDefinition, ContextFieldDef, ToolParameterDef } from '../../../common/workflowTypes.js'
 import { WorkflowTutorial } from './Tutorial/index.js'
@@ -39,6 +41,15 @@ import { AutoField } from './Wizard/AutoField.js'
 import { getAvailableSources, getAutoWireSuggestions, type StepInfo } from '../../../common/typeCompatibility.js'
 import { generateContextFieldFromParam, generateFormSections } from '../../../common/bindingAnalyzer.js'
 import { validateWorkflowDraft, type ValidationResult } from '../../../common/workflowValidator.js'
+import { BlockPalette, getBlockIcon } from './BlockPalette.js'
+import {
+  blockToStepDraft,
+  blockToContextFields,
+  blockToFormSection,
+  computeDataFlowSummary,
+  detectBlockForStep,
+  type WorkflowBlock
+} from '../../../common/workflowBlocks.js'
 
 const electron = window.electron
 
@@ -91,6 +102,8 @@ interface WorkflowDesignerProps {
   onSave?: (schema: Record<string, unknown>) => void
   initialDefinition?: Record<string, unknown> | null
   startWithTutorial?: boolean
+  /** When true, start in simple (block-based) mode instead of advanced */
+  startInSimpleMode?: boolean
 }
 
 // ── Constants ──────────────────────────────────────────────────────
@@ -1281,7 +1294,8 @@ export function WorkflowDesigner({
   onClose,
   onSave,
   initialDefinition,
-  startWithTutorial
+  startWithTutorial,
+  startInSimpleMode
 }: WorkflowDesignerProps): React.ReactElement | null {
   const [draft, setDraft] = useState<WorkflowDraft>({ ...DEFAULT_DRAFT })
   const [jsonSource, setJsonSource] = useState('')
@@ -1294,6 +1308,13 @@ export function WorkflowDesigner({
   const [showToolSelector, setShowToolSelector] = useState(false)
   const [toolSearch, setToolSearch] = useState('')
   const [tutorialOpen, setTutorialOpen] = useState(false)
+
+  // ── Simple/Advanced mode ──────────────────────────────────────────
+  const [designerMode, setDesignerMode] = useState<'simple' | 'advanced'>(
+    startInSimpleMode !== false ? 'simple' : 'advanced'
+  )
+  const [selectedStepIndex, setSelectedStepIndex] = useState<number | null>(null)
+  const [expandedAdvanced, setExpandedAdvanced] = useState<Set<number>>(new Set())
 
   // Open tutorial automatically when startWithTutorial prop changes
   useEffect(() => {
@@ -1308,6 +1329,9 @@ export function WorkflowDesigner({
       setJsonSource('')
       setJsonError(null)
       setTab('visual')
+      setDesignerMode(startInSimpleMode !== false ? 'simple' : 'advanced')
+      setSelectedStepIndex(null)
+      setExpandedAdvanced(new Set())
       return
     }
     // Load available tools and heuristics when designer opens
@@ -1582,7 +1606,518 @@ export function WorkflowDesigner({
 
   // addStep is now handled by the tool selector popover in the Steps tab
 
+  // ── Simple mode: block addition handler ──────────────────────────
+  const toolsMap = useMemo(() => new Map(tools.map((t) => [t.name, t])), [tools])
+
+  const handleAddBlock = useCallback((block: WorkflowBlock): void => {
+    const wfInputs = Object.fromEntries(
+      Object.entries(draft.workflowInputs).map(([k, v]) => [k, { type: v.type }])
+    )
+    const stepDraft = blockToStepDraft(block, draft.steps.length, draft.steps, toolsMap, wfInputs)
+
+    // Generate context fields for exposed inputs
+    const toolDef = toolsMap.get(block.tool)
+    const newContextFields = toolDef
+      ? blockToContextFields(block, toolDef)
+      : {}
+
+    // Generate form section
+    const formSection = blockToFormSection(block)
+
+    setDraft((prev) => {
+      // Skip duplicate context fields
+      const mergedFields = { ...prev.contextFields }
+      for (const [name, field] of Object.entries(newContextFields)) {
+        if (!(name in mergedFields)) {
+          mergedFields[name] = field
+        }
+      }
+
+      // Auto-bind step inputs to context fields for exposed fields
+      for (const fieldName of block.exposedFields) {
+        if (stepDraft.inputs[fieldName] && !stepDraft.inputs[fieldName].value) {
+          stepDraft.inputs[fieldName] = { mode: 'ref', value: `context.${fieldName}` }
+        }
+      }
+
+      return {
+        ...prev,
+        contextFields: mergedFields,
+        sections: [...prev.sections, formSection],
+        steps: [...prev.steps, stepDraft]
+      }
+    })
+
+    setSelectedStepIndex(draft.steps.length)
+  }, [draft, toolsMap])
+
+  const handleRemoveStep = useCallback((index: number): void => {
+    setDraft((prev) => ({
+      ...prev,
+      steps: prev.steps.filter((_, i) => i !== index),
+      sections: prev.sections.filter((_, i) => i !== index)
+    }))
+    if (selectedStepIndex === index) {
+      setSelectedStepIndex(null)
+    } else if (selectedStepIndex !== null && selectedStepIndex > index) {
+      setSelectedStepIndex(selectedStepIndex - 1)
+    }
+  }, [selectedStepIndex])
+
+  const handleMoveStepSimple = useCallback((index: number, direction: -1 | 1): void => {
+    const target = index + direction
+    setDraft((prev) => {
+      const steps = [...prev.steps]
+      const sections = [...prev.sections]
+      ;[steps[index], steps[target]] = [steps[target], steps[index]]
+      // Also move matching sections if they exist
+      if (sections[index] && sections[target]) {
+        ;[sections[index], sections[target]] = [sections[target], sections[index]]
+      }
+      return { ...prev, steps, sections }
+    })
+    setSelectedStepIndex(target)
+  }, [])
+
+  const toggleAdvancedForStep = useCallback((index: number): void => {
+    setExpandedAdvanced((prev) => {
+      const next = new Set(prev)
+      if (next.has(index)) {
+        next.delete(index)
+      } else {
+        next.add(index)
+      }
+      return next
+    })
+  }, [])
+
   if (!open) return null
+
+  // ── Simple mode: step detail rendering ─────────────────────────────
+  const renderSimpleMode = (): React.ReactElement => {
+    const selectedStep = selectedStepIndex !== null ? draft.steps[selectedStepIndex] : null
+    const selectedBlock = selectedStep ? detectBlockForStep(selectedStep) : null
+    const lastStep = draft.steps.length > 0 ? draft.steps[draft.steps.length - 1] : null
+
+    // Build ContextFieldDef map from draft for AutoField rendering
+    const fieldDefs: Record<string, ContextFieldDef> = {}
+    for (const [name, field] of Object.entries(draft.contextFields)) {
+      let parsedDefault: unknown
+      if (field.default) {
+        try { parsedDefault = JSON.parse(field.default) } catch { parsedDefault = field.default }
+      }
+      fieldDefs[name] = {
+        type: field.type,
+        label: field.label || undefined,
+        description: field.description,
+        heuristic: field.heuristic || undefined,
+        default: parsedDefault,
+        enum: undefined
+      }
+    }
+
+    return (
+      <div className="flex flex-1 min-h-0">
+        {/* Left panel: palette + step rail */}
+        <div className="w-72 border-r border-neutral-5 flex flex-col min-h-0 bg-panel">
+          {/* Block palette */}
+          <div className="p-3 border-b border-neutral-5 overflow-y-auto max-h-64">
+            <Text size="1" weight="bold" className="text-neutral-10 uppercase tracking-wider mb-2 block">
+              Add Blocks
+            </Text>
+            <BlockPalette
+              onAddBlock={handleAddBlock}
+              tools={toolsMap}
+              lastStepTool={lastStep?.tool}
+            />
+          </div>
+
+          {/* Step rail */}
+          <div className="flex-1 overflow-y-auto p-3">
+            <Text size="1" weight="bold" className="text-neutral-10 uppercase tracking-wider mb-2 block">
+              Pipeline
+            </Text>
+            {draft.steps.length === 0 ? (
+              <div className="flex flex-col items-center gap-2 py-8 text-center">
+                <Text size="2" className="text-neutral-8">
+                  Click a block above to start building your pipeline
+                </Text>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-1">
+                {draft.steps.map((step, i) => {
+                  const block = detectBlockForStep(step)
+                  const isSelected = selectedStepIndex === i
+                  const stepValidation = validation.errors.filter((e) => e.message.includes(step.name))
+                  const hasError = stepValidation.length > 0
+
+                  return (
+                    <React.Fragment key={i}>
+                      {/* Data flow pill between steps */}
+                      {i > 0 && (
+                        <div className="flex items-center justify-center py-0.5">
+                          <div className="flex items-center gap-1">
+                            {computeDataFlowSummary(draft.steps[i - 1], step, toolsMap).map((flow, fi) => (
+                              <Badge
+                                key={fi}
+                                variant="soft"
+                                size="1"
+                                color={flow.color as 'blue' | 'yellow' | 'green' | 'gray' | 'purple' | 'teal' | 'orange'}
+                              >
+                                {flow.label}
+                              </Badge>
+                            ))}
+                            {computeDataFlowSummary(draft.steps[i - 1], step, toolsMap).length === 0 && (
+                              <div className="w-px h-3 bg-neutral-6" />
+                            )}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Step card */}
+                      <button
+                        className={`flex items-center gap-2 w-full px-3 py-2 rounded text-left transition-colors cursor-pointer ${
+                          isSelected
+                            ? 'bg-[var(--accent-3)] border border-[var(--accent-7)]'
+                            : hasError
+                              ? 'bg-[var(--red-2)] border border-[var(--red-6)] hover:bg-[var(--red-3)]'
+                              : 'hover:bg-[var(--gray-3)] border border-transparent'
+                        }`}
+                        onClick={() => setSelectedStepIndex(i)}
+                      >
+                        <span className={isSelected ? 'text-[var(--accent-9)]' : 'text-neutral-9'}>
+                          {block ? getBlockIcon(block.icon) : <GearIcon />}
+                        </span>
+                        <div className="flex-1 min-w-0">
+                          <Text size="1" weight="medium" className="text-neutral-12 truncate block">
+                            {block?.label || step.name}
+                          </Text>
+                        </div>
+                        <Badge variant="soft" size="1" color={hasError ? 'red' : 'gray'}>
+                          {i + 1}
+                        </Badge>
+                      </button>
+                    </React.Fragment>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Right panel: step detail */}
+        <div className="flex-1 min-h-0 overflow-y-auto p-6">
+          {selectedStep && selectedStepIndex !== null ? (
+            <div className="max-w-2xl mx-auto flex flex-col gap-6">
+              {/* Step header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <span className="text-[var(--accent-9)]">
+                    {selectedBlock ? getBlockIcon(selectedBlock.icon) : <GearIcon />}
+                  </span>
+                  <div>
+                    <Heading size="4" weight="bold" className="text-neutral-12">
+                      {selectedBlock?.label || selectedStep.name}
+                    </Heading>
+                    <Text size="2" className="text-neutral-9">
+                      {selectedBlock?.description || `Tool: ${selectedStep.tool}`}
+                    </Text>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <IconButton
+                    variant="ghost"
+                    color="gray"
+                    size="1"
+                    onClick={() => handleMoveStepSimple(selectedStepIndex, -1)}
+                    disabled={selectedStepIndex === 0}
+                  >
+                    <ChevronUpIcon />
+                  </IconButton>
+                  <IconButton
+                    variant="ghost"
+                    color="gray"
+                    size="1"
+                    onClick={() => handleMoveStepSimple(selectedStepIndex, 1)}
+                    disabled={selectedStepIndex === draft.steps.length - 1}
+                  >
+                    <ChevronDownIcon />
+                  </IconButton>
+                  <IconButton
+                    variant="ghost"
+                    color="red"
+                    size="1"
+                    onClick={() => handleRemoveStep(selectedStepIndex)}
+                  >
+                    <TrashIcon />
+                  </IconButton>
+                </div>
+              </div>
+
+              <Separator size="4" />
+
+              {/* Exposed fields (user-facing form) */}
+              {selectedBlock && selectedBlock.formComponent ? (
+                <Card size="2">
+                  <div className="py-4 text-center">
+                    <Badge variant="soft" size="2">{selectedBlock.formComponent}</Badge>
+                    <Text size="2" className="text-neutral-8 mt-2 block">
+                      Custom component — rendered at runtime in the wizard
+                    </Text>
+                  </div>
+                </Card>
+              ) : (
+                <div className="flex flex-col gap-4">
+                  {(selectedBlock?.exposedFields || []).map((fieldName) => {
+                    const fieldDef = fieldDefs[fieldName]
+                    if (!fieldDef) {
+                      // Field might be a tool input not yet in context - create inline
+                      const toolDef = toolsMap.get(selectedStep.tool)
+                      const param = toolDef?.inputs[fieldName]
+                      if (!param) return null
+                      const generated = generateContextFieldFromParam(fieldName, param)
+                      return (
+                        <AutoField
+                          key={fieldName}
+                          fieldName={fieldName}
+                          fieldDef={{
+                            type: generated.type,
+                            label: generated.label,
+                            description: generated.description,
+                            default: generated.default
+                          }}
+                          value={previewContext[fieldName]}
+                          onChange={(v) => setPreviewContext((prev) => ({ ...prev, [fieldName]: v }))}
+                        />
+                      )
+                    }
+                    return (
+                      <AutoField
+                        key={fieldName}
+                        fieldName={fieldName}
+                        fieldDef={fieldDef}
+                        value={previewContext[fieldName]}
+                        onChange={(v) => setPreviewContext((prev) => ({ ...prev, [fieldName]: v }))}
+                      />
+                    )
+                  })}
+                  {(!selectedBlock || selectedBlock.exposedFields.length === 0) && !selectedBlock?.formComponent && (
+                    <Text size="2" className="text-neutral-8">
+                      This block uses automatic configuration. Expand "Advanced" to customize.
+                    </Text>
+                  )}
+                </div>
+              )}
+
+              {/* Advanced collapsible */}
+              <div>
+                <button
+                  className="flex items-center gap-2 w-full text-left cursor-pointer py-2"
+                  onClick={() => toggleAdvancedForStep(selectedStepIndex)}
+                >
+                  {expandedAdvanced.has(selectedStepIndex) ? (
+                    <ChevronDownIcon className="text-neutral-8" />
+                  ) : (
+                    <ChevronRightIcon className="text-neutral-8" />
+                  )}
+                  <Text size="2" weight="medium" className="text-neutral-9">
+                    Advanced
+                  </Text>
+                </button>
+
+                {expandedAdvanced.has(selectedStepIndex) && (
+                  <Card size="2" className="mt-2">
+                    <div className="flex flex-col gap-4">
+                      {/* Step name */}
+                      <div className="flex items-center gap-2">
+                        <Text size="1" className="text-neutral-9 shrink-0 w-20">Step name:</Text>
+                        <TextField.Root
+                          value={selectedStep.name}
+                          onChange={(e) => updateStep(selectedStepIndex, { ...selectedStep, name: e.target.value })}
+                          size="1"
+                          className="flex-1 font-mono"
+                        />
+                      </div>
+
+                      {/* Tool */}
+                      <div className="flex items-center gap-2">
+                        <Text size="1" className="text-neutral-9 shrink-0 w-20">Tool:</Text>
+                        <Badge variant="soft" size="1">{selectedStep.tool}</Badge>
+                      </div>
+
+                      {/* Condition */}
+                      <div className="flex items-center gap-2">
+                        <Text size="1" className="text-neutral-9 shrink-0 w-20">Condition:</Text>
+                        <TextField.Root
+                          value={selectedStep.condition}
+                          onChange={(e) => updateStep(selectedStepIndex, { ...selectedStep, condition: e.target.value })}
+                          placeholder="e.g. context.skull_strip_config.enabled"
+                          size="1"
+                          className="flex-1 font-mono"
+                        />
+                      </div>
+
+                      {/* Input bindings */}
+                      <div className="flex flex-col gap-2">
+                        <Text size="1" weight="medium" className="text-neutral-11">Input Bindings:</Text>
+                        {Object.entries(selectedStep.inputs).map(([key, binding]) => (
+                          <div key={key} className="flex items-center gap-2">
+                            <Text size="1" className="font-mono text-neutral-10 w-28 truncate shrink-0">{key}</Text>
+                            <Select.Root
+                              value={binding.mode}
+                              onValueChange={(v) => {
+                                const newInputs = { ...selectedStep.inputs, [key]: { ...binding, mode: v as 'ref' | 'constant' } }
+                                updateStep(selectedStepIndex, { ...selectedStep, inputs: newInputs })
+                              }}
+                              size="1"
+                            >
+                              <Select.Trigger className="w-20" />
+                              <Select.Content>
+                                <Select.Item value="ref">ref</Select.Item>
+                                <Select.Item value="constant">const</Select.Item>
+                              </Select.Content>
+                            </Select.Root>
+                            <TextField.Root
+                              value={binding.value}
+                              onChange={(e) => {
+                                const newInputs = { ...selectedStep.inputs, [key]: { ...binding, value: e.target.value } }
+                                updateStep(selectedStepIndex, { ...selectedStep, inputs: newInputs })
+                              }}
+                              placeholder={binding.mode === 'ref' ? 'inputs.X or context.Y' : 'value'}
+                              size="1"
+                              className="flex-1 font-mono"
+                            />
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Output mappings */}
+                      <div className="flex flex-col gap-2">
+                        <Text size="1" weight="medium" className="text-neutral-11">Output Mappings:</Text>
+                        {Object.entries(selectedStep.outputMappings).map(([key, ctxField]) => (
+                          <div key={key} className="flex items-center gap-2">
+                            <TextField.Root
+                              value={key}
+                              onChange={(e) => {
+                                const mappings = { ...selectedStep.outputMappings }
+                                delete mappings[key]
+                                mappings[e.target.value] = ctxField
+                                updateStep(selectedStepIndex, { ...selectedStep, outputMappings: mappings })
+                              }}
+                              size="1"
+                              className="flex-1 font-mono"
+                              placeholder="tool_output"
+                            />
+                            <Text size="1" className="text-neutral-8">-&gt;</Text>
+                            <TextField.Root
+                              value={ctxField}
+                              onChange={(e) => {
+                                const mappings = { ...selectedStep.outputMappings, [key]: e.target.value }
+                                updateStep(selectedStepIndex, { ...selectedStep, outputMappings: mappings })
+                              }}
+                              size="1"
+                              className="flex-1 font-mono"
+                              placeholder="context_field"
+                            />
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </Card>
+                )}
+              </div>
+            </div>
+          ) : (
+            /* No step selected - show workflow metadata */
+            <div className="max-w-2xl mx-auto flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
+                <Heading size="4" weight="bold" className="text-neutral-12">
+                  Workflow Settings
+                </Heading>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="flex flex-col gap-1">
+                    <Text size="1" weight="medium" className="text-neutral-11">Name</Text>
+                    <TextField.Root
+                      value={draft.name}
+                      onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+                      placeholder="my-workflow"
+                      size="2"
+                    />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <Text size="1" weight="medium" className="text-neutral-11">Version</Text>
+                    <TextField.Root
+                      value={draft.version}
+                      onChange={(e) => setDraft((d) => ({ ...d, version: e.target.value }))}
+                      placeholder="1.0.0"
+                      size="2"
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Text size="1" weight="medium" className="text-neutral-11">Description</Text>
+                  <TextField.Root
+                    value={draft.description}
+                    onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+                    placeholder="What does this workflow do?"
+                    size="2"
+                  />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Text size="1" weight="medium" className="text-neutral-11">Category</Text>
+                  <Select.Root
+                    value={draft.menu}
+                    onValueChange={(v) => setDraft((d) => ({ ...d, menu: v }))}
+                    size="2"
+                  >
+                    <Select.Trigger />
+                    <Select.Content>
+                      <Select.Item value="Import">Import</Select.Item>
+                      <Select.Item value="Processing">Processing</Select.Item>
+                      <Select.Item value="Export">Export</Select.Item>
+                    </Select.Content>
+                  </Select.Root>
+                </div>
+              </div>
+
+              <Separator size="4" />
+
+              {/* Validation summary */}
+              {draft.steps.length > 0 && (
+                <div className="flex flex-col gap-2">
+                  <Heading size="3" className="text-neutral-12">Pipeline Summary</Heading>
+                  <Text size="2" className="text-neutral-9">
+                    {draft.steps.length} step{draft.steps.length !== 1 ? 's' : ''} configured
+                  </Text>
+                  {validation.errors.length > 0 && (
+                    <Badge variant="soft" color="red" size="2">
+                      <CrossCircledIcon /> {validation.errors.length} error{validation.errors.length !== 1 ? 's' : ''}
+                    </Badge>
+                  )}
+                  {validation.errors.length === 0 && (
+                    <Badge variant="soft" color="green" size="2">
+                      <CheckCircledIcon /> Pipeline is valid
+                    </Badge>
+                  )}
+                </div>
+              )}
+
+              {draft.steps.length === 0 && (
+                <div className="flex flex-col items-center gap-3 py-12 text-center">
+                  <PlusIcon className="w-10 h-10 text-neutral-7" />
+                  <Heading size="3" className="text-neutral-9">Add blocks to get started</Heading>
+                  <Text size="2" className="text-neutral-8">
+                    Choose from the block palette on the left to build your processing pipeline.
+                    Each block represents a step like importing DICOMs, skull stripping, or BIDS conversion.
+                  </Text>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-surface">
@@ -1593,14 +2128,36 @@ export function WorkflowDesigner({
             <Heading size="4" weight="bold" className="text-neutral-12">
               Workflow Designer
             </Heading>
-            <Text size="2" className="text-neutral-9">
-              Design your workflow pipeline and form layout
-            </Text>
+            {/* Mode toggle */}
+            <div className="flex items-center rounded-md border border-neutral-6 overflow-hidden">
+              <button
+                className={`px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                  designerMode === 'simple'
+                    ? 'bg-[var(--accent-3)] text-[var(--accent-11)]'
+                    : 'text-neutral-9 hover:bg-[var(--gray-3)]'
+                }`}
+                onClick={() => setDesignerMode('simple')}
+              >
+                Simple
+              </button>
+              <button
+                className={`px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
+                  designerMode === 'advanced'
+                    ? 'bg-[var(--accent-3)] text-[var(--accent-11)]'
+                    : 'text-neutral-9 hover:bg-[var(--gray-3)]'
+                }`}
+                onClick={() => setDesignerMode('advanced')}
+              >
+                Advanced
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" color="blue" size="2" onClick={() => setTutorialOpen(true)}>
-              <InfoCircledIcon /> Tutorial
-            </Button>
+            {designerMode === 'advanced' && (
+              <Button variant="ghost" color="blue" size="2" onClick={() => setTutorialOpen(true)}>
+                <InfoCircledIcon /> Tutorial
+              </Button>
+            )}
             <Button variant="soft" size="2" onClick={handleSave} data-tutorial-id="designer-save">
               Save
             </Button>
@@ -1611,6 +2168,7 @@ export function WorkflowDesigner({
         </header>
 
         {/* Content */}
+        {designerMode === 'simple' ? renderSimpleMode() : (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="max-w-3xl mx-auto p-6">
             <Tabs.Root value={tab} onValueChange={(t) => {
@@ -1966,6 +2524,7 @@ export function WorkflowDesigner({
             </Tabs.Root>
           </div>
         </div>
+        )}
       </Theme>
       <WorkflowTutorial open={tutorialOpen} onClose={() => setTutorialOpen(false)} />
     </div>

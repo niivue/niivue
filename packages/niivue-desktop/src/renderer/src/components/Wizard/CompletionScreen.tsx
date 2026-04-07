@@ -119,13 +119,15 @@ interface CompletionScreenProps {
   outputs: Record<string, unknown> | null
   onClose: () => void
   onLoadFile?: (niftiPath: string) => Promise<void>
+  onEditWorkflow?: () => void
 }
 
 export function CompletionScreen({
   context,
   outputs,
   onClose,
-  onLoadFile
+  onLoadFile,
+  onEditWorkflow
 }: CompletionScreenProps): React.ReactElement {
   const mappings = (context.series_list as BidsSeriesMapping[]) || []
   const bidsDir = (outputs?.bids_dir as string) || ''
@@ -264,7 +266,12 @@ export function CompletionScreen({
         </div>
       )}
 
-      <div className="flex justify-end pt-4 border-t border-neutral-5">
+      <div className="flex justify-end gap-2 pt-4 border-t border-neutral-5">
+        {onEditWorkflow && (
+          <Button variant="soft" size="2" onClick={onEditWorkflow}>
+            Edit Workflow
+          </Button>
+        )}
         <Button variant="solid" size="2" onClick={onClose}>
           Done
         </Button>

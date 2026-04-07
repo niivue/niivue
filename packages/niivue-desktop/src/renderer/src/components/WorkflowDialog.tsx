@@ -439,6 +439,7 @@ interface WorkflowDialogProps {
   onClose: () => void
   onLoadFile?: (niftiPath: string) => Promise<void>
   onBidsInit?: (mappings: BidsSeriesMapping[]) => void
+  onEditWorkflow?: (workflowName: string) => void
   workflowName: string
   inputs: Record<string, unknown>
 }
@@ -448,6 +449,7 @@ export function WorkflowDialog({
   onClose,
   onLoadFile,
   onBidsInit,
+  onEditWorkflow,
   workflowName,
   inputs
 }: WorkflowDialogProps): React.ReactElement | null {
@@ -563,6 +565,10 @@ export function WorkflowDialog({
           outputs={engine.completedOutputs}
           onClose={engine.handleClose}
           onLoadFile={handleLoadFile}
+          onEditWorkflow={onEditWorkflow ? () => {
+            engine.handleClose()
+            onEditWorkflow(workflowName)
+          } : undefined}
         />
       )}
     </WizardShell>

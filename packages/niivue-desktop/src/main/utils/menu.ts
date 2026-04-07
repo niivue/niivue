@@ -941,7 +941,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
       label: 'Workflows',
       submenu: [
         {
-          label: 'New Workflow...',
+          label: 'Create Workflow...',
           accelerator: 'CmdOrCtrl+Shift+N',
           click: (): void => {
             win.webContents.send('workflow:open-designer')

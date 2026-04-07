@@ -21,6 +21,7 @@ import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
 import { WorkflowDialog } from './components/WorkflowDialog.js'
 import { WorkflowDesigner } from './components/WorkflowDesigner.js'
+import { WorkflowTemplateGallery, type TemplateChoice } from './components/WorkflowTemplateGallery.js'
 import { HeuristicDesigner } from './components/HeuristicDesigner.js'
 import { OpenTargetDialog } from './components/OpenTargetDialog.js'
 
@@ -103,6 +104,10 @@ function MainApp(): JSX.Element {
   const [workflowDesignerOpen, setWorkflowDesignerOpen] = useState(false)
   const [designerInitialDefinition, setDesignerInitialDefinition] = useState<Record<string, unknown> | null>(null)
   const [designerStartWithTutorial, setDesignerStartWithTutorial] = useState(false)
+  const [designerStartInSimpleMode, setDesignerStartInSimpleMode] = useState(true)
+
+  // Template gallery state
+  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false)
 
   // Heuristic designer state
   const [heuristicDesignerOpen, setHeuristicDesignerOpen] = useState(false)
@@ -121,9 +126,7 @@ function MainApp(): JSX.Element {
     electron.ipcRenderer.on('workflow:open', handleWorkflowOpen)
 
     const handleOpenDesigner = (): void => {
-      setDesignerInitialDefinition(null)
-      setDesignerStartWithTutorial(false)
-      setWorkflowDesignerOpen(true)
+      setTemplateGalleryOpen(true)
     }
     electron.ipcRenderer.on('workflow:open-designer', handleOpenDesigner)
 
@@ -1572,6 +1575,42 @@ function MainApp(): JSX.Element {
         }}
         workflowName={workflowName}
         inputs={workflowInputs}
+        onEditWorkflow={(name) => {
+          electron.ipcRenderer.invoke('workflow:get-definition', name).then(
+            (definition: Record<string, unknown>) => {
+              setDesignerInitialDefinition(definition)
+              setDesignerStartInSimpleMode(true)
+              setWorkflowDesignerOpen(true)
+            }
+          )
+        }}
+      />
+      <WorkflowTemplateGallery
+        open={templateGalleryOpen}
+        onClose={() => setTemplateGalleryOpen(false)}
+        onSelect={(choice: TemplateChoice) => {
+          setTemplateGalleryOpen(false)
+          if (choice.kind === 'run-workflow') {
+            setWorkflowName(choice.workflowName)
+            setWorkflowInputs(choice.inputs)
+            setWorkflowOpen(true)
+          } else if (choice.kind === 'customize') {
+            setDesignerInitialDefinition(choice.definition)
+            setDesignerStartInSimpleMode(true)
+            setDesignerStartWithTutorial(false)
+            setWorkflowDesignerOpen(true)
+          } else if (choice.kind === 'blank') {
+            setDesignerInitialDefinition(null)
+            setDesignerStartInSimpleMode(true)
+            setDesignerStartWithTutorial(false)
+            setWorkflowDesignerOpen(true)
+          } else if (choice.kind === 'advanced') {
+            setDesignerInitialDefinition(null)
+            setDesignerStartInSimpleMode(false)
+            setDesignerStartWithTutorial(false)
+            setWorkflowDesignerOpen(true)
+          }
+        }}
       />
       <WorkflowDesigner
         open={workflowDesignerOpen}
@@ -1588,6 +1627,7 @@ function MainApp(): JSX.Element {
         }}
         initialDefinition={designerInitialDefinition}
         startWithTutorial={designerStartWithTutorial}
+        startInSimpleMode={designerStartInSimpleMode}
       />
       <HeuristicDesigner
         open={heuristicDesignerOpen}
