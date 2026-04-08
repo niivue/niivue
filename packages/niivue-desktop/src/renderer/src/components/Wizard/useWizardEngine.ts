@@ -48,13 +48,27 @@ export function useWizardEngine(
     electron.ipcRenderer.invoke('workflow:list-tools').then((t: ToolDefinition[]) => setTools(t))
   }, [open])
 
-  // Compute missing inputs — UI mode: only flag inputs for the current section's step.
-  // Inputs bound to prior step outputs are skipped (they'll resolve when the step runs).
+  // Compute missing inputs — only flag inputs whose context fields appear
+  // in sections up to and including the current one.
+  const formSections = definition?.form?.sections ?? []
   const missingInputs = useMemo((): MissingInput[] => {
     if (!definition || tools.length === 0) return []
     const toolsMap = new Map(tools.map((t) => [t.name, t]))
-    return validateUserProvidedInputs(definition, context, inputs, toolsMap, currentSection)
-  }, [definition, context, inputs, tools, currentSection])
+
+    // Collect all context field names shown in sections 0..currentSection
+    const visibleFields = new Set<string>()
+    for (let i = 0; i <= currentSection; i++) {
+      const sec = formSections[i]
+      if (sec) {
+        for (const f of sec.fields) visibleFields.add(f)
+      }
+    }
+
+    // Validate all steps but filter to only missing inputs whose contextField
+    // is visible in the current or prior sections
+    const allMissing = validateUserProvidedInputs(definition, context, inputs, toolsMap)
+    return allMissing.filter((m) => m.contextField && visibleFields.has(m.contextField))
+  }, [definition, context, inputs, tools, currentSection, formSections])
 
   // Start the workflow run when dialog opens
   useEffect(() => {
