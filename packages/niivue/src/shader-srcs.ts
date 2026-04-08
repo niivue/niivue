@@ -258,9 +258,10 @@ const kRenderTail = `
 		}
 		float val = texture(overlay, samplePos.xyz).a;
 		if (drawOpacity > 0.0) {
-			if (smoothDrawing > 0.0)
-				val = max(val, texture(drawSmoothed, samplePos.xyz).r * 2.0);
-			else
+			if (smoothDrawing > 0.0) {
+				if (!isClipAllVolumes || !(skipSample(samplePos.a, sampleRange) ^^ isClipCutaway))
+					val = max(val, texture(drawSmoothed, samplePos.xyz).r * 2.0);
+			} else
 				val = max(val, texture(drawing, samplePos.xyz).r);
 		}
 		if (val > 0.001)
@@ -284,6 +285,16 @@ const kRenderTail = `
 	if (backgroundMasksOverlays > 0)
 		samplePos = firstHit;
 	bool firstDraw = true;
+	// For smooth drawing with a clip plane: if the ray enters the unclipped region
+	// already inside the drawn volume, start with prevSmoothOut=false so no
+	// outside→inside transition is detected, suppressing the clip-plane cap face.
+	bool prevSmoothOut = true;
+	bool enteredFromOutside = false;
+	if (isClipAllVolumes && isClip && !isClipCutaway && smoothDrawing > 0.0) {
+		vec3 clipEntry = start.xyz + dir * sampleRange.x;
+		if (texture(drawSmoothed, clipEntry).r >= 0.5)
+			prevSmoothOut = false;
+	}
 	while (samplePos.a <= len) {
 		if (skipSample(samplePos.a, overlaySampleRange) ^^ overlayIsClipCutaway) {
 			samplePos += deltaDirFast;
@@ -293,8 +304,25 @@ const kRenderTail = `
 		if ((colorSample.a < 0.01) && (drawOpacity > 0.0)) {
 			if (smoothDrawing > 0.0) {
 				// Smooth drawing: isosurface rendering with gradient-based shading
+				// Clip the smooth surface only when isClipAllVolumes is set
+				if (isClipAllVolumes && (skipSample(samplePos.a, sampleRange) ^^ isClipCutaway)) {
+					samplePos += deltaDir;
+					continue;
+				}
 				float smoothVal = texture(drawSmoothed, samplePos.xyz).r;
-				if (smoothVal > 0.5) {
+				bool nowSmoothInside = (smoothVal > 0.5);
+				// Track entry transitions: only mark enteredFromOutside on a genuine
+				// outside→inside crossing; clear it when we exit.
+				if (!nowSmoothInside) {
+					prevSmoothOut = true;
+					enteredFromOutside = false;
+				} else if (prevSmoothOut) {
+					prevSmoothOut = false;
+					enteredFromOutside = true;
+				}
+				// Render at every inside sample only if we entered from outside,
+				// preserving full opacity accumulation while suppressing the clip cap.
+				if (nowSmoothInside && enteredFromOutside) {
 					vec3 vxSize = 1.0 / vec3(textureSize(drawing, 0));
 					// Compute gradient of smoothed field for surface normal
 					float gx = texture(drawSmoothed, samplePos.xyz + vec3(vxSize.x, 0.0, 0.0)).r
