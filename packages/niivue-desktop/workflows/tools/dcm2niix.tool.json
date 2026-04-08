@@ -24,7 +24,8 @@
     },
     "series": {
       "type": "number",
-      "description": "Only convert series matching this CRC number (dcm2niix -n flag)"
+      "description": "Only convert series matching this CRC number (dcm2niix -n flag)",
+      "optional": true
     },
     "pattern": {
       "type": "string",
@@ -67,17 +68,13 @@
       "type": "json[]",
       "description": "BIDS sidecar JSON files (when bids=y)"
     },
-    "stdout": {
-      "type": "string",
-      "description": "Combined stdout from dcm2niix"
-    },
-    "stderr": {
-      "type": "string",
-      "description": "Combined stderr from dcm2niix"
-    },
     "outDir": {
       "type": "string",
       "description": "Output directory"
+    },
+    "detectedSubjects": {
+      "type": "subject[]",
+      "description": "Detected subjects extracted from DICOM headers"
     }
   },
   "exec": {

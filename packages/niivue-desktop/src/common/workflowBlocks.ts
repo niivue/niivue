@@ -37,6 +37,8 @@ export interface WorkflowBlock {
   formComponent?: string
   /** Optional default condition expression */
   condition?: string
+  /** Heuristic names to assign to exposed context fields */
+  heuristics?: Record<string, string>
 }
 
 /** Draft types mirrored from WorkflowDesigner for interop */
@@ -69,6 +71,18 @@ export interface FormSectionDraft {
   buttonText: string
 }
 
+export interface WorkflowDraft {
+  name: string
+  version: string
+  description: string
+  menu: string
+  sections: FormSectionDraft[]
+  contextFields: Record<string, ContextFieldDraft>
+  steps: StepDraft[]
+  workflowInputs: Record<string, { type: string; description: string }>
+  workflowOutputs: Record<string, { type: string; ref: string }>
+}
+
 /** Data flow summary between two pipeline steps */
 export interface DataFlowItem {
   type: string
@@ -95,10 +109,11 @@ export const WORKFLOW_BLOCKS: WorkflowBlock[] = [
     defaultOutputMappings: {
       volumes: '_stepOutputs_convert_volumes',
       sidecars: '_stepOutputs_convert_sidecars',
-      outDir: '_stepOutputs_convert_outDir'
+      outDir: '_stepOutputs_convert_outDir',
+      detectedSubjects: '_stepOutputs_convert_detectedSubjects'
     },
     exposedFields: ['dicom_dir'],
-    hiddenFields: ['bids', 'compress', 'bids_anon', 'pattern', 'merge', 'verbose']
+    hiddenFields: ['bids', 'compress', 'bids_anon', 'pattern', 'merge', 'verbose', 'series']
   },
   {
     id: 'load-nifti',
@@ -117,17 +132,20 @@ export const WORKFLOW_BLOCKS: WorkflowBlock[] = [
 
   // ── Processing ──────────────────────────────────────────────────────
   {
-    id: 'preview-images',
-    label: 'Preview Images',
-    description: 'Review images before proceeding to the next step',
+    id: 'subject-select',
+    label: 'Subject Selection',
+    description: 'Select which subjects to include or exclude',
     category: 'Processing',
-    icon: 'EyeOpenIcon',
-    tool: 'bids-validate',
+    icon: 'PersonIcon',
+    tool: 'bids-classify',
     defaultInputs: {},
-    defaultOutputMappings: {},
-    exposedFields: ['series_list'],
-    hiddenFields: [],
-    formComponent: 'bids-preview'
+    defaultOutputMappings: {
+      subjects: 'subjects'
+    },
+    exposedFields: ['subjects'],
+    hiddenFields: ['sidecars', 'overrides'],
+    formComponent: 'subject-select',
+    heuristics: { subjects: 'detect-subjects' }
   },
   {
     id: 'participants-sessions',
@@ -139,8 +157,9 @@ export const WORKFLOW_BLOCKS: WorkflowBlock[] = [
     defaultInputs: {},
     defaultOutputMappings: {},
     exposedFields: ['subjects'],
-    hiddenFields: [],
-    formComponent: 'subject-session-editor'
+    hiddenFields: ['sidecars', 'overrides'],
+    formComponent: 'subject-session-editor',
+    heuristics: { subjects: 'detect-subjects' }
   },
   {
     id: 'classify-bids',
@@ -149,14 +168,30 @@ export const WORKFLOW_BLOCKS: WorkflowBlock[] = [
     category: 'Processing',
     icon: 'MixerHorizontalIcon',
     tool: 'bids-classify',
-    defaultInputs: {},
+    defaultInputs: {
+      overrides: { ref: 'context.series_list' }
+    },
     defaultOutputMappings: {
       mappings: 'series_list',
       subjects: 'subjects'
     },
     exposedFields: ['series_list'],
     hiddenFields: ['sidecars', 'overrides'],
-    formComponent: 'bids-classification-table'
+    formComponent: 'bids-classification-table',
+    heuristics: { series_list: 'bids-classify' }
+  },
+  {
+    id: 'preview-images',
+    label: 'Preview Images',
+    description: 'Review images before proceeding to the next step',
+    category: 'Processing',
+    icon: 'EyeOpenIcon',
+    tool: 'bids-validate',
+    defaultInputs: {},
+    defaultOutputMappings: {},
+    exposedFields: ['series_list'],
+    hiddenFields: [],
+    formComponent: 'bids-preview'
   },
   {
     id: 'skull-strip',
@@ -442,6 +477,38 @@ function findCompatibleSource(
 }
 
 /**
+ * Re-wire unbound inputs on a step against available sources.
+ * Call this after adding a step or when the pipeline changes.
+ */
+export function autoWireStep(
+  step: StepDraft,
+  stepIndex: number,
+  allSteps: StepDraft[],
+  tools: Map<string, ToolDefinition>,
+  workflowInputs: Record<string, { type: string }>
+): StepDraft {
+  const tool = tools.get(step.tool)
+  if (!tool) return step
+
+  const updatedInputs = { ...step.inputs }
+  for (const [inputName, paramDef] of Object.entries(tool.inputs)) {
+    const existing = updatedInputs[inputName]
+    // Skip already-bound inputs (non-empty refs or constants)
+    if (existing) {
+      if (existing.mode === 'constant' && existing.value) continue
+      if (existing.mode === 'ref' && existing.value) continue
+    }
+
+    const source = findCompatibleSource(inputName, paramDef.type, allSteps.slice(0, stepIndex), tools, workflowInputs)
+    if (source) {
+      updatedInputs[inputName] = { mode: 'ref', value: source }
+    }
+  }
+
+  return { ...step, inputs: updatedInputs }
+}
+
+/**
  * Generate context fields for a block's exposed fields.
  */
 export function blockToContextFields(
@@ -459,7 +526,7 @@ export function blockToContextFields(
       type: generated.type,
       label: generated.label,
       description: generated.description,
-      heuristic: '',
+      heuristic: block.heuristics?.[fieldName] || '',
       default: generated.default !== undefined ? JSON.stringify(generated.default) : ''
     }
   }
@@ -520,27 +587,29 @@ export function computeDataFlowSummary(
  * Returns the matching block or undefined if no match.
  */
 export function detectBlockForStep(step: StepDraft): WorkflowBlock | undefined {
-  // First, try matching by tool name — most blocks map 1:1 to a tool
-  const candidates = WORKFLOW_BLOCKS.filter((b) => b.tool === step.tool)
-
-  if (candidates.length === 0) return undefined
-  if (candidates.length === 1) return candidates[0]
-
-  // Multiple blocks use the same tool (e.g., bids-classify used by both
-  // 'classify-bids' and 'participants-sessions'). Disambiguate by checking
-  // formComponent or exposed fields.
-  for (const block of candidates) {
-    if (block.formComponent) {
-      // If the step has output mappings matching this block's defaults, it's likely a match
-      const defaultKeys = Object.keys(block.defaultOutputMappings)
-      const stepKeys = Object.keys(step.outputMappings)
-      if (defaultKeys.length > 0 && defaultKeys.every((k) => stepKeys.includes(k))) {
-        return block
-      }
+  // First, try matching by step name prefix — step names are generated as
+  // `${block.id.replace(/-/g, '_')}_${index}`, so we can match the prefix.
+  for (const block of WORKFLOW_BLOCKS) {
+    const prefix = block.id.replace(/-/g, '_')
+    if (step.name.startsWith(prefix)) {
+      return block
     }
   }
 
-  // Fall back to first candidate
+  // Fall back to tool name matching
+  const candidates = WORKFLOW_BLOCKS.filter((b) => b.tool === step.tool)
+  if (candidates.length === 0) return undefined
+  if (candidates.length === 1) return candidates[0]
+
+  // Multiple blocks use the same tool — disambiguate by output mappings
+  for (const block of candidates) {
+    const defaultKeys = Object.keys(block.defaultOutputMappings)
+    const stepKeys = Object.keys(step.outputMappings)
+    if (defaultKeys.length > 0 && defaultKeys.every((k) => stepKeys.includes(k))) {
+      return block
+    }
+  }
+
   return candidates[0]
 }
 
@@ -548,3 +617,76 @@ export function detectBlockForStep(step: StepDraft): WorkflowBlock | undefined {
  * Get all block categories in display order.
  */
 export const BLOCK_CATEGORIES: BlockCategory[] = ['Import', 'Processing', 'Quality', 'Output']
+
+// ── Context slot utilities ───────────────────────────────────────────
+
+/** A context slot derived from a tool's output. */
+export interface ContextSlot {
+  /** Unique id, e.g. "skull_strip_0.output_paths" */
+  id: string
+  /** Friendly label, e.g. "Skull-stripped volumes" */
+  label: string
+  /** The output type, e.g. "volume[]" */
+  type: string
+  /** Index of the step that produces this slot */
+  sourceStep: number
+  /** The tool output key */
+  sourceOutput: string
+  /** Color from TYPE_COLORS */
+  color: string
+  /** Indices of steps that read from this slot */
+  consumers: number[]
+}
+
+/**
+ * Derive context slots from the current pipeline steps.
+ * Each tool output becomes a slot. Consumer steps are detected
+ * by scanning input bindings for refs to the slot's step output.
+ */
+export function computeContextSlots(
+  steps: StepDraft[],
+  tools: Map<string, ToolDefinition>
+): ContextSlot[] {
+  const slots: ContextSlot[] = []
+
+  for (let i = 0; i < steps.length; i++) {
+    const step = steps[i]
+    const tool = tools.get(step.tool)
+    if (!tool) continue
+
+    const block = detectBlockForStep(step)
+
+    for (const [outputName, outputDef] of Object.entries(tool.outputs)) {
+      const slotId = `${step.name}.${outputName}`
+      const typeLabel = TYPE_LABELS[outputDef.type] || outputDef.type
+      const blockLabel = block?.label || step.name
+
+      // Find consumers: steps whose inputs reference this output
+      const consumers: number[] = []
+      for (let j = 0; j < steps.length; j++) {
+        if (j === i) continue
+        for (const binding of Object.values(steps[j].inputs)) {
+          if (binding.mode === 'ref' && binding.value === `steps.${step.name}.outputs.${outputName}`) {
+            consumers.push(j)
+            break
+          }
+        }
+      }
+
+      slots.push({
+        id: slotId,
+        label: `${blockLabel} → ${typeLabel}`,
+        type: outputDef.type,
+        sourceStep: i,
+        sourceOutput: outputName,
+        color: TYPE_COLORS[outputDef.type] || 'gray',
+        consumers
+      })
+    }
+  }
+
+  return slots
+}
+
+/** Export TYPE_COLORS and TYPE_LABELS for use by the visual designer. */
+export { TYPE_COLORS, TYPE_LABELS }

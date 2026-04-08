@@ -117,8 +117,7 @@
         "volumes": "_stepOutputs_convert_volumes",
         "detectedSubjects": "_stepOutputs_convert_detectedSubjects",
         "outDir": "_stepOutputs_convert_outDir",
-        "stdout": "_stepOutputs_convert_stdout",
-        "stderr": "_stepOutputs_convert_stderr"
+        "detectedSubjects": "_stepOutputs_convert_detectedSubjects"
       }
     },
     "classify": {

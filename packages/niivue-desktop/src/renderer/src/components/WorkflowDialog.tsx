@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { Text, Callout } from '@radix-ui/themes'
+import { Text, Callout, Heading, TextField, Select } from '@radix-ui/themes'
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons'
 import type { ContextFieldDef } from '../../../common/workflowTypes.js'
 import type {
@@ -20,6 +20,20 @@ import { StepBidsPreview } from './BidsWizard/StepBidsPreview.js'
 
 // ── Classification table adapter ─────────────────────────────────────
 
+/** Get series indices belonging to excluded subjects */
+function getExcludedSeriesIndices(subjects: DetectedSubject[]): Set<number> {
+  const excluded = new Set<number>()
+  for (const sub of subjects) {
+    if (!sub.excluded) continue
+    for (const ses of sub.sessions) {
+      for (const idx of ses.seriesIndices) {
+        excluded.add(idx)
+      }
+    }
+  }
+  return excluded
+}
+
 function ClassificationAdapter({
   context,
   onFieldChange
@@ -27,7 +41,14 @@ function ClassificationAdapter({
   context: Record<string, unknown>
   onFieldChange: (fieldName: string, value: unknown) => void
 }): React.ReactElement {
-  const mappings = (context.series_list as BidsSeriesMapping[]) || []
+  const rawMappings = (context.series_list as BidsSeriesMapping[]) || []
+  const subjects = (context.subjects as DetectedSubject[]) || []
+  const excludedIndices = getExcludedSeriesIndices(subjects)
+
+  // Apply subject exclusions to series mappings
+  const mappings = rawMappings.map((m) =>
+    excludedIndices.has(m.index) ? { ...m, excluded: true } : m
+  )
   const fieldmapIntendedFor = (context._fieldmapIntendedFor as FieldmapIntendedFor[]) || []
 
   const handleUpdateMapping = (index: number, changes: Partial<BidsSeriesMapping>): void => {
@@ -344,10 +365,21 @@ function SubjectSelectAdapter({
 
   const toggleSubject = (index: number): void => {
     const old = detectedSubjects[index]
-    const updated = detectedSubjects.map((ds, i) =>
+    const updatedSubjects = detectedSubjects.map((ds, i) =>
       i === index ? { ...ds, excluded: !old.excluded } : ds
     )
-    void onFieldChange('subjects', updated)
+    void onFieldChange('subjects', updatedSubjects)
+
+    // Also sync exclusion flags to series_list
+    const seriesList = (context.series_list as BidsSeriesMapping[]) || []
+    if (seriesList.length > 0) {
+      const excludedIndices = getExcludedSeriesIndices(updatedSubjects)
+      const updatedSeries = seriesList.map((m) => ({
+        ...m,
+        excluded: excludedIndices.has(m.index) ? true : (m.excluded || false)
+      }))
+      void onFieldChange('series_list', updatedSeries)
+    }
   }
 
   const includedCount = detectedSubjects.filter((s) => !s.excluded).length
@@ -507,7 +539,7 @@ export function WorkflowDialog({
       currentStep={engine.currentSection}
       onStepChange={engine.goToSection}
       onNext={engine.handleNext}
-      canProceed={!isPreparing && !isRunning}
+      canProceed={!isPreparing && !isRunning && engine.missingInputs.length === 0}
       loading={isRunning}
       lastStepLabel={sections[engine.currentSection]?.buttonText || 'Run'}
       onComplete={handleComplete}
@@ -537,6 +569,75 @@ export function WorkflowDialog({
           componentRegistry={COMPONENT_REGISTRY}
         />
       )}
+
+      {/* Auto-generated form for missing inputs not already shown in the current section */}
+      {(() => {
+        const currentFields = new Set(sections[engine.currentSection]?.fields || [])
+        const extraMissing = engine.missingInputs.filter((m) => !m.contextField || !currentFields.has(m.contextField))
+        return extraMissing.length > 0 && !isPreparing && !isRunning && !isCompleted && (
+        <div className="mt-6 flex flex-col gap-4">
+          <div className="flex items-center gap-2">
+            <ExclamationTriangleIcon className="text-[var(--yellow-9)]" />
+            <Heading size="3" className="text-neutral-12">
+              Required Fields
+            </Heading>
+          </div>
+          <div className="flex flex-col gap-3">
+            {extraMissing.map((m) => {
+              const currentValue = m.contextField ? (engine.context[m.contextField] as string || '') : ''
+
+              return (
+                <div key={`${m.stepName}-${m.inputName}`} className="flex flex-col gap-1">
+                  <Text size="2" weight="medium" className="text-neutral-11">
+                    {m.description || m.inputName}
+                  </Text>
+                  <Text size="1" className="text-neutral-8">
+                    Step: {m.stepName} / {m.inputName} ({m.type})
+                  </Text>
+                  {m.type === 'directory' || m.type === 'dicom-folder' ? (
+                    <div className="flex items-center gap-2">
+                      <TextField.Root
+                        value={currentValue}
+                        onChange={(e) => {
+                          if (m.contextField) {
+                            void engine.handleFieldChange(m.contextField, e.target.value)
+                          }
+                        }}
+                        placeholder="Select a directory..."
+                        size="2"
+                        className="flex-1"
+                      />
+                      <button
+                        className="px-3 py-1.5 rounded bg-[var(--accent-3)] text-[var(--accent-11)] hover:bg-[var(--accent-4)] transition-colors text-sm cursor-pointer"
+                        onClick={async () => {
+                          const dir = await electron.ipcRenderer.invoke('workflow:select-directory', { title: m.description })
+                          if (dir && m.contextField) {
+                            void engine.handleFieldChange(m.contextField, dir)
+                          }
+                        }}
+                      >
+                        Browse...
+                      </button>
+                    </div>
+                  ) : (
+                    <TextField.Root
+                      value={currentValue}
+                      onChange={(e) => {
+                        if (m.contextField) {
+                          void engine.handleFieldChange(m.contextField, e.target.value)
+                        }
+                      }}
+                      placeholder={m.description}
+                      size="2"
+                    />
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+        )
+      })()}
 
       {/* Error display */}
       {engine.error && (

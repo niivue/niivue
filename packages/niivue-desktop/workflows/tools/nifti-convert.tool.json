@@ -5,7 +5,7 @@
   "description": "Convert between NIfTI formats and apply basic preprocessing (reorient, resample)",
   "inputs": {
     "input_path": {
-      "type": "string",
+      "type": "volume",
       "description": "Input volume path"
     },
     "reorient": {
@@ -24,7 +24,7 @@
   },
   "outputs": {
     "output_path": {
-      "type": "string",
+      "type": "volume",
       "description": "Converted volume path"
     }
   }

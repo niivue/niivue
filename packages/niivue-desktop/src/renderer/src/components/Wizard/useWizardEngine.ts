@@ -1,5 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
-import type { WorkflowDefinition, FormSectionDef } from '../../../../common/workflowTypes.js'
+import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
+import type { WorkflowDefinition, FormSectionDef, ToolDefinition } from '../../../../common/workflowTypes.js'
+import { validateUserProvidedInputs, type MissingInput } from '../../../../common/workflowValidator.js'
 
 const electron = window.electron
 
@@ -12,6 +13,7 @@ export interface WizardEngineState {
   completedOutputs: Record<string, unknown> | null
   error: string | null
   heuristicLoading: Set<string>
+  missingInputs: MissingInput[]
 }
 
 export interface WizardEngineActions {
@@ -36,8 +38,23 @@ export function useWizardEngine(
   const [completedOutputs, setCompletedOutputs] = useState<Record<string, unknown> | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [heuristicLoading, setHeuristicLoading] = useState<Set<string>>(new Set())
+  const [tools, setTools] = useState<ToolDefinition[]>([])
   const runIdRef = useRef<string | null>(null)
   const closingRef = useRef(false)
+
+  // Load tools once when dialog opens
+  useEffect(() => {
+    if (!open) return
+    electron.ipcRenderer.invoke('workflow:list-tools').then((t: ToolDefinition[]) => setTools(t))
+  }, [open])
+
+  // Compute missing inputs — UI mode: only flag inputs for the current section's step.
+  // Inputs bound to prior step outputs are skipped (they'll resolve when the step runs).
+  const missingInputs = useMemo((): MissingInput[] => {
+    if (!definition || tools.length === 0) return []
+    const toolsMap = new Map(tools.map((t) => [t.name, t]))
+    return validateUserProvidedInputs(definition, context, inputs, toolsMap, currentSection)
+  }, [definition, context, inputs, tools, currentSection])
 
   // Start the workflow run when dialog opens
   useEffect(() => {
@@ -153,10 +170,13 @@ export function useWizardEngine(
   const isLastSection = currentSection >= sections.length - 1
 
   const handleNext = useCallback(async (): Promise<void> => {
+    if (!runId) return
+
+    setStatus('running')
+    setError(null)
+
     if (isLastSection) {
-      // Execute all remaining steps
-      setStatus('running')
-      setError(null)
+      // Final step: execute all remaining workflow steps
       try {
         const result = await electron.ipcRenderer.invoke('workflow:execute-all', { runId })
         setStatus('completed')
@@ -168,10 +188,26 @@ export function useWizardEngine(
       return
     }
 
+    // Run the next ready step (one at a time, not all at once)
+    // This ensures dcm2niix runs after import, but classify doesn't
+    // run until explicitly needed — heuristics handle context population
+    try {
+      const readyResult = await electron.ipcRenderer.invoke('workflow:run-ready-steps', { runId, maxStepIndex: currentSection })
+      if (readyResult.runState?.context) {
+        setContext(readyResult.runState.context)
+      }
+    } catch (err) {
+      // Non-fatal — some sections are form-only with no step to run
+      console.warn('run-ready-steps:', err)
+    }
+
+    setStatus('form')
     const nextSection = currentSection + 1
     setCurrentSection(nextSection)
 
-    if (runId && definition && sections[nextSection]) {
+    // Run heuristics for the next section — these populate context fields
+    // with subject exclusion propagation, classification, etc.
+    if (definition && sections[nextSection]) {
       await runSectionHeuristics(runId, definition, sections[nextSection])
     }
   }, [currentSection, isLastSection, runId, definition, sections])
@@ -217,6 +253,7 @@ export function useWizardEngine(
     completedOutputs,
     error,
     heuristicLoading,
+    missingInputs,
     goToSection,
     handleFieldChange,
     handleNext,

@@ -15,7 +15,8 @@ import {
   DownloadIcon,
   PlusIcon,
   CodeIcon,
-  GearIcon
+  GearIcon,
+  TrashIcon
 } from '@radix-ui/react-icons'
 import type { WorkflowListItem } from '../../../common/workflowTypes.js'
 
@@ -34,6 +35,8 @@ const CATEGORY_META: Record<string, { icon: React.ReactNode; color: string }> = 
 export type TemplateChoice =
   | { kind: 'run-workflow'; workflowName: string; inputs: Record<string, unknown> }
   | { kind: 'customize'; definition: Record<string, unknown> }
+  | { kind: 'use-as-template'; definition: Record<string, unknown> }
+  | { kind: 'edit-user'; definition: Record<string, unknown> }
   | { kind: 'blank' }
   | { kind: 'advanced' }
 
@@ -81,12 +84,32 @@ export function WorkflowTemplateGallery({
     onSelect({ kind: 'run-workflow', workflowName: wf.name, inputs: {} })
   }
 
-  const handleCustomize = async (wf: WorkflowListItem): Promise<void> => {
+  const handleUseAsTemplate = async (wf: WorkflowListItem): Promise<void> => {
     try {
       const definition = await electron.ipcRenderer.invoke('workflow:get-definition', wf.name)
-      onSelect({ kind: 'customize', definition })
+      // Clear the name so user must provide a new one
+      onSelect({ kind: 'use-as-template', definition: { ...definition, name: '' } })
     } catch (err) {
       console.error('Failed to load workflow definition:', err)
+    }
+  }
+
+  const handleEditUser = async (wf: WorkflowListItem): Promise<void> => {
+    try {
+      const definition = await electron.ipcRenderer.invoke('workflow:get-definition', wf.name)
+      onSelect({ kind: 'edit-user', definition })
+    } catch (err) {
+      console.error('Failed to load workflow definition:', err)
+    }
+  }
+
+  const handleDelete = async (wf: WorkflowListItem): Promise<void> => {
+    if (!confirm(`Delete workflow "${wf.description || wf.name}"?\n\nThis cannot be undone.`)) return
+    try {
+      await electron.ipcRenderer.invoke('workflow:delete', wf.name)
+      setWorkflows((prev) => prev.filter((w) => w.name !== wf.name))
+    } catch (err) {
+      console.error('Failed to delete workflow:', err)
     }
   }
 
@@ -139,13 +162,18 @@ export function WorkflowTemplateGallery({
                         {wfs.map((wf) => (
                           <Card key={wf.name} size="2" className="hover:shadow-md transition-shadow">
                             <div className="flex flex-col gap-3">
-                              <div>
-                                <Text size="3" weight="bold" className="text-neutral-12">
-                                  {wf.description || wf.name}
-                                </Text>
-                                <Text size="1" className="text-neutral-8 font-mono block mt-0.5">
-                                  {wf.name}
-                                </Text>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1">
+                                  <Text size="3" weight="bold" className="text-neutral-12">
+                                    {wf.description || wf.name}
+                                  </Text>
+                                  <Text size="1" className="text-neutral-8 font-mono block mt-0.5">
+                                    {wf.name}
+                                  </Text>
+                                </div>
+                                {wf.userCreated && (
+                                  <Badge variant="soft" size="1" color="green">Custom</Badge>
+                                )}
                               </div>
                               <div className="flex items-center gap-2">
                                 <Button
@@ -153,15 +181,35 @@ export function WorkflowTemplateGallery({
                                   size="1"
                                   onClick={() => handleUseTemplate(wf)}
                                 >
-                                  <RocketIcon /> Use Template
+                                  <RocketIcon /> Run
                                 </Button>
-                                <Button
-                                  variant="soft"
-                                  size="1"
-                                  onClick={() => void handleCustomize(wf)}
-                                >
-                                  <GearIcon /> Customize
-                                </Button>
+                                {wf.userCreated ? (
+                                  <>
+                                    <Button
+                                      variant="soft"
+                                      size="1"
+                                      onClick={() => void handleEditUser(wf)}
+                                    >
+                                      <GearIcon /> Edit
+                                    </Button>
+                                    <Button
+                                      variant="soft"
+                                      color="red"
+                                      size="1"
+                                      onClick={() => void handleDelete(wf)}
+                                    >
+                                      <TrashIcon /> Delete
+                                    </Button>
+                                  </>
+                                ) : (
+                                  <Button
+                                    variant="soft"
+                                    size="1"
+                                    onClick={() => void handleUseAsTemplate(wf)}
+                                  >
+                                    <PlusIcon /> Use as Template
+                                  </Button>
+                                )}
                               </div>
                             </div>
                           </Card>

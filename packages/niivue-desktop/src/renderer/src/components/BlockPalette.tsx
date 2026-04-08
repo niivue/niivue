@@ -22,7 +22,8 @@ import {
   ChevronRightIcon,
   LayoutIcon,
   ActivityLogIcon,
-  BarChartIcon
+  BarChartIcon,
+  GearIcon
 } from '@radix-ui/react-icons'
 import {
   WORKFLOW_BLOCKS,
@@ -49,7 +50,8 @@ const ICON_MAP: Record<string, React.ReactNode> = {
   DownloadIcon: <DownloadIcon />,
   LayoutIcon: <LayoutIcon />,
   ActivityLogIcon: <ActivityLogIcon />,
-  BarChartIcon: <BarChartIcon />
+  BarChartIcon: <BarChartIcon />,
+  GearIcon: <GearIcon />
 }
 
 export function getBlockIcon(iconName: string): React.ReactNode {

@@ -48,53 +48,18 @@ import {
   blockToFormSection,
   computeDataFlowSummary,
   detectBlockForStep,
-  type WorkflowBlock
+  type WorkflowBlock,
+  type WorkflowDraft,
+  type StepDraft,
+  type BindingDraft,
+  type ContextFieldDraft,
+  type FormSectionDraft
 } from '../../../common/workflowBlocks.js'
+import { ContextSpineDesigner } from './ContextSpineDesigner.js'
 
 const electron = window.electron
 
-// ── Draft types ────────────────────────────────────────────────────
-
-interface FormSectionDraft {
-  title: string
-  description: string
-  fields: string[]
-  component: string
-  buttonText: string
-}
-
-interface ContextFieldDraft {
-  type: string
-  label: string
-  description: string
-  heuristic: string
-  default: string // JSON-encoded default value
-}
-
-interface BindingDraft {
-  mode: 'ref' | 'constant'
-  value: string
-}
-
-interface StepDraft {
-  name: string
-  tool: string
-  inputs: Record<string, BindingDraft>
-  outputMappings: Record<string, string>
-  condition: string
-}
-
-interface WorkflowDraft {
-  name: string
-  version: string
-  description: string
-  menu: string
-  sections: FormSectionDraft[]
-  contextFields: Record<string, ContextFieldDraft>
-  steps: StepDraft[]
-  workflowInputs: Record<string, { type: string; description: string }>
-  workflowOutputs: Record<string, { type: string; ref: string }>
-}
+// Draft types imported from '../../../common/workflowBlocks.js'
 
 interface WorkflowDesignerProps {
   open: boolean
@@ -1520,7 +1485,14 @@ export function WorkflowDesigner({
     return schema
   }, [draft])
 
+  const [saveError, setSaveError] = useState<string | null>(null)
+
   const handleSave = (): void => {
+    setSaveError(null)
+    if (!draft.name.trim()) {
+      setSaveError('Please enter a workflow name before saving.')
+      return
+    }
     if (tab === 'json') {
       try {
         const parsed = JSON.parse(jsonSource)
@@ -1633,10 +1605,22 @@ export function WorkflowDesigner({
         }
       }
 
-      // Auto-bind step inputs to context fields for exposed fields
+      // Auto-bind exposed fields to context only if not already wired to a step output
       for (const fieldName of block.exposedFields) {
-        if (stepDraft.inputs[fieldName] && !stepDraft.inputs[fieldName].value) {
+        const existing = stepDraft.inputs[fieldName]
+        if (existing && !existing.value) {
+          // Not wired to anything — fall back to context field
           stepDraft.inputs[fieldName] = { mode: 'ref', value: `context.${fieldName}` }
+        }
+        // If existing.value is already set (e.g. steps.X.outputs.Y), keep it
+      }
+
+      // Auto-generate output mappings for all tool outputs → context
+      if (toolDef) {
+        for (const outputName of Object.keys(toolDef.outputs)) {
+          if (!stepDraft.outputMappings[outputName]) {
+            stepDraft.outputMappings[outputName] = `_stepOutputs_${stepDraft.name}_${outputName}`
+          }
         }
       }
 
@@ -2138,7 +2122,7 @@ export function WorkflowDesigner({
                 }`}
                 onClick={() => setDesignerMode('simple')}
               >
-                Simple
+                Visual
               </button>
               <button
                 className={`px-3 py-1 text-xs font-medium transition-colors cursor-pointer ${
@@ -2168,7 +2152,18 @@ export function WorkflowDesigner({
         </header>
 
         {/* Content */}
-        {designerMode === 'simple' ? renderSimpleMode() : (
+        {designerMode === 'simple' ? (
+          <ContextSpineDesigner
+            draft={draft}
+            setDraft={setDraft}
+            tools={toolsMap}
+            validation={validation}
+            onAddBlock={handleAddBlock}
+            onRemoveStep={handleRemoveStep}
+            onMoveStep={handleMoveStepSimple}
+            onSave={handleSave}
+          />
+        ) : (
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="max-w-3xl mx-auto p-6">
             <Tabs.Root value={tab} onValueChange={(t) => {

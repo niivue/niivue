@@ -5,7 +5,7 @@
   "description": "Remove facial features from anatomical NIfTI volumes for anonymization",
   "inputs": {
     "nifti_path": {
-      "type": "string",
+      "type": "volume",
       "description": "Path to anatomical volume"
     },
     "method": {
@@ -22,7 +22,7 @@
   },
   "outputs": {
     "output_path": {
-      "type": "string",
+      "type": "volume",
       "description": "Path to defaced volume"
     }
   }

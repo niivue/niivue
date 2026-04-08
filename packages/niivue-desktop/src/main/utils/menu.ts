@@ -11,7 +11,7 @@ import { runNiimath } from './runNiimath.js'
 import { join } from 'path'
 import { SeriesListEventPayload } from '../../common/dcm2niixTypes.js'
 import { listDicomSeries } from './runDcm2niix.js'
-import { getWorkflowDefinitions, getHeuristicDefinitions } from './workflowLoader.js'
+import { getWorkflowDefinitions, getHeuristicDefinitions, isBuiltInWorkflow } from './workflowLoader.js'
 import type { WorkflowDefinition } from '../../common/workflowTypes.js'
 
 export const viewState = {
@@ -231,20 +231,23 @@ function buildAllWorkflowMenuItems(
   const workflows = getWorkflowDefinitions()
   const items: Electron.MenuItemConstructorOptions[] = []
   for (const wf of workflows.values()) {
-    items.push({
-      label: `${wf.description}`,
-      submenu: [
-        {
-          label: 'Run...',
-          click: () => handleWorkflowMenuClick(win, wf)
-        },
-        {
-          label: 'Edit...',
-          click: () => {
-            win.webContents.send('workflow:edit-designer', wf.name)
-          }
+    const submenu: Electron.MenuItemConstructorOptions[] = [
+      {
+        label: 'Run...',
+        click: () => handleWorkflowMenuClick(win, wf)
+      }
+    ]
+    if (!isBuiltInWorkflow(wf.name)) {
+      submenu.push({
+        label: 'Edit...',
+        click: () => {
+          win.webContents.send('workflow:edit-designer', wf.name)
         }
-      ]
+      })
+    }
+    items.push({
+      label: `${wf.description || wf.name}`,
+      submenu
     })
   }
   if (items.length === 0) {

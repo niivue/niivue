@@ -5,7 +5,7 @@
   "description": "Skull strip a NIfTI volume using Brainchop MindGrab (in-browser WebGL inference)",
   "inputs": {
     "nifti_path": {
-      "type": "string",
+      "type": "volume",
       "description": "Path to the input NIfTI volume"
     },
     "output_path": {
@@ -30,7 +30,7 @@
   },
   "outputs": {
     "output_path": {
-      "type": "string",
+      "type": "volume",
       "description": "Path to the skull-stripped NIfTI volume"
     }
   }

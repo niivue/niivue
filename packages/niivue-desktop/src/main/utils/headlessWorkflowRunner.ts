@@ -6,7 +6,8 @@ import {
   updateContext,
   getRunState
 } from './workflowEngine.js'
-import { getWorkflowDefinitions } from './workflowLoader.js'
+import { getWorkflowDefinitions, getToolDefinitions } from './workflowLoader.js'
+import { validateRequiredInputs } from '../../common/workflowValidator.js'
 
 export interface HeadlessWorkflowOptions {
   workflowName: string
@@ -45,6 +46,25 @@ export async function runWorkflowHeadless(opts: HeadlessWorkflowOptions): Promis
   if (opts.contextOverrides) {
     for (const [key, value] of Object.entries(opts.contextOverrides)) {
       updateContext(runId, key, value)
+    }
+  }
+
+  // Validate that all required inputs are satisfied
+  const state = getRunState(runId)
+  if (state) {
+    const toolsMap = getToolDefinitions()
+    const missing = validateRequiredInputs(
+      definition,
+      state.context,
+      state.inputs,
+      state.stepOutputs,
+      toolsMap
+    )
+    if (missing.length > 0) {
+      const details = missing.map(
+        (m) => `  - Step "${m.stepName}", input "${m.inputName}" (${m.type}): ${m.description}`
+      ).join('\n')
+      throw new Error(`Missing required inputs:\n${details}`)
     }
   }
 

@@ -1594,7 +1594,7 @@ function MainApp(): JSX.Element {
             setWorkflowName(choice.workflowName)
             setWorkflowInputs(choice.inputs)
             setWorkflowOpen(true)
-          } else if (choice.kind === 'customize') {
+          } else if (choice.kind === 'customize' || choice.kind === 'use-as-template' || choice.kind === 'edit-user') {
             setDesignerInitialDefinition(choice.definition)
             setDesignerStartInSimpleMode(true)
             setDesignerStartWithTutorial(false)
@@ -1620,10 +1620,14 @@ function MainApp(): JSX.Element {
           setDesignerStartWithTutorial(false)
         }}
         onSave={(schema) => {
-          console.log('Workflow saved:', schema)
-          setWorkflowDesignerOpen(false)
-          setDesignerInitialDefinition(null)
-          setDesignerStartWithTutorial(false)
+          electron.ipcRenderer.invoke('workflow:save', schema).then(() => {
+            console.log('Workflow saved:', schema)
+            setWorkflowDesignerOpen(false)
+            setDesignerInitialDefinition(null)
+            setDesignerStartWithTutorial(false)
+          }).catch((err: Error) => {
+            console.error('Failed to save workflow:', err)
+          })
         }}
         initialDefinition={designerInitialDefinition}
         startWithTutorial={designerStartWithTutorial}

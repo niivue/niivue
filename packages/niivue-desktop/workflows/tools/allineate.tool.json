@@ -5,7 +5,7 @@
   "description": "Skull strip NIfTI volumes using allineate registration with MNI152 template",
   "inputs": {
     "nifti_path": {
-      "type": "string",
+      "type": "volume",
       "description": "Path to a single input NIfTI volume",
       "optional": true
     },

@@ -120,6 +120,7 @@ export function buildArgs(
         val = def.default
       }
       if (val == null) continue // omit when absent
+      if ('omitIfEmpty' in def && def.omitIfEmpty && (val === '' || (Array.isArray(val) && val.length === 0))) continue
 
       if (def.flag) {
         args.push(def.flag, String(val))

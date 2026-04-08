@@ -1,7 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
-import { getWorkflowDefinitions, getToolDefinitions, getHeuristicDefinitions } from './workflowLoader.js'
+import { getWorkflowDefinitions, getToolDefinitions, getHeuristicDefinitions, isBuiltInWorkflow, saveUserWorkflow, deleteUserWorkflow } from './workflowLoader.js'
+import { refreshMenu } from './menu.js'
 import {
   startWorkflow,
   getRunState,
@@ -12,11 +13,12 @@ import {
   executeStep,
   executeAllSteps,
   runAutoSteps,
+  runReadySteps,
   cancelRun
 } from './workflowEngine.js'
 import { getHeuristicNames, registerHeuristic } from './heuristicRegistry.js'
 import { createDeclarativeHeuristic } from './declarativeHeuristic.js'
-import type { WorkflowListItem, HeuristicDefinition } from '../../common/workflowTypes.js'
+import type { WorkflowListItem, WorkflowDefinition, HeuristicDefinition } from '../../common/workflowTypes.js'
 
 export function registerWorkflowIpcHandlers(): void {
   ipcMain.handle('workflow:list', async () => {
@@ -26,10 +28,32 @@ export function registerWorkflowIpcHandlers(): void {
       items.push({
         name: wf.name,
         description: wf.description,
-        menu: wf.menu
+        menu: wf.menu,
+        userCreated: !isBuiltInWorkflow(wf.name)
       })
     }
     return items
+  })
+
+  ipcMain.handle('workflow:save', async (_evt, definition: WorkflowDefinition) => {
+    if (!definition.name || definition.name.trim() === '') {
+      throw new Error('Workflow name is required')
+    }
+    if (isBuiltInWorkflow(definition.name)) {
+      throw new Error(`Cannot overwrite built-in workflow "${definition.name}". Choose a different name.`)
+    }
+    const filePath = saveUserWorkflow(definition)
+    refreshMenu()
+    return { success: true, path: filePath }
+  })
+
+  ipcMain.handle('workflow:delete', async (_evt, name: string) => {
+    const success = deleteUserWorkflow(name)
+    if (!success) {
+      throw new Error(`Cannot delete built-in workflow "${name}"`)
+    }
+    refreshMenu()
+    return { success: true }
   })
 
   ipcMain.handle('workflow:get-definition', async (_evt, name: string) => {
@@ -95,6 +119,12 @@ export function registerWorkflowIpcHandlers(): void {
     return { outputs, runState: state }
   })
 
+  ipcMain.handle('workflow:run-ready-steps', async (_evt, payload: { runId: string; maxStepIndex?: number }) => {
+    const executed = await runReadySteps(payload.runId, payload.maxStepIndex ?? -1)
+    const state = getRunState(payload.runId)
+    return { executed, runState: state }
+  })
+
   ipcMain.handle('workflow:cancel', async (_evt, payload: { runId: string }) => {
     cancelRun(payload.runId)
     return { success: true }
@@ -150,41 +180,10 @@ export function registerWorkflowIpcHandlers(): void {
     const win = BrowserWindow.fromWebContents(evt.sender)
     const title = payload?.title || 'Select Directory'
 
-    if (process.platform === 'darwin') {
-      // On macOS, showOpenDialog doesn't reliably enable "New Folder" even with
-      // createDirectory. Use showSaveDialog instead, which always shows an enabled
-      // "New Folder" button natively. The user types a folder name and we create it.
-      const options: Electron.SaveDialogOptions = {
-        title,
-        message: title,
-        buttonLabel: 'Select',
-        defaultPath: app.getPath('home'),
-        nameFieldLabel: 'Folder Name:',
-        showsTagField: false
-      }
-      const result = win
-        ? await dialog.showSaveDialog(win, options)
-        : await dialog.showSaveDialog(options)
-      if (result.canceled || !result.filePath) {
-        return null
-      }
-      const fs = await import('node:fs')
-      // If the user navigated to an existing folder and typed its name, just use it.
-      // Otherwise create the new directory.
-      if (!fs.existsSync(result.filePath)) {
-        fs.mkdirSync(result.filePath, { recursive: true })
-      } else if (!fs.statSync(result.filePath).isDirectory()) {
-        // They selected a file — use its parent directory
-        const path = await import('node:path')
-        return path.dirname(result.filePath)
-      }
-      return result.filePath
-    }
-
-    // Non-macOS: showOpenDialog works fine with createDirectory
+    // Select an existing directory only — no folder creation
     const options: Electron.OpenDialogOptions = {
       title,
-      properties: ['openDirectory', 'createDirectory']
+      properties: ['openDirectory']
     }
     const result = win
       ? await dialog.showOpenDialog(win, options)

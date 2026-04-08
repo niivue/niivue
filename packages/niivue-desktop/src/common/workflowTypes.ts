@@ -45,7 +45,7 @@ export interface OutputFileDef {
 }
 
 export type ArgDef =
-  | { input: string; flag?: string; default?: unknown }
+  | { input: string; flag?: string; default?: unknown; omitIfEmpty?: boolean }
   | { value: string; flag?: string }
 
 export type OutputCollectDef =
@@ -78,6 +78,7 @@ export interface ContextFieldDef {
   type: string
   label?: string
   description: string
+  optional?: boolean
   heuristic?: string
   default?: unknown
   enum?: unknown[]
@@ -177,4 +178,6 @@ export interface WorkflowListItem {
   name: string
   description: string
   menu: string
+  /** True for user-created workflows, false/undefined for built-in */
+  userCreated?: boolean
 }

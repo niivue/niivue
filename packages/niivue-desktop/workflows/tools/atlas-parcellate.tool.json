@@ -5,7 +5,7 @@
   "description": "Apply atlas parcellation via Brainchop model",
   "inputs": {
     "nifti_path": {
-      "type": "string",
+      "type": "volume",
       "description": "Path to skull-stripped anatomical"
     },
     "atlas": {
@@ -17,7 +17,7 @@
   },
   "outputs": {
     "parcellation_path": {
-      "type": "string",
+      "type": "volume",
       "description": "Path to parcellation volume"
     },
     "label_json": {

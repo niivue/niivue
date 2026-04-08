@@ -54,7 +54,7 @@ export function AutoField({
   }
 
   // Directory picker
-  if (fieldName === 'output_dir' || fieldDef.type === 'directory') {
+  if (fieldName === 'output_dir' || fieldDef.type === 'directory' || fieldDef.type === 'dicom-folder') {
     return (
       <DirectoryField
         label={label}

@@ -12,6 +12,8 @@ const isDev = !app.isPackaged
 const toolDefinitions = new Map<string, ToolDefinition>()
 const workflowDefinitions = new Map<string, WorkflowDefinition>()
 const heuristicDefinitions = new Map<string, HeuristicDefinition>()
+/** Names of built-in (non-editable) workflows */
+const builtInWorkflowNames = new Set<string>()
 
 function getWorkflowsRoot(): string {
   if (isDev) {
@@ -62,13 +64,24 @@ export function loadAllDefinitions(): void {
   const workflows = loadJsonFiles<WorkflowDefinition>(path.join(root, 'workflows'))
   for (const wf of workflows) {
     workflowDefinitions.set(wf.name, wf)
+    builtInWorkflowNames.add(wf.name)
+  }
+
+  // Load user workflows from app data directory
+  const userDir = getUserWorkflowsDir()
+  if (fs.existsSync(userDir)) {
+    const userWorkflows = loadJsonFiles<WorkflowDefinition>(userDir)
+    for (const wf of userWorkflows) {
+      workflowDefinitions.set(wf.name, wf)
+    }
   }
 
   // Load declarative heuristics (if directory exists)
   loadHeuristics(path.join(root, 'heuristics'))
 
+  const userCount = workflowDefinitions.size - builtInWorkflowNames.size
   console.log(
-    `[workflow] Loaded ${toolDefinitions.size} tools (${declToolCount} declarative), ${workflowDefinitions.size} workflows, ${heuristicDefinitions.size} heuristics`
+    `[workflow] Loaded ${toolDefinitions.size} tools (${declToolCount} declarative), ${workflowDefinitions.size} workflows (${userCount} user), ${heuristicDefinitions.size} heuristics`
   )
 }
 
@@ -106,4 +119,34 @@ export function getWorkflowDefinitions(): Map<string, WorkflowDefinition> {
 
 export function getHeuristicDefinitions(): Map<string, HeuristicDefinition> {
   return heuristicDefinitions
+}
+
+export function isBuiltInWorkflow(name: string): boolean {
+  return builtInWorkflowNames.has(name)
+}
+
+export function getUserWorkflowsDir(): string {
+  return path.join(app.getPath('userData'), 'workflows')
+}
+
+export function saveUserWorkflow(definition: WorkflowDefinition): string {
+  const dir = getUserWorkflowsDir()
+  if (!fs.existsSync(dir)) {
+    fs.mkdirSync(dir, { recursive: true })
+  }
+  const filePath = path.join(dir, `${definition.name}.workflow.json`)
+  fs.writeFileSync(filePath, JSON.stringify(definition, null, 2))
+  workflowDefinitions.set(definition.name, definition)
+  return filePath
+}
+
+export function deleteUserWorkflow(name: string): boolean {
+  if (builtInWorkflowNames.has(name)) return false
+  const dir = getUserWorkflowsDir()
+  const filePath = path.join(dir, `${name}.workflow.json`)
+  if (fs.existsSync(filePath)) {
+    fs.unlinkSync(filePath)
+  }
+  workflowDefinitions.delete(name)
+  return true
 }

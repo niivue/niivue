@@ -11,19 +11,20 @@ const listDicomSeriesHeuristic: HeuristicFn = async (inputs) => {
 }
 
 const bidsClassifyHeuristic: HeuristicFn = async (_inputs, context) => {
-  // If mappings already exist in context (user may have edited classification,
-  // skull-stripped paths, etc.), preserve them instead of re-classifying
-  const existing = context.series_list as BidsSeriesMapping[] | undefined
-  if (existing && existing.length > 0) return existing
+  // If mappings already exist in context, preserve them but re-apply exclusions
+  let mappings = context.series_list as BidsSeriesMapping[] | undefined
 
-  const sidecars = context._stepOutputs_convert_sidecars as string[] | undefined
-  if (!sidecars || sidecars.length === 0) return []
-  const { mappings } = classifyAll(sidecars)
+  if (!mappings || mappings.length === 0) {
+    // No existing mappings — classify from sidecars
+    const sidecars = context._stepOutputs_convert_sidecars as string[] | undefined
+    if (!sidecars || sidecars.length === 0) return []
+    const result = classifyAll(sidecars)
+    mappings = result.mappings
+  }
 
-  // Apply subject exclusions from the subject selection step
+  // Always apply subject/session exclusions to mappings
   const subjects = context.subjects as import('../../common/bidsTypes.js').DetectedSubject[] | undefined
   if (subjects) {
-    // Build a set of excluded series indices from excluded subjects/sessions
     const excludedIndices = new Set<number>()
     for (const sub of subjects) {
       if (sub.excluded) {
@@ -42,6 +43,10 @@ const bidsClassifyHeuristic: HeuristicFn = async (_inputs, context) => {
       if (excludedIndices.has(m.index)) {
         m.excluded = true
         m.exclusionReason = 'Subject excluded'
+      } else if (m.exclusionReason === 'Subject excluded' || m.exclusionReason === 'Session excluded') {
+        // Re-include if subject/session was un-excluded
+        m.excluded = false
+        m.exclusionReason = undefined
       }
     }
   }

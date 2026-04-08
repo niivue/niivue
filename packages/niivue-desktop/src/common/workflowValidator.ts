@@ -1,4 +1,4 @@
-import type { ToolDefinition } from './workflowTypes.js'
+import type { ToolDefinition, WorkflowDefinition, Binding } from './workflowTypes.js'
 import { isTypeCompatible } from './typeCompatibility.js'
 
 // ── Validation result types ─────────────────────────────────────────
@@ -266,4 +266,181 @@ export function validateWorkflowDraft(
   }
 
   return { errors, warnings }
+}
+
+// ── Runtime validation ─────────────────────────────────────────────
+
+/** A required input that could not be resolved at runtime. */
+export interface MissingInput {
+  stepName: string
+  inputName: string
+  type: string
+  description: string
+  /** The context field name this input reads from, if bound via context.X */
+  contextField?: string
+}
+
+/**
+ * Resolve a binding against runtime state and return the value.
+ * Unlike the engine's resolveBinding, this is a pure function that
+ * doesn't require an active workflow run.
+ */
+function resolveBindingValue(
+  binding: Binding,
+  inputs: Record<string, unknown>,
+  context: Record<string, unknown>,
+  stepOutputs: Record<string, Record<string, unknown>>
+): unknown {
+  if ('constant' in binding) return binding.constant
+
+  const ref = binding.ref
+  const parts = ref.split('.')
+
+  if (parts[0] === 'inputs' && parts.length >= 2) {
+    return inputs[parts[1]]
+  }
+
+  if (parts[0] === 'context') {
+    if (parts.length === 1) return { ...context }
+    return context[parts[1]]
+  }
+
+  if (parts[0] === 'steps' && parts.length >= 4 && parts[2] === 'outputs') {
+    return stepOutputs[parts[1]]?.[parts[3]]
+  }
+
+  return undefined
+}
+
+/**
+ * Validate that all required tool inputs can be resolved to non-empty values
+ * at runtime. Works with the same data in both headless and UI contexts.
+ *
+ * @param definition  The workflow definition (for steps and their bindings)
+ * @param context     Current workflow context (user-filled + heuristic values)
+ * @param inputs      Workflow-level inputs
+ * @param stepOutputs Outputs from already-executed steps
+ * @param tools       Tool definitions map
+ * @returns Array of missing required inputs (empty = all satisfied)
+ */
+export function validateRequiredInputs(
+  definition: WorkflowDefinition,
+  context: Record<string, unknown>,
+  inputs: Record<string, unknown>,
+  stepOutputs: Record<string, Record<string, unknown>>,
+  tools: Map<string, ToolDefinition>
+): MissingInput[] {
+  const missing: MissingInput[] = []
+
+  for (const [stepName, step] of Object.entries(definition.steps)) {
+    const tool = tools.get(step.tool)
+    if (!tool) continue
+
+    for (const [inputName, inputDef] of Object.entries(tool.inputs)) {
+      if (inputDef.optional) continue
+
+      const binding = step.inputs[inputName]
+      if (!binding) {
+        missing.push({
+          stepName,
+          inputName,
+          type: inputDef.type,
+          description: inputDef.description
+        })
+        continue
+      }
+
+      const value = resolveBindingValue(binding, inputs, context, stepOutputs)
+      if (value === undefined || value === null || value === '') {
+        // Extract context field name if the binding is a context ref
+        let contextField: string | undefined
+        if ('ref' in binding) {
+          const parts = binding.ref.split('.')
+          if (parts[0] === 'context' && parts.length === 2) {
+            contextField = parts[1]
+          }
+        }
+
+        missing.push({
+          stepName,
+          inputName,
+          type: inputDef.type,
+          description: inputDef.description,
+          contextField
+        })
+      }
+    }
+  }
+
+  return missing
+}
+
+/**
+ * UI-mode validation: only flag inputs that need user-provided values NOW.
+ * Inputs bound to prior step outputs (steps.X.outputs.Y) are assumed to be
+ * satisfied when that step runs, so they're skipped. Only context/input
+ * bindings that are currently empty are flagged.
+ *
+ * Use `validateRequiredInputs` for headless mode where everything must
+ * be known upfront.
+ */
+export function validateUserProvidedInputs(
+  definition: WorkflowDefinition,
+  context: Record<string, unknown>,
+  inputs: Record<string, unknown>,
+  tools: Map<string, ToolDefinition>,
+  maxStepIndex: number = -1
+): MissingInput[] {
+  const missing: MissingInput[] = []
+  const stepEntries = Object.entries(definition.steps)
+
+  for (let idx = 0; idx < stepEntries.length; idx++) {
+    if (maxStepIndex >= 0 && idx > maxStepIndex) break
+    const [stepName, step] = stepEntries[idx]
+    const tool = tools.get(step.tool)
+    if (!tool) continue
+
+    for (const [inputName, inputDef] of Object.entries(tool.inputs)) {
+      if (inputDef.optional) continue
+
+      const binding = step.inputs[inputName]
+      if (!binding) {
+        // Completely unbound — missing
+        missing.push({
+          stepName,
+          inputName,
+          type: inputDef.type,
+          description: inputDef.description
+        })
+        continue
+      }
+
+      // Skip step output refs — these will be filled when the step runs
+      if ('ref' in binding && binding.ref.startsWith('steps.')) {
+        continue
+      }
+
+      // Check context and input refs
+      const value = resolveBindingValue(binding, inputs, context, {})
+      if (value === undefined || value === null || value === '') {
+        let contextField: string | undefined
+        if ('ref' in binding) {
+          const parts = binding.ref.split('.')
+          if (parts[0] === 'context' && parts.length === 2) {
+            contextField = parts[1]
+          }
+        }
+
+        missing.push({
+          stepName,
+          inputName,
+          type: inputDef.type,
+          description: inputDef.description,
+          contextField
+        })
+      }
+    }
+  }
+
+  return missing
 }

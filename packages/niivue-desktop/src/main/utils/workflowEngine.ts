@@ -440,6 +440,90 @@ export async function runUpToStep(
   }
 }
 
+/**
+ * Run steps whose inputs are currently satisfied, up to a maximum step index.
+ * Unlike runAutoSteps which only runs steps with no context dependencies,
+ * this runs any step whose bindings now resolve — including steps that
+ * depend on context values the user just filled in.
+ *
+ * @param maxStepIndex  Only consider steps up to this index (inclusive).
+ *                      Pass -1 or omit to consider all steps.
+ */
+export async function runReadySteps(
+  runId: string,
+  maxStepIndex: number = -1
+): Promise<string[]> {
+  const state = activeRuns.get(runId)
+  if (!state) throw new Error(`No active run: ${runId}`)
+
+  const definition = getWorkflowDefinitions().get(state.workflowName)
+  if (!definition) throw new Error(`Definition not found: ${state.workflowName}`)
+
+  const executed: string[] = []
+
+  const toolDefs = getToolDefinitions()
+  const stepEntries = Object.entries(definition.steps)
+
+  for (let idx = 0; idx < stepEntries.length; idx++) {
+    if (maxStepIndex >= 0 && idx > maxStepIndex) break
+    const [stepName, step] = stepEntries[idx]
+    if (state.stepOutputs[stepName]) continue // already ran
+
+    const executor = getToolExecutor(step.tool)
+    if (!executor) continue
+
+    const toolDef = toolDefs.get(step.tool)
+
+    // Check if all REQUIRED inputs resolve to non-empty values
+    let allResolved = true
+    for (const [inputName, binding] of Object.entries(step.inputs)) {
+      // Skip optional tool inputs
+      const paramDef = toolDef?.inputs[inputName]
+      if (paramDef?.optional) continue
+
+      const value = resolveBinding(binding, state)
+      if (value === undefined || value === null || value === '') {
+        allResolved = false
+        break
+      }
+    }
+
+    // Also check required tool inputs that have no binding at all
+    if (allResolved && toolDef) {
+      for (const [inputName, paramDef] of Object.entries(toolDef.inputs)) {
+        if (paramDef.optional) continue
+        if (step.inputs[inputName]) continue // has a binding, already checked
+        allResolved = false
+        break
+      }
+    }
+
+    // Skip steps whose output mappings write to context fields managed by heuristics.
+    // During the form phase, heuristics handle these fields (e.g., subject exclusion).
+    // The step will run during the final execute-all.
+    if (allResolved && definition.context?.fields) {
+      const outputMappingTargets = Object.values(step.outputMappings || {})
+      const hasHeuristicTarget = outputMappingTargets.some((ctxField) => {
+        const fieldDef = definition.context?.fields[ctxField]
+        return fieldDef?.heuristic
+      })
+      if (hasHeuristicTarget) {
+        continue
+      }
+    }
+
+    if (allResolved) {
+      await executeStep(runId, stepName)
+      executed.push(stepName)
+    }
+  }
+
+  if (executed.length > 0) {
+    state.status = 'paused-for-form'
+  }
+  return executed
+}
+
 export function cancelRun(runId: string): void {
   activeRuns.delete(runId)
   clearRunCache(runId)
