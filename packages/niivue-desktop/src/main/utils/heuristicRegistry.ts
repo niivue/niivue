@@ -11,21 +11,23 @@ const listDicomSeriesHeuristic: HeuristicFn = async (inputs) => {
 }
 
 const bidsClassifyHeuristic: HeuristicFn = async (_inputs, context) => {
-  // If mappings already exist in context, preserve them but re-apply exclusions
-  let mappings = context.series_list as BidsSeriesMapping[] | undefined
+  console.log('[bids-classify heuristic] Running...')
+  let sourceMappings = context.series_list as BidsSeriesMapping[] | undefined
+  console.log('[bids-classify heuristic] existing series_list:', sourceMappings?.length ?? 0)
 
-  if (!mappings || mappings.length === 0) {
+  if (!sourceMappings || sourceMappings.length === 0) {
     // No existing mappings — classify from sidecars
     const sidecars = context._stepOutputs_convert_sidecars as string[] | undefined
     if (!sidecars || sidecars.length === 0) return []
     const result = classifyAll(sidecars)
-    mappings = result.mappings
+    sourceMappings = result.mappings
   }
 
-  // Always apply subject/session exclusions to mappings
+  // Create a new array (so React detects the change) with exclusions applied
   const subjects = context.subjects as import('../../common/bidsTypes.js').DetectedSubject[] | undefined
+  console.log('[bids-classify heuristic] subjects:', subjects?.length ?? 0, 'excluded:', subjects?.filter(s => s.excluded).length ?? 0)
+  const excludedIndices = new Set<number>()
   if (subjects) {
-    const excludedIndices = new Set<number>()
     for (const sub of subjects) {
       if (sub.excluded) {
         for (const ses of sub.sessions) {
@@ -39,63 +41,64 @@ const bidsClassifyHeuristic: HeuristicFn = async (_inputs, context) => {
         }
       }
     }
-    for (const m of mappings) {
-      if (excludedIndices.has(m.index)) {
-        m.excluded = true
-        m.exclusionReason = 'Subject excluded'
-      } else if (m.exclusionReason === 'Subject excluded' || m.exclusionReason === 'Session excluded') {
-        // Re-include if subject/session was un-excluded
-        m.excluded = false
-        m.exclusionReason = undefined
-      }
-    }
   }
 
-  return mappings
+  console.log('[bids-classify heuristic] excludedIndices:', [...excludedIndices])
+  return sourceMappings.map((m) => {
+    if (excludedIndices.has(m.index)) {
+      return { ...m, excluded: true, exclusionReason: 'Subject excluded' }
+    } else if (m.exclusionReason === 'Subject excluded' || m.exclusionReason === 'Session excluded') {
+      return { ...m, excluded: false, exclusionReason: undefined }
+    }
+    return m
+  })
 }
 
 const detectSubjectsHeuristic: HeuristicFn = async (_inputs, context) => {
   // If subjects already exist in context (user may have edited exclusions), preserve them
-  // and apply subject/session labels + exclusion status to mappings
+  // and apply subject/session labels + exclusion status to series_list
   const existing = context.subjects as import('../../common/bidsTypes.js').DetectedSubject[] | undefined
   if (existing && existing.length > 0) {
     const mappings = context.series_list as BidsSeriesMapping[] | undefined
     if (mappings) {
+      // Create new array with labels and exclusions applied
+      const updated = mappings.map((m) => ({ ...m }))
       for (const sub of existing) {
         for (const session of sub.sessions) {
           for (const idx of session.seriesIndices) {
-            if (idx < mappings.length) {
-              mappings[idx].subject = sub.label
-              mappings[idx].session = session.label
-              // Apply exclusion from subject/session to series
+            if (idx < updated.length) {
+              updated[idx].subject = sub.label
+              updated[idx].session = session.label
               if (sub.excluded || session.excluded) {
-                mappings[idx].excluded = true
-                mappings[idx].exclusionReason = sub.excluded ? 'Subject excluded' : 'Session excluded'
+                updated[idx].excluded = true
+                updated[idx].exclusionReason = sub.excluded ? 'Subject excluded' : 'Session excluded'
               }
             }
           }
         }
       }
+      context.series_list = updated
     }
     return existing
   }
 
-  // Use pre-computed subjects from the convert step if available (extracted from DICOM headers)
+  // Use pre-computed subjects from the convert step if available
   const preComputed = context._stepOutputs_convert_detectedSubjects as import('../../common/bidsTypes.js').DetectedSubject[] | undefined
   if (preComputed && preComputed.length > 0) {
-    // Apply subject/session labels to mappings if available
     const mappings = context.series_list as BidsSeriesMapping[] | undefined
     if (mappings) {
+      const updated = mappings.map((m) => ({ ...m }))
       for (const sub of preComputed) {
         for (const session of sub.sessions) {
           for (const idx of session.seriesIndices) {
-            if (idx < mappings.length) {
-              mappings[idx].subject = sub.label
-              mappings[idx].session = session.label
+            if (idx < updated.length) {
+              updated[idx].subject = sub.label
+              updated[idx].session = session.label
             }
           }
         }
       }
+      context.series_list = updated
     }
     return preComputed
   }

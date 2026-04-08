@@ -15,6 +15,11 @@
     "config": {
       "type": "string",
       "description": "Reference to the workflow context containing dataset metadata (name, outputDir, license, authors, readme, bidsVersion)"
+    },
+    "output_dir": {
+      "type": "directory",
+      "description": "Output directory for the BIDS dataset",
+      "optional": true
     }
   },
   "outputs": {

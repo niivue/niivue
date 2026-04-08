@@ -515,6 +515,8 @@ export async function runReadySteps(
     if (allResolved) {
       await executeStep(runId, stepName)
       executed.push(stepName)
+      // Only run one step per call — let heuristics handle the rest
+      break
     }
   }
 
