@@ -131,13 +131,17 @@ const bidsWriteExecutor: ToolExecutor = async (inputs) => {
   const mappings = inputs.mappings as BidsSeriesMapping[]
   const context = inputs.config as Record<string, unknown>
 
+  // output_dir can come as a direct input or from the context
+  const outputDir = (inputs.output_dir as string) || (context.output_dir as string) || ''
+  console.log('[bids-write] outputDir:', outputDir)
+
   const config: BidsDatasetConfig = {
     name: (context.dataset_name as string) || '',
     bidsVersion: (context.dataset_version as string) || '1.9.0',
     license: (context.license as string) || 'CC0',
     authors: (context.authors as string || '').split(',').map((a: string) => a.trim()).filter(Boolean),
     readme: (context.readme as string) || '',
-    outputDir: (context.output_dir as string) || ''
+    outputDir
   }
 
   // Build demographics map from detected subjects in context

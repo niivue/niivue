@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import type {
   BidsSeriesMapping,
@@ -321,7 +322,8 @@ export function writeDataset(
 ): { outputDir: string; filesCopied: number } {
   // Create a subdirectory named after the dataset to avoid writing into a broad parent directory
   const sanitizedName = (config.name || 'bids-dataset').replace(/[^a-zA-Z0-9_-]/g, '_')
-  const outputDir = path.join(config.outputDir, sanitizedName)
+  const baseDir = config.outputDir || path.join(os.tmpdir(), 'niivue-bids-output')
+  const outputDir = path.join(baseDir, sanitizedName)
 
   // Resolve IntendedFor paths on fmap mappings
   if (fieldmapIntendedFor && fieldmapIntendedFor.length > 0) {
