@@ -257,8 +257,12 @@ const kRenderTail = `
 			continue;
 		}
 		float val = texture(overlay, samplePos.xyz).a;
-		if (drawOpacity > 0.0)
-			val = max(val, texture(drawing, samplePos.xyz).r);
+		if (drawOpacity > 0.0) {
+			if (smoothDrawing > 0.0)
+				val = max(val, texture(drawSmoothed, samplePos.xyz).r * 2.0);
+			else
+				val = max(val, texture(drawing, samplePos.xyz).r);
+		}
 		if (val > 0.001)
 			break;
 		samplePos += deltaDirFast; //advance ray position
@@ -287,9 +291,45 @@ const kRenderTail = `
 		}
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		if ((colorSample.a < 0.01) && (drawOpacity > 0.0)) {
-			float val = texture(drawing, samplePos.xyz).r;
-			vec4 draw = drawColor(val, drawOpacity);
-			if ((draw.a > 0.0) && (firstDraw)) {
+			if (smoothDrawing > 0.0) {
+				// Smooth drawing: isosurface rendering with gradient-based shading
+				float smoothVal = texture(drawSmoothed, samplePos.xyz).r;
+				if (smoothVal > 0.5) {
+					vec3 vxSize = 1.0 / vec3(textureSize(drawing, 0));
+					// Compute gradient of smoothed field for surface normal
+					float gx = texture(drawSmoothed, samplePos.xyz + vec3(vxSize.x, 0.0, 0.0)).r
+					         - texture(drawSmoothed, samplePos.xyz - vec3(vxSize.x, 0.0, 0.0)).r;
+					float gy = texture(drawSmoothed, samplePos.xyz + vec3(0.0, vxSize.y, 0.0)).r
+					         - texture(drawSmoothed, samplePos.xyz - vec3(0.0, vxSize.y, 0.0)).r;
+					float gz = texture(drawSmoothed, samplePos.xyz + vec3(0.0, 0.0, vxSize.z)).r
+					         - texture(drawSmoothed, samplePos.xyz - vec3(0.0, 0.0, vxSize.z)).r;
+					vec3 grad = vec3(gx, gy, gz);
+					float gradLen = length(grad);
+					vec3 normal = gradLen > 0.001 ? normalize(grad) : vec3(0.0, 0.0, 1.0);
+					// Get pen color from original drawing texture
+					float drawVal = texture(drawing, samplePos.xyz).r;
+					if (drawVal == 0.0) {
+						// At smooth boundary, discrete voxel may be outside; step inward
+						drawVal = texture(drawing, samplePos.xyz - normal * vxSize).r;
+					}
+					vec4 draw = drawColor(max(drawVal, 1.0 / 255.0), drawOpacity);
+					// Phong shading with two-sided lighting
+					float ambient = 0.4;
+					float diffuseCoeff = 0.6;
+					float specularCoeff = 0.2;
+					float shininess = 20.0;
+					float NdotL = abs(dot(normal, normalize(rayDir)));
+					vec3 reflected = reflect(normalize(rayDir), normal);
+					float spec = pow(max(dot(reflected, normalize(-rayDir)), 0.0), shininess);
+					draw.rgb *= (ambient + diffuseCoeff * NdotL);
+					draw.rgb += vec3(specularCoeff * spec);
+					colorSample = draw;
+				}
+			} else {
+				// Original discrete drawing path
+				float val = texture(drawing, samplePos.xyz).r;
+				vec4 draw = drawColor(val, drawOpacity);
+				if ((draw.a > 0.0) && (firstDraw)) {
 				firstDraw = false;
 				float sum = 0.0;
 				const float mn = 1.0 / 256.0;
@@ -332,6 +372,7 @@ const kRenderTail = `
 				draw.rgb = mix (draw.rgb, ao , renderDrawAmbientOcclusionX);
 			}
 			colorSample = draw;
+			} // end else (discrete drawing path)
 		}
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a >= 0.01) {
@@ -390,6 +431,8 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
+uniform highp sampler3D drawSmoothed;
+uniform float smoothDrawing;
 uniform highp sampler2D colormap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform bool isClipAllVolumes;
@@ -483,6 +526,8 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
+uniform highp sampler3D drawSmoothed;
+uniform float smoothDrawing;
 uniform highp sampler2D colormap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform bool isClipAllVolumes;
@@ -539,6 +584,8 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float renderOverlayBlend;
 uniform highp sampler3D drawing, gradient;
+uniform highp sampler3D drawSmoothed;
+uniform float smoothDrawing;
 uniform highp sampler2D colormap;
 uniform highp sampler2D matCap;
 uniform vec2 renderDrawAmbientOcclusionXY;

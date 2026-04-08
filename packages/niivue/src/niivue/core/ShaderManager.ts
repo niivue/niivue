@@ -227,6 +227,8 @@ export function initRenderShader(params: InitRenderShaderParams): void {
     gl.uniform1i(shader.uniforms.colormap, 1)
     gl.uniform1i(shader.uniforms.overlay, 2)
     gl.uniform1i(shader.uniforms.drawing, 7)
+    gl.uniform1i(shader.uniforms.drawSmoothed, 10) // TEXTURE10_DRAW_SMOOTH
+    gl.uniform1f(shader.uniforms.smoothDrawing, 0.0)
     gl.uniform1i(shader.uniforms.paqd, 8) // TEXTURE8_PAQD
     gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [renderDrawAmbientOcclusion, 1.0])
     gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount)

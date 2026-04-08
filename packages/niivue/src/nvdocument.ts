@@ -219,6 +219,8 @@ export type NVConfigOptions = {
     zarrCacheSize: number
     /** Number of chunk rings to prefetch around the visible region for zarr viewing (0 disables, default 1) */
     zarrPrefetchRings: number
+    /** Smooth drawing surfaces in 3D rendering. 0 = off, > 0 = Gaussian blur radius in voxels (default 0) */
+    smoothDrawing: number
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -334,7 +336,8 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     boundsBorderColor: [1, 1, 1, 1], // white border by default
     // Zarr options
     zarrCacheSize: 1000,
-    zarrPrefetchRings: 10
+    zarrPrefetchRings: 10,
+    smoothDrawing: 0
 }
 
 //

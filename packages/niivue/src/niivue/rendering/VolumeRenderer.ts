@@ -431,6 +431,8 @@ export interface DrawImage3DParams {
     drawBitmap: Uint8Array | null
     renderDrawAmbientOcclusion: number
     drawOpacity: number
+    smoothDrawing: number
+    drawSmoothedTexture: WebGLTexture | null
     paqdUniforms: number[]
     matRAS: mat4
     crosshairPos: number[] | vec3
@@ -462,6 +464,8 @@ export function drawImage3D(params: DrawImage3DParams): void {
         drawBitmap,
         renderDrawAmbientOcclusion,
         drawOpacity,
+        smoothDrawing,
+        drawSmoothedTexture,
         paqdUniforms,
         matRAS,
         crosshairPos,
@@ -500,8 +504,16 @@ export function drawImage3D(params: DrawImage3DParams): void {
         }
         if (drawBitmap && drawBitmap.length > 8) {
             gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, renderDrawAmbientOcclusion, drawOpacity)
+            if (smoothDrawing > 0 && drawSmoothedTexture) {
+                gl.uniform1f(shader.uniforms.smoothDrawing, smoothDrawing)
+                gl.activeTexture(gl.TEXTURE10)
+                gl.bindTexture(gl.TEXTURE_3D, drawSmoothedTexture)
+            } else {
+                gl.uniform1f(shader.uniforms.smoothDrawing, 0.0)
+            }
         } else {
             gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, renderDrawAmbientOcclusion, 0.0)
+            gl.uniform1f(shader.uniforms.smoothDrawing, 0.0)
         }
         gl.uniform4fv(shader.uniforms.paqdUniforms, paqdUniforms)
         gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMatrix)

@@ -205,6 +205,7 @@
           <a class="viewBtn dropdown-item-checked" id="ThinPen">Thin Pen</a>
           <a class="viewBtn" id="Growcut">Grow Cut</a>
           <a class="viewBtn" id="DrawOtsu">Otsu</a>
+          <a class="viewBtn" id="SmoothDrawing">Smooth Drawing 3D</a>
           <a class="viewBtn divider" id="InterpolateMaskGeometricAxial">Interpolate Mask (Simple) Axial</a>
           <a class="viewBtn" id="InterpolateMaskGeometricCoronal">Interpolate Mask (Simple) Coronal</a>
           <a class="viewBtn" id="InterpolateMaskGeometricSagittal">Interpolate Mask (Simple) Sagittal</a>
@@ -616,6 +617,16 @@
 
       case 'Growcut':
         nv1.drawGrowCut()
+        handled = true
+        break
+      case 'SmoothDrawing':
+        if (nv1.opts.smoothDrawing > 0) {
+          nv1.opts.smoothDrawing = 0
+        } else {
+          nv1.opts.smoothDrawing = 2.0
+        }
+        buttonElement.classList.toggle('dropdown-item-checked')
+        nv1.refreshDrawing()
         handled = true
         break
       case 'DrawOtsu':

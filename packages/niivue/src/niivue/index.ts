@@ -36,6 +36,7 @@ import * as LayoutManager from '@/niivue/navigation/LayoutManager'
 import * as CameraController from '@/niivue/navigation/CameraController'
 import * as ClipPlaneManager from '@/niivue/navigation/ClipPlaneManager'
 import * as DrawingManager from '@/niivue/drawing/DrawingManager'
+import { blurDrawingBitmap } from '@/niivue/drawing/SmoothDrawing'
 import * as PenTool from '@/niivue/drawing/PenTool'
 import * as ShapeTool from '@/niivue/drawing/ShapeTool'
 import * as FloodFillTool from '@/niivue/drawing/FloodFillTool'
@@ -170,6 +171,7 @@ export class Niivue extends EventTarget {
     useCustomGradientTexture = false // flag to indicate if a custom gradient texture is used
     renderGradientValues = false
     drawTexture: WebGLTexture | null = null // the GPU memory storage of the drawing
+    drawSmoothedTexture: WebGLTexture | null = null // the GPU memory storage of the smoothed drawing
     paqdTexture: WebGLTexture | null = null // the GPU memory storage of the probabilistic atlas
     drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
     drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
@@ -6011,6 +6013,10 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
     closeDrawing(): void {
         this.drawClearAllUndoBitmaps()
         this.drawTexture = this.rgbaTex(this.drawTexture, TEXTURE_CONSTANTS.TEXTURE7_DRAW, [2, 2, 2, 2], true)
+        if (this.drawSmoothedTexture) {
+            this.gl.deleteTexture(this.drawSmoothedTexture)
+            this.drawSmoothedTexture = null
+        }
         this.drawBitmap = null
         this.clickToSegmentGrowingBitmap = null
         this._emitEvent('drawingChanged', { action: 'close' })
@@ -6093,6 +6099,17 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         if (!this.drawTexture) {
             log.error('refreshDrawing: drawTexture (GPU texture) is null.')
             return
+        }
+
+        // Update smoothed drawing texture if smooth drawing is enabled
+        if (this.opts.smoothDrawing > 0 && !this.opts.is2DSliceShader) {
+            const smoothed = blurDrawingBitmap(bitmapDataSource, dims, this.opts.smoothDrawing)
+            this.drawSmoothedTexture = this.r16fTex(
+                this.drawSmoothedTexture,
+                TEXTURE_CONSTANTS.TEXTURE10_DRAW_SMOOTH,
+                dims,
+                smoothed
+            )
         }
 
         if (isForceRedraw) {
@@ -10215,6 +10232,8 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             drawBitmap: this.drawBitmap,
             renderDrawAmbientOcclusion: this.renderDrawAmbientOcclusion,
             drawOpacity: this.drawOpacity,
+            smoothDrawing: this.opts.smoothDrawing,
+            drawSmoothedTexture: this.drawSmoothedTexture,
             paqdUniforms: this.opts.paqdUniforms,
             matRAS: this.back!.matRAS!,
             crosshairPos: this.scene.crosshairPos,
@@ -12234,6 +12253,14 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
      */
     r16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], img16: Int16Array): WebGLTexture {
         return glUtils.r16Tex(this.gl, texID, activeID, dims, img16)
+    }
+
+    /**
+     * Creates a 3D 1-component float16 texture with LINEAR filtering for smooth drawing.
+     * @internal
+     */
+    r16fTex(texID: WebGLTexture | null, activeID: number, dims: number[], data: Float32Array): WebGLTexture | null {
+        return glUtils.r16fTex(this.gl, texID, activeID, dims, data)
     }
 
     /**
