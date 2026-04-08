@@ -36,7 +36,7 @@ import * as LayoutManager from '@/niivue/navigation/LayoutManager'
 import * as CameraController from '@/niivue/navigation/CameraController'
 import * as ClipPlaneManager from '@/niivue/navigation/ClipPlaneManager'
 import * as DrawingManager from '@/niivue/drawing/DrawingManager'
-import { blurDrawingBitmap } from '@/niivue/drawing/SmoothDrawing'
+import { blurDrawingBitmap, getSmoothDrawingWorker, terminateSmoothDrawingWorker } from '@/niivue/drawing/SmoothDrawing'
 import * as PenTool from '@/niivue/drawing/PenTool'
 import * as ShapeTool from '@/niivue/drawing/ShapeTool'
 import * as FloodFillTool from '@/niivue/drawing/FloodFillTool'
@@ -172,6 +172,7 @@ export class Niivue extends EventTarget {
     renderGradientValues = false
     drawTexture: WebGLTexture | null = null // the GPU memory storage of the drawing
     drawSmoothedTexture: WebGLTexture | null = null // the GPU memory storage of the smoothed drawing
+    _smoothDrawingGeneration = 0 // incremented each blur request; stale worker results are discarded
     paqdTexture: WebGLTexture | null = null // the GPU memory storage of the probabilistic atlas
     drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
     drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
@@ -6016,6 +6017,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         if (this.drawSmoothedTexture) {
             this.gl.deleteTexture(this.drawSmoothedTexture)
             this.drawSmoothedTexture = null
+            terminateSmoothDrawingWorker()
         }
         this.drawBitmap = null
         this.clickToSegmentGrowingBitmap = null
@@ -6101,15 +6103,52 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             return
         }
 
-        // Update smoothed drawing texture if smooth drawing is enabled
-        if (this.opts.smoothDrawing > 0 && !this.opts.is2DSliceShader) {
-            const smoothed = blurDrawingBitmap(bitmapDataSource, dims, this.opts.smoothDrawing)
-            this.drawSmoothedTexture = this.r16fTex(
-                this.drawSmoothedTexture,
-                TEXTURE_CONSTANTS.TEXTURE10_DRAW_SMOOTH,
-                dims,
-                smoothed
-            )
+        // Update smoothed drawing texture if smooth drawing is enabled.
+        // Run the blur in a Web Worker so the main thread is never blocked.
+        // Falls back to the synchronous path if the Worker is unavailable
+        // (restrictive CSP, SSR environment, or bundler interference).
+        const hasAnyVoxel = bitmapDataSource.some(v => v !== 0);
+        if (this.opts.smoothDrawing > 0 && !this.opts.is2DSliceShader && hasAnyVoxel) {
+            const generation = ++this._smoothDrawingGeneration
+            const dimsSnapshot = dims.slice()
+            const radius = this.opts.smoothDrawing
+            let workerDispatched = false
+            const worker = getSmoothDrawingWorker()
+            if (worker) {
+                try {
+                    // Transfer a copy of the bitmap — zero-copy across the thread boundary
+                    const bitmapCopy = bitmapDataSource.slice().buffer
+                    const onMessage = (e: MessageEvent): void => {
+                        // Discard result if a newer blur has been requested in the meantime
+                        if (e.data.generation !== generation) return
+                        worker.removeEventListener('message', onMessage)
+                        const smoothed = new Float32Array(e.data.smoothed)
+                        this.drawSmoothedTexture = this.r16fTex(
+                            this.drawSmoothedTexture,
+                            TEXTURE_CONSTANTS.TEXTURE10_DRAW_SMOOTH,
+                            dimsSnapshot,
+                            smoothed
+                        )
+                        this.drawScene()
+                    }
+                    worker.addEventListener('message', onMessage)
+                    worker.postMessage({ bitmap: bitmapCopy, dims: dimsSnapshot, radius, generation }, [bitmapCopy])
+                    workerDispatched = true
+                } catch {
+                    // postMessage failed; fall through to sync path
+                    console.warn("`opts.smoothDrawing` enabled without Web Worker support. This will severely impact UI responsiveness.")
+                }
+            }
+            if (!workerDispatched) {
+                // Sync fallback: blocks the main thread but always produces a result
+                const smoothed = blurDrawingBitmap(bitmapDataSource, dimsSnapshot, radius)
+                this.drawSmoothedTexture = this.r16fTex(
+                    this.drawSmoothedTexture,
+                    TEXTURE_CONSTANTS.TEXTURE10_DRAW_SMOOTH,
+                    dimsSnapshot,
+                    smoothed
+                )
+            }
         }
 
         if (isForceRedraw) {
