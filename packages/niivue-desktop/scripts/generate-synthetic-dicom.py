@@ -5,18 +5,19 @@ DICOM → BIDS workflow — specifically the `bids-fix-sidecars` tool.
 
 What it produces:
     * One subject, one study
-    * Four MR series, each a small 3D stack of classic MR Image Storage
+    * Five MR series, each a small 3D stack of classic MR Image Storage
       instances (enough for dcm2niix to convert cleanly):
-        1. T1w MPRAGE                 — classifies as anat/T1w (complete)
-        2. T2w SPACE                  — classifies as anat/T2w (complete)
-        3. fMRI rest BOLD             — classifies as func/bold (missing TaskName)
-        4. task-nback fMRI BOLD       — classifies as func/bold (missing TaskName)
+        1. T1w MPRAGE               — anat/T1w (complete baseline)
+        2. T2w SPACE                — anat/T2w (complete baseline)
+        3. fMRI rest BOLD           — func/bold: missing RepetitionTime,
+                                      FlipAngle, and TaskName (TaskName is
+                                      auto-fixed from filename)
+        4. task-nback fMRI BOLD     — func/bold: missing EchoTime, TaskName
+        5. SpinEchoFieldMap AP      — fmap/epi: naturally missing
+                                      IntendedFor (validator will flag it)
 
-    The two BOLD series deliberately lack TaskName in their sidecars
-    (dcm2niix never writes TaskName — it's a BIDS-specific field). After
-    `bids-write` emits `sub-01_task-rest_bold.json` and
-    `sub-01_task-nback_bold.json`, the `bids-fix-sidecars` tool will
-    auto-populate TaskName from the filename.
+    Combined with the TaskName auto-fix (always unambiguous), this dataset
+    exercises both the auto-fix summary and the interactive edit form.
 
 Usage:
     python3 generate-synthetic-dicom.py [OUTPUT_DIR]
@@ -32,6 +33,7 @@ import os
 import sys
 import shutil
 import datetime
+from typing import Optional
 
 import numpy as np
 import pydicom
@@ -72,9 +74,9 @@ def make_slice(
     instance_number: int,
     series_description: str,
     protocol_name: str,
-    repetition_time: float,
-    echo_time: float,
-    flip_angle: float,
+    repetition_time: Optional[float],
+    echo_time: Optional[float],
+    flip_angle: Optional[float],
     image_type: list,
     pixel_array: np.ndarray,
     slice_position_z: float,
@@ -117,11 +119,14 @@ def make_slice(
     ds.InstanceCreationDate = STUDY_DATE
     ds.InstanceCreationTime = STUDY_TIME
 
-    # MR
+    # MR — fields omitted intentionally to exercise bids-fix-sidecars
     ds.MagneticFieldStrength = 3.0
-    ds.RepetitionTime = repetition_time * 1000.0  # ms in DICOM
-    ds.EchoTime = echo_time * 1000.0  # ms in DICOM
-    ds.FlipAngle = flip_angle
+    if repetition_time is not None:
+        ds.RepetitionTime = repetition_time * 1000.0  # ms in DICOM
+    if echo_time is not None:
+        ds.EchoTime = echo_time * 1000.0  # ms in DICOM
+    if flip_angle is not None:
+        ds.FlipAngle = flip_angle
     ds.ScanningSequence = "GR"
     ds.SequenceVariant = "SP"
     ds.MRAcquisitionType = "3D"
@@ -183,11 +188,12 @@ def write_series(
     series_number: int,
     series_description: str,
     protocol_name: str,
-    repetition_time: float,
-    echo_time: float,
-    flip_angle: float,
+    repetition_time: Optional[float],
+    echo_time: Optional[float],
+    flip_angle: Optional[float],
     image_type: list,
     study_uid: str,
+    note: str = "",
 ) -> None:
     series_dir = os.path.join(out_dir, f"series_{series_number:02d}_{protocol_name}")
     os.makedirs(series_dir, exist_ok=True)
@@ -213,7 +219,8 @@ def write_series(
         path = os.path.join(series_dir, f"slice_{i + 1:03d}.dcm")
         pydicom.dcmwrite(path, ds, enforce_file_format=True)
 
-    print(f"  [{series_number}] {series_description:<30} → {series_dir} ({N_SLICES} slices)")
+    suffix = f"  [{note}]" if note else ""
+    print(f"  [{series_number}] {series_description:<28} → {os.path.basename(series_dir)}{suffix}")
 
 
 def main() -> int:
@@ -225,6 +232,8 @@ def main() -> int:
     study_uid = generate_uid()
 
     print(f"Writing synthetic DICOM dataset to: {out_dir}")
+
+    # 1 — T1w MPRAGE: complete
     write_series(
         out_dir,
         series_number=1,
@@ -235,7 +244,10 @@ def main() -> int:
         flip_angle=8,
         image_type=["ORIGINAL", "PRIMARY", "M", "ND", "NORM"],
         study_uid=study_uid,
+        note="complete",
     )
+
+    # 2 — T2w SPACE: complete
     write_series(
         out_dir,
         series_number=2,
@@ -246,39 +258,64 @@ def main() -> int:
         flip_angle=120,
         image_type=["ORIGINAL", "PRIMARY", "M", "ND", "NORM"],
         study_uid=study_uid,
+        note="complete",
     )
+
+    # 3 — BOLD rest: missing RepetitionTime + FlipAngle in DICOM
+    # TaskName will be auto-fixed from the _task-rest_ filename segment.
+    # RepetitionTime and FlipAngle will be surfaced in the fix form.
     write_series(
         out_dir,
         series_number=3,
         series_description="fMRI_rest_BOLD",
         protocol_name="fMRI_rest_BOLD",
-        repetition_time=0.8,
+        repetition_time=None,
         echo_time=0.037,
-        flip_angle=52,
+        flip_angle=None,
         image_type=["ORIGINAL", "PRIMARY", "M", "ND"],
         study_uid=study_uid,
+        note="missing RepetitionTime, FlipAngle",
     )
+
+    # 4 — BOLD nback: missing EchoTime in DICOM
     write_series(
         out_dir,
         series_number=4,
         series_description="task-nback_fMRI_BOLD",
         protocol_name="task-nback_fMRI_BOLD",
         repetition_time=0.8,
-        echo_time=0.037,
+        echo_time=None,
         flip_angle=52,
         image_type=["ORIGINAL", "PRIMARY", "M", "ND"],
         study_uid=study_uid,
+        note="missing EchoTime",
+    )
+
+    # 5 — Spin-echo fieldmap AP: classifies as fmap/epi. IntendedFor is
+    # never derivable from DICOM, so the validator flags it and the user
+    # has to point the fieldmap at its BOLD targets.
+    write_series(
+        out_dir,
+        series_number=5,
+        series_description="SpinEchoFieldMap_AP",
+        protocol_name="SpinEchoFieldMap_AP",
+        repetition_time=8.0,
+        echo_time=0.058,
+        flip_angle=90,
+        image_type=["ORIGINAL", "PRIMARY", "M", "ND"],
+        study_uid=study_uid,
+        note="missing IntendedFor (fmap/epi always needs user input)",
     )
 
     print()
     print("Done. Load this folder from NiiVue Desktop:")
     print("  File → Workflows → Import → 'import DICOM to BIDS and view'")
     print()
-    print("Expected flow:")
-    print("  • dcm2niix converts all 4 series")
-    print("  • bids-classify labels T1w, T2w, and two BOLD runs (task=rest, task=nback)")
-    print("  • bids-write produces sub-01_task-rest_bold.json / sub-01_task-nback_bold.json")
-    print("  • bids-fix-sidecars auto-populates TaskName in both BOLD sidecars")
+    print("Expected flow through bids-fix-sidecars:")
+    print("  • Auto-fixed      TaskName for both BOLD sidecars")
+    print("  • User must enter RepetitionTime, FlipAngle on sub-01_task-rest_bold.json")
+    print("  • User must enter EchoTime on sub-01_task-nback_bold.json")
+    print("  • User must enter IntendedFor on sub-01_dir-AP_epi.json (fmap)")
     return 0
 
 
