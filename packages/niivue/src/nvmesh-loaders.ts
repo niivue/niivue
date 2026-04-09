@@ -604,8 +604,8 @@ export class NVMeshLoaders {
         }
         const vers = reader.getUint32(992, true) // 2
         const hdr_sz = reader.getUint32(996, true) // 1000
-        if (vers > 2 || hdr_sz !== 1000 || magic !== 1128354388) {
-            throw new Error('Not a valid TRK file')
+        if (vers > 3 || hdr_sz !== 1000 || magic !== 1128354388) {
+            throw new Error(`Not a valid TRK file expected version ≤3 (${vers}), header size 1000 (${hdr_sz}) and magic of 1128354388 (${magic})`)
         }
         const n_scalars = reader.getInt16(36, true)
         const dpv = []
