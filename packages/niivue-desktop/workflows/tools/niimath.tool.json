@@ -48,6 +48,19 @@
       "description": "Directory containing output files"
     }
   },
+  "block": {
+    "id": "niimath",
+    "label": "NiiMath",
+    "description": "General-purpose image calculator — smoothing, thresholding, masking, and math ops",
+    "category": "Processing",
+    "icon": "GearIcon",
+    "defaults": {
+      "operation": "-s",
+      "operand": "2"
+    },
+    "exposedFields": ["nifti_paths", "operation", "operand", "output_dir"],
+    "hiddenFields": ["nifti_path"]
+  },
   "exec": {
     "binary": {
       "name": "niimath",

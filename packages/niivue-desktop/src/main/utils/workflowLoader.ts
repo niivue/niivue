@@ -1,11 +1,16 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { app } from 'electron'
-import type { ToolDefinition, WorkflowDefinition, HeuristicDefinition } from '../../common/workflowTypes.js'
+import type {
+  ToolDefinition,
+  WorkflowDefinition,
+  HeuristicDefinition
+} from '../../common/workflowTypes.js'
 import { registerHeuristic } from './heuristicRegistry.js'
 import { createDeclarativeHeuristic } from './declarativeHeuristic.js'
 import { registerToolExecutor } from './toolRegistry.js'
 import { createDeclarativeToolExecutor } from './declarativeToolExecutor.js'
+import { inferFormSections } from '../../common/bindingAnalyzer.js'
 
 const isDev = !app.isPackaged
 
@@ -50,6 +55,37 @@ function loadDeclarativeTools(tools: ToolDefinition[]): number {
   return count
 }
 
+/**
+ * Apply form inference (if the workflow has no explicit form) and freeze the
+ * definition so it can't be mutated at runtime. Run once per workflow when
+ * loaded or saved — not on every run.
+ */
+function finalizeWorkflow(
+  definition: WorkflowDefinition,
+  tools: Map<string, ToolDefinition>
+): WorkflowDefinition {
+  if (definition.form) {
+    return Object.freeze(definition)
+  }
+
+  const { sections, extraContextFields } = inferFormSections(definition, tools)
+
+  // Build a new definition object (no mutation of the raw JSON load)
+  const finalized: WorkflowDefinition = {
+    ...definition,
+    form: sections.length > 0 ? { sections } : definition.form,
+    context: {
+      ...definition.context,
+      fields: {
+        ...(definition.context?.fields ?? {}),
+        ...extraContextFields
+      }
+    }
+  }
+
+  return Object.freeze(finalized)
+}
+
 export function loadAllDefinitions(): void {
   const root = getWorkflowsRoot()
 
@@ -63,7 +99,7 @@ export function loadAllDefinitions(): void {
 
   const workflows = loadJsonFiles<WorkflowDefinition>(path.join(root, 'workflows'))
   for (const wf of workflows) {
-    workflowDefinitions.set(wf.name, wf)
+    workflowDefinitions.set(wf.name, finalizeWorkflow(wf, toolDefinitions))
     builtInWorkflowNames.add(wf.name)
   }
 
@@ -72,7 +108,7 @@ export function loadAllDefinitions(): void {
   if (fs.existsSync(userDir)) {
     const userWorkflows = loadJsonFiles<WorkflowDefinition>(userDir)
     for (const wf of userWorkflows) {
-      workflowDefinitions.set(wf.name, wf)
+      workflowDefinitions.set(wf.name, finalizeWorkflow(wf, toolDefinitions))
     }
   }
 
@@ -99,7 +135,7 @@ export function loadDefinitionsFromPath(rootDir: string): void {
 
   const workflows = loadJsonFiles<WorkflowDefinition>(path.join(rootDir, 'workflows'))
   for (const wf of workflows) {
-    workflowDefinitions.set(wf.name, wf)
+    workflowDefinitions.set(wf.name, finalizeWorkflow(wf, toolDefinitions))
   }
 
   loadHeuristics(path.join(rootDir, 'heuristics'))
@@ -136,7 +172,7 @@ export function saveUserWorkflow(definition: WorkflowDefinition): string {
   }
   const filePath = path.join(dir, `${definition.name}.workflow.json`)
   fs.writeFileSync(filePath, JSON.stringify(definition, null, 2))
-  workflowDefinitions.set(definition.name, definition)
+  workflowDefinitions.set(definition.name, finalizeWorkflow(definition, toolDefinitions))
   return filePath
 }
 

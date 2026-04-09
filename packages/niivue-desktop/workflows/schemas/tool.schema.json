@@ -41,9 +41,73 @@
     },
     "exec": {
       "$ref": "#/$defs/execDef"
+    },
+    "block": {
+      "description": "Optional block metadata for the visual workflow designer. A single object produces one palette entry; an array produces multiple variants backed by this tool. Omit to hide the tool from the palette.",
+      "oneOf": [
+        { "$ref": "#/$defs/blockDef" },
+        { "type": "array", "items": { "$ref": "#/$defs/blockDef" } }
+      ]
     }
   },
   "$defs": {
+    "blockDef": {
+      "type": "object",
+      "description": "Describes how a tool appears as a block in the visual designer",
+      "required": ["id", "label", "description", "category", "exposedFields"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique block identifier (kebab-case). Must be unique across all tools.",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "label": {
+          "type": "string",
+          "description": "Friendly label shown in the palette"
+        },
+        "description": {
+          "type": "string",
+          "description": "One-line description shown below the label"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Import", "Processing", "Quality", "Output"]
+        },
+        "icon": {
+          "type": "string",
+          "description": "Radix icon component name (e.g. UploadIcon)"
+        },
+        "defaults": {
+          "type": "object",
+          "description": "Pre-filled input values (hidden from the user form)",
+          "additionalProperties": true
+        },
+        "exposedFields": {
+          "type": "array",
+          "description": "Tool input names that appear in the user-facing form",
+          "items": { "type": "string" }
+        },
+        "hiddenFields": {
+          "type": "array",
+          "description": "Tool input names that are hidden (typically covered by defaults)",
+          "items": { "type": "string" }
+        },
+        "formComponent": {
+          "type": "string",
+          "description": "Custom form component name (e.g. 'subject-select', 'bids-classification-table')"
+        },
+        "condition": {
+          "type": "string",
+          "description": "Optional dot-path condition expression for conditional execution"
+        },
+        "heuristics": {
+          "type": "object",
+          "description": "Map from exposed field name → heuristic name that auto-populates it",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
     "parameterDef": {
       "type": "object",
       "required": ["type", "description"],
@@ -155,6 +219,10 @@
         "forEach": {
           "type": "string",
           "description": "Input name containing an array to iterate over"
+        },
+        "forEachExtract": {
+          "type": "string",
+          "description": "When each forEach element is an object, extract this field as the scalar iteration value (e.g. 'seriesNumber' to turn DicomSeries[] into number[])"
         },
         "iterationVar": {
           "type": "string",

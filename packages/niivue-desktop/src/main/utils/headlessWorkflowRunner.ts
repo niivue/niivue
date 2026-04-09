@@ -4,7 +4,8 @@ import {
   runHeuristic,
   executeAllSteps,
   updateContext,
-  getRunState
+  getRunState,
+  runReadySteps
 } from './workflowEngine.js'
 import { getWorkflowDefinitions, getToolDefinitions } from './workflowLoader.js'
 import { validateRequiredInputs } from '../../common/workflowValidator.js'
@@ -28,9 +29,25 @@ export async function runWorkflowHeadless(opts: HeadlessWorkflowOptions): Promis
   opts.onProgress?.('init', 'starting')
   const { runId } = startWorkflow(opts.workflowName, opts.inputs)
 
+  // Apply context overrides early so that steps depending on context values
+  // (e.g. context.dicom_dir in user-created workflows) can be resolved.
+  if (opts.contextOverrides) {
+    for (const [key, value] of Object.entries(opts.contextOverrides)) {
+      updateContext(runId, key, value)
+    }
+  }
+
   // Run auto steps (steps that don't depend on context/form)
   opts.onProgress?.('auto-steps', 'running')
   await runAutoSteps(runId)
+
+  // Run any additional steps whose context dependencies are now satisfied
+  // (e.g. convert step that depends on context.dicom_dir after overrides)
+  opts.onProgress?.('ready-steps', 'running')
+  let readySteps: string[] = []
+  do {
+    readySteps = await runReadySteps(runId)
+  } while (readySteps.length > 0)
 
   // Run all heuristics to auto-populate context fields
   if (definition.context?.fields) {
@@ -42,7 +59,7 @@ export async function runWorkflowHeadless(opts: HeadlessWorkflowOptions): Promis
     }
   }
 
-  // Apply context overrides from the caller
+  // Re-apply context overrides after heuristics so caller values take precedence
   if (opts.contextOverrides) {
     for (const [key, value] of Object.entries(opts.contextOverrides)) {
       updateContext(runId, key, value)

@@ -22,5 +22,13 @@
       "type": "json[]",
       "description": "Volumes flagged for quality issues"
     }
+  },
+  "block": {
+    "id": "quality-check",
+    "label": "Quality Check",
+    "description": "Compute quality metrics (SNR, motion, artifacts) on NIfTI volumes",
+    "category": "Quality",
+    "icon": "ActivityLogIcon",
+    "exposedFields": ["volumes", "series_list"]
   }
 }

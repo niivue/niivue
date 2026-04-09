@@ -77,6 +77,20 @@
       "description": "Detected subjects extracted from DICOM headers"
     }
   },
+  "block": {
+    "id": "import-dicoms",
+    "label": "Import DICOMs",
+    "description": "Convert DICOM images to NIfTI format with BIDS sidecars",
+    "category": "Import",
+    "icon": "UploadIcon",
+    "defaults": {
+      "bids": "y",
+      "compress": "y",
+      "bids_anon": "n"
+    },
+    "exposedFields": ["dicom_dir"],
+    "hiddenFields": ["bids", "compress", "bids_anon", "pattern", "merge", "verbose", "series"]
+  },
   "exec": {
     "binary": {
       "name": "dcm2niix",
@@ -96,6 +110,7 @@
       "tempPrefix": "wf-dcm2niix-"
     },
     "forEach": "series",
+    "forEachExtract": "seriesNumber",
     "iterationVar": "_series_item",
     "parallel": false,
     "args": [

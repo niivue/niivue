@@ -35,11 +35,6 @@
         "dicom_dir": { "ref": "inputs.dicom_dir" },
         "compress": { "constant": "y" },
         "bids": { "constant": "y" }
-      },
-      "outputMappings": {
-        "volumes": "_stepOutputs_convert_volumes",
-        "sidecars": "_stepOutputs_convert_sidecars",
-        "outDir": "_stepOutputs_convert_outDir"
       }
     },
     "skull_strip": {

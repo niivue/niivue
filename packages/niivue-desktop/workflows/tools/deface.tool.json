@@ -25,5 +25,17 @@
       "type": "volume",
       "description": "Path to defaced volume"
     }
+  },
+  "block": {
+    "id": "deface",
+    "label": "Deface",
+    "description": "Remove facial features from anatomical scans for anonymization",
+    "category": "Processing",
+    "icon": "EyeNoneIcon",
+    "defaults": {
+      "method": "mask"
+    },
+    "exposedFields": ["nifti_path"],
+    "hiddenFields": ["method", "output_path"]
   }
 }

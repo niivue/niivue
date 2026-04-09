@@ -68,8 +68,8 @@ export interface StepInfo {
 /**
  * Collect all compatible sources for a given input on a given step.
  *
- * Scans workflow-level inputs and outputs of all preceding steps,
- * returning them sorted with exact type matches first.
+ * Scans workflow-level inputs, existing context fields, and outputs of all
+ * preceding steps, returning them sorted with exact type matches first.
  */
 export function getAvailableSources(
   stepIndex: number,
@@ -77,7 +77,8 @@ export function getAvailableSources(
   inputType: string,
   allSteps: StepInfo[],
   tools: Map<string, ToolDefinition>,
-  workflowInputs: Record<string, { type: string }>
+  workflowInputs: Record<string, { type: string }>,
+  contextFields: Record<string, { type: string }> = {}
 ): SourceSuggestion[] {
   const suggestions: SourceSuggestion[] = []
 
@@ -93,7 +94,19 @@ export function getAvailableSources(
     }
   }
 
-  // 2. Outputs from preceding steps
+  // 2. Existing context fields (user-form fields, heuristic outputs, etc.)
+  for (const [name, def] of Object.entries(contextFields)) {
+    if (isTypeCompatible(def.type, inputType)) {
+      suggestions.push({
+        ref: `context.${name}`,
+        type: def.type,
+        label: `context: ${name} (${def.type})`,
+        exact: def.type === inputType,
+      })
+    }
+  }
+
+  // 3. Outputs from preceding steps
   for (let i = 0; i < stepIndex; i++) {
     const step = allSteps[i]
     const tool = tools.get(step.tool)

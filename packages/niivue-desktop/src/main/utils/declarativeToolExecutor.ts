@@ -10,7 +10,13 @@ import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
 import { app } from 'electron'
-import type { ToolDefinition, ToolExecutor, ToolExecDef, ArgDef, OutputCollectDef } from '../../common/workflowTypes.js'
+import type {
+  ToolDefinition,
+  ToolExecutor,
+  ToolExecDef,
+  ArgDef,
+  OutputCollectDef
+} from '../../common/workflowTypes.js'
 import { spawnBinary } from './spawnBinary.js'
 import { getStandardImagePath } from './inputResolver.js'
 import { getPostProcessor } from './toolRegistry.js'
@@ -79,10 +85,7 @@ function resolveResources(exec: ToolExecDef): Record<string, string> {
 
 // ── Output directory ────────────────────────────────────────────────
 
-function resolveOutputDir(
-  exec: ToolExecDef,
-  inputs: Record<string, unknown>
-): string {
+function resolveOutputDir(exec: ToolExecDef, inputs: Record<string, unknown>): string {
   if (!exec.outputDir) {
     return fs.mkdtempSync(path.join(os.tmpdir(), 'wf-tool-'))
   }
@@ -120,7 +123,12 @@ export function buildArgs(
         val = def.default
       }
       if (val == null) continue // omit when absent
-      if ('omitIfEmpty' in def && def.omitIfEmpty && (val === '' || (Array.isArray(val) && val.length === 0))) continue
+      if (
+        'omitIfEmpty' in def &&
+        def.omitIfEmpty &&
+        (val === '' || (Array.isArray(val) && val.length === 0))
+      )
+        continue
 
       if (def.flag) {
         args.push(def.flag, String(val))
@@ -264,7 +272,17 @@ export function createDeclarativeToolExecutor(def: ToolDefinition): ToolExecutor
     if (exec.forEach) {
       const forEachInput = inputs[exec.forEach]
       if (Array.isArray(forEachInput)) {
-        items = forEachInput
+        // Optionally extract a field from each element to get scalar iteration
+        // values (e.g. forEachExtract: "seriesNumber" turns DicomSeries[] into
+        // number[]). Without forEachExtract, elements are passed through as-is.
+        const extractKey = exec.forEachExtract
+        items = extractKey
+          ? forEachInput.map((v) =>
+              v != null && typeof v === 'object' && extractKey in (v as object)
+                ? (v as Record<string, unknown>)[extractKey]
+                : v
+            )
+          : forEachInput
       } else if (forEachInput != null) {
         items = [forEachInput]
       } else {
@@ -281,7 +299,9 @@ export function createDeclarativeToolExecutor(def: ToolDefinition): ToolExecutor
 
     const acceptedCodes = new Set(exec.exitCodes ?? [0])
 
-    const runOne = async (item: unknown): Promise<{ outputFile: string; stdout: string; stderr: string }> => {
+    const runOne = async (
+      item: unknown
+    ): Promise<{ outputFile: string; stdout: string; stderr: string }> => {
       // Build per-iteration inputs with the iteration variable bound
       const iterInputs = { ...inputs }
       if (iterVar && item != null) {
@@ -339,7 +359,14 @@ export function createDeclarativeToolExecutor(def: ToolDefinition): ToolExecutor
     const allStderr = results.map((r) => r.stderr).join('')
 
     const templateVars: Record<string, string> = { ...baseVars }
-    let outputs = collectOutputs(exec.outputs, templateVars, allOutputFiles, outDir, allStdout, allStderr)
+    let outputs = collectOutputs(
+      exec.outputs,
+      templateVars,
+      allOutputFiles,
+      outDir,
+      allStdout,
+      allStderr
+    )
 
     // Apply post-processor if defined
     if (exec.postProcess) {

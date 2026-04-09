@@ -111,13 +111,6 @@
         "bids": { "constant": "y" },
         "compress": { "constant": "y" },
         "bids_anon": { "constant": "n" }
-      },
-      "outputMappings": {
-        "sidecars": "_stepOutputs_convert_sidecars",
-        "volumes": "_stepOutputs_convert_volumes",
-        "detectedSubjects": "_stepOutputs_convert_detectedSubjects",
-        "outDir": "_stepOutputs_convert_outDir",
-        "detectedSubjects": "_stepOutputs_convert_detectedSubjects"
       }
     },
     "classify": {
@@ -139,7 +132,8 @@
       "inputs": {
         "volumes": { "ref": "steps.convert.outputs.volumes" },
         "mappings": { "ref": "context.series_list" },
-        "config": { "ref": "context" }
+        "config": { "ref": "context" },
+        "output_dir": { "ref": "context.output_dir" }
       }
     }
   },

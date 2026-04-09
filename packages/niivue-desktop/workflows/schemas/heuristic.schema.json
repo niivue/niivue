@@ -32,7 +32,7 @@
     },
     "source": {
       "type": "string",
-      "description": "Dot-path to the initial data source: inputs.X or context.Y (including _stepOutputs_*)"
+      "description": "Dot-path to the initial data source: inputs.X, context.Y, or steps.<stepName>.outputs.<outputName>"
     },
     "operations": {
       "type": "array",

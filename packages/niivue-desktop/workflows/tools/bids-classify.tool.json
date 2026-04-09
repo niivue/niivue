@@ -23,5 +23,43 @@
       "type": "subject[]",
       "description": "Detected subjects and sessions grouped by PatientID and AcquisitionDate"
     }
-  }
+  },
+  "block": [
+    {
+      "id": "subject-select",
+      "label": "Subject Selection",
+      "description": "Select which subjects to include or exclude",
+      "category": "Processing",
+      "icon": "PersonIcon",
+      "exposedFields": ["subjects"],
+      "hiddenFields": ["sidecars", "overrides"],
+      "formComponent": "subject-select",
+      "heuristics": { "subjects": "detect-subjects" }
+    },
+    {
+      "id": "participants-sessions",
+      "label": "Participants & Sessions",
+      "description": "Edit subject labels, session names, and demographics",
+      "category": "Processing",
+      "icon": "PersonIcon",
+      "exposedFields": ["subjects"],
+      "hiddenFields": ["sidecars", "overrides"],
+      "formComponent": "subject-session-editor",
+      "heuristics": { "subjects": "detect-subjects" }
+    },
+    {
+      "id": "classify-bids",
+      "label": "Classify for BIDS",
+      "description": "Auto-detect and review BIDS datatype/suffix for each series",
+      "category": "Processing",
+      "icon": "MixerHorizontalIcon",
+      "defaults": {
+        "overrides": { "ref": "context.series_list" }
+      },
+      "exposedFields": ["series_list"],
+      "hiddenFields": ["sidecars", "overrides"],
+      "formComponent": "bids-classification-table",
+      "heuristics": { "series_list": "bids-classify" }
+    }
+  ]
 }

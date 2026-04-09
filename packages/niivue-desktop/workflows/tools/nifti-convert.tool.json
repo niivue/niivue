@@ -27,5 +27,17 @@
       "type": "volume",
       "description": "Converted volume path"
     }
+  },
+  "block": {
+    "id": "load-nifti",
+    "label": "Load NIfTI Files",
+    "description": "Load and optionally reorient NIfTI (.nii/.nii.gz) volumes",
+    "category": "Import",
+    "icon": "FileIcon",
+    "defaults": {
+      "reorient": "RAS"
+    },
+    "exposedFields": ["input_path"],
+    "hiddenFields": ["reorient", "resample"]
   }
 }

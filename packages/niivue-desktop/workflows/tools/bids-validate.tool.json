@@ -26,5 +26,25 @@
       "type": "json[]",
       "description": "Non-blocking validation warnings"
     }
-  }
+  },
+  "block": [
+    {
+      "id": "preview-images",
+      "label": "Preview Images",
+      "description": "Review images before proceeding to the next step",
+      "category": "Processing",
+      "icon": "EyeOpenIcon",
+      "exposedFields": ["series_list"],
+      "formComponent": "bids-preview"
+    },
+    {
+      "id": "validate-bids",
+      "label": "Validate BIDS",
+      "description": "Check that the dataset meets BIDS specification requirements",
+      "category": "Quality",
+      "icon": "CheckCircledIcon",
+      "exposedFields": ["mappings"],
+      "hiddenFields": ["config"]
+    }
+  ]
 }

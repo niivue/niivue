@@ -7,7 +7,6 @@ import type {
 } from '../../common/workflowTypes.js'
 import { getWorkflowDefinitions, getToolDefinitions } from './workflowLoader.js'
 import { getToolExecutor } from './toolRegistry.js'
-import { inferFormSections } from '../../common/bindingAnalyzer.js'
 import { getHeuristic } from './heuristicRegistry.js'
 import {
   computeInputHash,
@@ -78,7 +77,9 @@ function applySmartDefaults(
   let inputDir: string | undefined
   for (const [, inputDef] of Object.entries(definition.inputs)) {
     if (inputDef.type === 'dicom-folder' || inputDef.type === 'directory') {
-      const val = Object.values(inputs).find((v) => typeof v === 'string' && v.length > 0) as string | undefined
+      const val = Object.values(inputs).find((v) => typeof v === 'string' && v.length > 0) as
+        | string
+        | undefined
       if (val) {
         inputDir = val
         break
@@ -91,7 +92,10 @@ function applySmartDefaults(
     if (context[key] !== undefined) continue
 
     // Smart default for directory/output_dir fields
-    if ((field.type === 'directory' || key.includes('output_dir') || key.includes('out_dir')) && inputDir) {
+    if (
+      (field.type === 'directory' || key.includes('output_dir') || key.includes('out_dir')) &&
+      inputDir
+    ) {
       const parentDir = path.dirname(inputDir)
       context[key] = path.join(parentDir, `${definition.name}_output`)
       continue
@@ -113,23 +117,8 @@ export function startWorkflow(
     throw new Error(`Unknown workflow: ${name}`)
   }
 
-  // Infer form sections if the workflow has no explicit form definition
-  if (!definition.form) {
-    const tools = getToolDefinitions()
-    const { sections, extraContextFields } = inferFormSections(definition, tools)
-
-    if (sections.length > 0) {
-      definition.form = { sections }
-    }
-
-    // Merge any discovered unbound-input fields into context
-    if (Object.keys(extraContextFields).length > 0) {
-      if (!definition.context) {
-        definition.context = { fields: {} }
-      }
-      Object.assign(definition.context.fields, extraContextFields)
-    }
-  }
+  // Note: form inference and definition freezing happens once at load time
+  // in workflowLoader.finalizeWorkflow. The definition here is immutable.
 
   // Initialize context from field defaults
   const context: Record<string, unknown> = {}
@@ -206,10 +195,7 @@ export function getAutoRunnableSteps(definition: WorkflowDefinition): string[] {
   return autoRunnable
 }
 
-export async function runHeuristic(
-  runId: string,
-  fieldName: string
-): Promise<unknown> {
+export async function runHeuristic(runId: string, fieldName: string): Promise<unknown> {
   const state = activeRuns.get(runId)
   if (!state) throw new Error(`No active run: ${runId}`)
 
@@ -228,16 +214,12 @@ export async function runHeuristic(
     throw new Error(`Unknown heuristic: ${field.heuristic}`)
   }
 
-  const value = await heuristic(state.inputs, state.context)
+  const value = await heuristic(state.inputs, state.context, state.stepOutputs)
   state.context[fieldName] = value
   return value
 }
 
-export function updateContext(
-  runId: string,
-  fieldName: string,
-  value: unknown
-): void {
+export function updateContext(runId: string, fieldName: string, value: unknown): void {
   const state = activeRuns.get(runId)
   if (!state) throw new Error(`No active run: ${runId}`)
 
@@ -260,10 +242,13 @@ export function updateContext(
   }
 }
 
-export function resolveBinding(
-  binding: Binding,
-  runState: WorkflowRunState
-): unknown {
+/**
+ * Resolve a binding to a concrete value. Throws with a descriptive message
+ * when a ref can't be resolved (workflow input missing, context field unset,
+ * step not yet run, or output key missing). Callers that want a non-throwing
+ * check (e.g., "is this step ready?") should use {@link tryResolveBinding}.
+ */
+export function resolveBinding(binding: Binding, runState: WorkflowRunState): unknown {
   if ('constant' in binding) {
     return binding.constant
   }
@@ -272,8 +257,14 @@ export function resolveBinding(
   const parts = ref.split('.')
 
   if (parts[0] === 'inputs') {
-    if (parts.length < 2) throw new Error(`Invalid binding ref (missing input name): ${ref}`)
-    return runState.inputs[parts[1]]
+    if (parts.length < 2) {
+      throw new Error(`Invalid binding ref (missing input name): ${ref}`)
+    }
+    const value = runState.inputs[parts[1]]
+    if (value === undefined) {
+      throw new Error(`Unresolved binding '${ref}': workflow input '${parts[1]}' was not provided`)
+    }
+    return value
   }
 
   if (parts[0] === 'context') {
@@ -281,18 +272,46 @@ export function resolveBinding(
       // { ref: "context" } → return the whole context object
       return { ...runState.context }
     }
-    return runState.context[parts[1]]
+    const value = runState.context[parts[1]]
+    if (value === undefined) {
+      throw new Error(`Unresolved binding '${ref}': context field '${parts[1]}' is not set`)
+    }
+    return value
   }
 
   if (parts[0] === 'steps') {
     // steps.Y.outputs.Z
-    if (parts.length < 4) throw new Error(`Invalid binding ref (expected steps.<name>.outputs.<key>): ${ref}`)
+    if (parts.length < 4) {
+      throw new Error(`Invalid binding ref (expected steps.<name>.outputs.<key>): ${ref}`)
+    }
     const stepName = parts[1]
     const outputName = parts[3]
-    return runState.stepOutputs[stepName]?.[outputName]
+    const stepOutputs = runState.stepOutputs[stepName]
+    if (!stepOutputs) {
+      throw new Error(`Unresolved binding '${ref}': step '${stepName}' has not run yet`)
+    }
+    if (!(outputName in stepOutputs)) {
+      throw new Error(
+        `Unresolved binding '${ref}': step '${stepName}' has no output '${outputName}'`
+      )
+    }
+    return stepOutputs[outputName]
   }
 
   throw new Error(`Cannot resolve binding ref: ${ref}`)
+}
+
+/**
+ * Try to resolve a binding, returning undefined if unresolved. Use for
+ * readiness checks and cache hashing where missing values are expected.
+ * For actual execution, use {@link resolveBinding} so errors are surfaced.
+ */
+export function tryResolveBinding(binding: Binding, runState: WorkflowRunState): unknown {
+  try {
+    return resolveBinding(binding, runState)
+  } catch {
+    return undefined
+  }
 }
 
 export async function executeStep(
@@ -315,14 +334,13 @@ export async function executeStep(
     return emptyOutputs
   }
 
-  // Check cache — reuse previous outputs if inputs haven't changed
-  const inputHash = computeInputHash(step, state, resolveBinding)
+  // Check cache — reuse previous outputs if inputs haven't changed.
+  // Use tryResolveBinding here because optional inputs legitimately resolve
+  // to undefined and shouldn't cause a cache-check failure.
+  const inputHash = computeInputHash(step, state, tryResolveBinding)
   const cached = getCachedOutput(runId, stepName, inputHash)
   if (cached) {
     state.stepOutputs[stepName] = cached
-    for (const [outKey, outVal] of Object.entries(cached)) {
-      state.context[`_stepOutputs_${stepName}_${outKey}`] = outVal
-    }
     applyOutputMappings(step, cached, state)
     return cached
   }
@@ -330,21 +348,30 @@ export async function executeStep(
   const executor = getToolExecutor(step.tool)
   if (!executor) throw new Error(`No executor for tool: ${step.tool}`)
 
-  // Resolve input bindings
+  // Resolve input bindings. Optional inputs that don't resolve are omitted
+  // silently; required inputs that don't resolve surface a descriptive error
+  // with step-level context.
+  const toolDef = getToolDefinitions().get(step.tool)
   const resolvedInputs: Record<string, unknown> = {}
   for (const [key, binding] of Object.entries(step.inputs)) {
-    resolvedInputs[key] = resolveBinding(binding, state)
+    const paramDef = toolDef?.inputs[key]
+    const isOptional = paramDef?.optional === true
+    try {
+      const value = resolveBinding(binding, state)
+      if (value !== undefined) {
+        resolvedInputs[key] = value
+      }
+    } catch (err) {
+      if (isOptional) continue
+      const msg = err instanceof Error ? err.message : String(err)
+      throw new Error(`Step '${stepName}' (tool: ${step.tool}) input '${key}': ${msg}`)
+    }
   }
 
   state.status = 'running'
   try {
     const outputs = await executor(resolvedInputs)
     state.stepOutputs[stepName] = outputs
-
-    // Stash step outputs into context for heuristics that need them
-    for (const [outKey, outVal] of Object.entries(outputs)) {
-      state.context[`_stepOutputs_${stepName}_${outKey}`] = outVal
-    }
 
     // Apply explicit outputMappings to context
     applyOutputMappings(step, outputs, state)
@@ -361,9 +388,7 @@ export async function executeStep(
   }
 }
 
-export async function executeAllSteps(
-  runId: string
-): Promise<Record<string, unknown>> {
+export async function executeAllSteps(runId: string): Promise<Record<string, unknown>> {
   const state = activeRuns.get(runId)
   if (!state) throw new Error(`No active run: ${runId}`)
 
@@ -397,9 +422,7 @@ export async function executeAllSteps(
  * Run all auto-runnable steps (steps whose inputs don't depend on context/form).
  * Used when the dialog opens to prepare data for heuristics.
  */
-export async function runAutoSteps(
-  runId: string
-): Promise<string[]> {
+export async function runAutoSteps(runId: string): Promise<string[]> {
   const state = activeRuns.get(runId)
   if (!state) throw new Error(`No active run: ${runId}`)
 
@@ -419,10 +442,7 @@ export async function runAutoSteps(
   return executed
 }
 
-export async function runUpToStep(
-  runId: string,
-  targetStepName: string
-): Promise<void> {
+export async function runUpToStep(runId: string, targetStepName: string): Promise<void> {
   const state = activeRuns.get(runId)
   if (!state) throw new Error(`No active run: ${runId}`)
 
@@ -449,10 +469,7 @@ export async function runUpToStep(
  * @param maxStepIndex  Only consider steps up to this index (inclusive).
  *                      Pass -1 or omit to consider all steps.
  */
-export async function runReadySteps(
-  runId: string,
-  maxStepIndex: number = -1
-): Promise<string[]> {
+export async function runReadySteps(runId: string, maxStepIndex: number = -1): Promise<string[]> {
   const state = activeRuns.get(runId)
   if (!state) throw new Error(`No active run: ${runId}`)
 
@@ -481,7 +498,7 @@ export async function runReadySteps(
       const paramDef = toolDef?.inputs[inputName]
       if (paramDef?.optional) continue
 
-      const value = resolveBinding(binding, state)
+      const value = tryResolveBinding(binding, state)
       if (value === undefined || value === null || value === '') {
         allResolved = false
         break

@@ -24,5 +24,16 @@
       "type": "string",
       "description": "Path to label definitions JSON"
     }
+  },
+  "block": {
+    "id": "atlas-parcellate",
+    "label": "Atlas Parcellation",
+    "description": "Apply atlas parcellation to a skull-stripped anatomical volume",
+    "category": "Processing",
+    "icon": "LayoutIcon",
+    "defaults": {
+      "atlas": "parcellation-104"
+    },
+    "exposedFields": ["nifti_path", "atlas"]
   }
 }

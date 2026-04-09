@@ -37,6 +37,18 @@
       "description": "Directory containing output files"
     }
   },
+  "block": {
+    "id": "register-template",
+    "label": "Register to Template",
+    "description": "Align volumes to MNI152 standard space using allineate",
+    "category": "Processing",
+    "icon": "TransformIcon",
+    "defaults": {
+      "cost": "ls"
+    },
+    "exposedFields": ["nifti_paths", "output_dir"],
+    "hiddenFields": ["cost", "nifti_path"]
+  },
   "exec": {
     "binary": {
       "name": "allineate",

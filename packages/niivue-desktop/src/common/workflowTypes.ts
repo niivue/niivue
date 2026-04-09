@@ -10,6 +10,35 @@ export interface ToolParameterDef {
   max?: number
 }
 
+/**
+ * Describes how a tool appears as a block in the visual designer.
+ * Embedded directly in the tool JSON so adding a new tool only requires
+ * touching one file.
+ */
+export interface BlockDef {
+  /** Unique block identifier (kebab-case). */
+  id: string
+  /** Friendly label shown in the palette. */
+  label: string
+  /** One-line description. */
+  description: string
+  category: 'Import' | 'Processing' | 'Quality' | 'Output'
+  /** Radix icon component name. */
+  icon?: string
+  /** Pre-filled input values hidden from the user form. */
+  defaults?: Record<string, unknown>
+  /** Tool input names that appear in the user-facing form. */
+  exposedFields: string[]
+  /** Tool input names hidden in the form (typically covered by defaults). */
+  hiddenFields?: string[]
+  /** Custom form component name. */
+  formComponent?: string
+  /** Dot-path condition expression for conditional execution. */
+  condition?: string
+  /** Map from exposed field name → heuristic name that auto-populates it. */
+  heuristics?: Record<string, string>
+}
+
 export interface ToolDefinition {
   name: string
   version: string
@@ -17,6 +46,8 @@ export interface ToolDefinition {
   inputs: Record<string, ToolParameterDef>
   outputs: Record<string, ToolParameterDef>
   exec?: ToolExecDef
+  /** Block metadata for the visual designer. Single object = one variant; array = multiple. */
+  block?: BlockDef | BlockDef[]
 }
 
 // ── Declarative tool executor definition ─────────────────────────────
@@ -61,6 +92,13 @@ export interface ToolExecDef {
   resources?: Record<string, { standardImage: string }>
   /** Input name containing an array to iterate over */
   forEach?: string
+  /**
+   * When each element of the forEach array is an object, extract this field
+   * for use as the scalar iteration value (e.g. `seriesNumber` turns a
+   * `DicomSeries[]` into a `number[]`). If omitted, array elements are used
+   * as-is.
+   */
+  forEachExtract?: string
   /** Single-item input name bound on each iteration */
   iterationVar?: string
   /** Run iterations in parallel (default false) */
@@ -122,12 +160,7 @@ export interface WorkflowDefinition {
 
 // ── Runtime types ────────────────────────────────────────────────────
 
-export type WorkflowRunStatus =
-  | 'idle'
-  | 'running'
-  | 'paused-for-form'
-  | 'completed'
-  | 'error'
+export type WorkflowRunStatus = 'idle' | 'running' | 'paused-for-form' | 'completed' | 'error'
 
 export interface WorkflowRunState {
   workflowName: string
@@ -138,13 +171,12 @@ export interface WorkflowRunState {
   error?: string
 }
 
-export type ToolExecutor = (
-  inputs: Record<string, unknown>
-) => Promise<Record<string, unknown>>
+export type ToolExecutor = (inputs: Record<string, unknown>) => Promise<Record<string, unknown>>
 
 export type HeuristicFn = (
   inputs: Record<string, unknown>,
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
+  stepOutputs: Record<string, Record<string, unknown>>
 ) => Promise<unknown>
 
 // ── Declarative heuristic definition ──────────────────────────────

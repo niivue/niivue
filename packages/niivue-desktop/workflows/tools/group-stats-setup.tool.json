@@ -23,5 +23,13 @@
       "type": "json[]",
       "description": "Subjects included in analysis"
     }
+  },
+  "block": {
+    "id": "group-stats-setup",
+    "label": "Group Statistics Setup",
+    "description": "Generate group-level analysis configuration from a BIDS dataset",
+    "category": "Output",
+    "icon": "BarChartIcon",
+    "exposedFields": ["bids_dir", "analysis_type"]
   }
 }

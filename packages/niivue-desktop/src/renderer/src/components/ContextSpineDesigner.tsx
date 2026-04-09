@@ -99,8 +99,17 @@ function analyzeInputs(
     const value = binding?.value || ''
     const hidden = hiddenFields.has(inputName) && mode === 'constant' && !!value
 
-    // Get available sources for the dropdown
-    const suggestions = getAvailableSources(stepIndex, inputName, paramDef.type, stepInfos, tools, workflowInputs)
+    // Get available sources for the dropdown (workflow inputs, context
+    // fields, and preceding step outputs).
+    const suggestions = getAvailableSources(
+      stepIndex,
+      inputName,
+      paramDef.type,
+      stepInfos,
+      tools,
+      workflowInputs,
+      contextFields
+    )
 
     // Determine current source type
     let source: InputSource = 'unset'
@@ -116,7 +125,7 @@ function analyzeInputs(
         const [, refStepName, refOutput] = stepRefMatch
         const sourceStepIdx = allSteps.findIndex((s) => s.name === refStepName)
         const slot = slots.find((s) => s.sourceStep === sourceStepIdx && s.sourceOutput === refOutput)
-        const sourceBlock = sourceStepIdx >= 0 ? detectBlockForStep(allSteps[sourceStepIdx]) : null
+        const sourceBlock = sourceStepIdx >= 0 ? detectBlockForStep(allSteps[sourceStepIdx], tools) : null
         sourceLabel = `${sourceBlock?.label || refStepName} → ${refOutput}`
         sourceColor = slot?.color || 'gray'
       } else if (value.startsWith('context.')) {
@@ -205,29 +214,85 @@ export function ContextSpineDesigner({
     })
   }, [setDraft])
 
-  /** Switch an input to "user form" mode: create a context field and bind the step input to it */
+  /**
+   * Switch an input to "user form" mode. Prefers reusing an existing
+   * context field with a matching name and compatible type; otherwise
+   * creates a new (step-prefixed) field and ensures it appears in a form
+   * section so the user actually gets prompted at runtime.
+   */
   const setInputToUserForm = useCallback((stepIndex: number, inputName: string, paramDef: ToolParameterDef) => {
-    const contextFieldName = `${draft.steps[stepIndex].name}_${inputName}`
-    const generated = generateContextFieldFromParam(inputName, paramDef)
-
     setDraft((prev) => {
-      const steps = [...prev.steps]
-      const step = { ...steps[stepIndex], inputs: { ...steps[stepIndex].inputs } }
-      step.inputs[inputName] = { mode: 'ref', value: `context.${contextFieldName}` }
-      steps[stepIndex] = step
+      const step = prev.steps[stepIndex]
 
-      const contextFields = { ...prev.contextFields }
-      contextFields[contextFieldName] = {
-        type: generated.type,
-        label: generated.label,
-        description: generated.description,
-        heuristic: '',
-        default: generated.default !== undefined ? JSON.stringify(generated.default) : ''
+      // 1. Reuse an existing context field with the plain input name if its
+      //    type is compatible. This is the common case when opening an older
+      //    workflow that already has a context field the user needs to bind.
+      const existing = prev.contextFields[inputName]
+      if (existing) {
+        const steps = [...prev.steps]
+        steps[stepIndex] = {
+          ...step,
+          inputs: {
+            ...step.inputs,
+            [inputName]: { mode: 'ref', value: `context.${inputName}` }
+          }
+        }
+        return { ...prev, steps }
       }
 
-      return { ...prev, steps, contextFields }
+      // 2. Otherwise create a new step-prefixed context field to avoid
+      //    collisions across steps.
+      const contextFieldName = `${step.name}_${inputName}`
+      const generated = generateContextFieldFromParam(inputName, paramDef)
+
+      const steps = [...prev.steps]
+      steps[stepIndex] = {
+        ...step,
+        inputs: {
+          ...step.inputs,
+          [inputName]: { mode: 'ref', value: `context.${contextFieldName}` }
+        }
+      }
+
+      const contextFields = {
+        ...prev.contextFields,
+        [contextFieldName]: {
+          type: generated.type,
+          label: generated.label,
+          description: generated.description,
+          heuristic: '',
+          default: generated.default !== undefined ? JSON.stringify(generated.default) : ''
+        }
+      }
+
+      // 3. Make sure the new field appears in a form section so the runtime
+      //    UI actually asks for it. Prefer a section whose title matches the
+      //    step's block label; fall back to a new section.
+      const block = detectBlockForStep(step, tools)
+      const targetTitle = block?.label || step.tool
+      const sections = [...prev.sections]
+      const existingIdx = sections.findIndex((s) => s.title === targetTitle)
+      if (existingIdx >= 0) {
+        const current = sections[existingIdx]
+        if (!current.fields.includes(contextFieldName)) {
+          sections[existingIdx] = {
+            ...current,
+            fields: [...current.fields, contextFieldName]
+          }
+        }
+      } else {
+        sections.push({
+          title: targetTitle,
+          description: '',
+          fields: [contextFieldName],
+          component: '',
+          buttonText: ''
+        })
+      }
+
+      return { ...prev, steps, contextFields, sections }
     })
-  }, [draft.steps, setDraft])
+  }, [setDraft, tools])
 
   const handleAddBlockWrapped = useCallback((block: WorkflowBlock) => {
     onAddBlock(block)
@@ -315,7 +380,7 @@ export function ContextSpineDesigner({
 
             return Array.from(stepGroups.entries()).map(([stepIdx, groupSlots]) => {
               const step = draft.steps[stepIdx]
-              const block = detectBlockForStep(step)
+              const block = detectBlockForStep(step, tools)
 
               return (
                 <div key={stepIdx} className="mb-2">
@@ -405,7 +470,7 @@ export function ContextSpineDesigner({
             </div>
           ) : (
             draft.steps.map((step, i) => {
-              const block = detectBlockForStep(step)
+              const block = detectBlockForStep(step, tools)
               const tool = tools.get(step.tool)
               const isSelected = selectedStep === i
               const hasError = validation.errors.some((e) => e.message.includes(step.name))
@@ -466,7 +531,7 @@ export function ContextSpineDesigner({
                       onClick={() => setSelectedStep(isSelected ? null : i)}
                     >
                       <span className={isSelected ? 'text-[var(--accent-9)]' : 'text-neutral-9'}>
-                        {block ? getBlockIcon(block.icon) : null}
+                        {block ? getBlockIcon(block.icon || '') : null}
                       </span>
                       <div className="flex-1 min-w-0">
                         <Text size="2" weight="bold" className="text-neutral-12 truncate block">
@@ -502,22 +567,33 @@ export function ContextSpineDesigner({
                           const hasContextSources = inp.suggestions.length > 0
                           const isRequired = !inp.paramDef.optional
 
-                          // For enum fields with a constant, just show the select
+                          // For enum fields with a constant, just show the select.
+                          // Draft constants are stored JSON-stringified (e.g. '"y"'), so
+                          // unwrap the quotes before comparing to Select.Item values.
                           if (inp.paramDef.enum && inp.source === 'constant') {
+                            let displayValue = inp.value
+                            try {
+                              const parsed = JSON.parse(inp.value)
+                              if (parsed !== undefined && parsed !== null) displayValue = String(parsed)
+                            } catch {
+                              /* not valid JSON — use raw */
+                            }
                             return (
                               <div key={inp.name} className="flex items-center gap-2">
                                 <Text size="1" className="text-neutral-9 w-28 shrink-0 truncate">
                                   {inp.paramDef.label || inp.name}
                                 </Text>
                                 <Select.Root
-                                  value={inp.value}
-                                  onValueChange={(v) => updateStepInput(i, inp.name, v)}
+                                  value={displayValue}
+                                  onValueChange={(v) => updateStepInput(i, inp.name, JSON.stringify(v))}
                                   size="1"
                                 >
                                   <Select.Trigger className="flex-1" />
                                   <Select.Content>
                                     {inp.paramDef.enum.map((opt) => (
-                                      <Select.Item key={String(opt)} value={String(opt)}>{String(opt)}</Select.Item>
+                                      <Select.Item key={String(opt)} value={String(opt)}>
+                                        {String(opt)}
+                                      </Select.Item>
                                     ))}
                                   </Select.Content>
                                 </Select.Root>

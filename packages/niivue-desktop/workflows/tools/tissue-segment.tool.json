@@ -24,5 +24,17 @@
       "type": "json[]",
       "description": "Tissue volume statistics (per-class voxel counts)"
     }
+  },
+  "block": {
+    "id": "segment-tissue",
+    "label": "Segment Tissue",
+    "description": "Segment brain into gray matter, white matter, and CSF",
+    "category": "Processing",
+    "icon": "ComponentInstanceIcon",
+    "defaults": {
+      "model": "tissue-seg-light"
+    },
+    "exposedFields": ["nifti_path"],
+    "hiddenFields": ["model"]
   }
 }

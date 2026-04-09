@@ -46,13 +46,25 @@ export function resolvePath(obj: unknown, path: string): unknown {
 export function resolveSource(
   source: string,
   inputs: Record<string, unknown>,
-  context: Record<string, unknown>
+  context: Record<string, unknown>,
+  stepOutputs: Record<string, Record<string, unknown>> = {}
 ): unknown {
   if (source.startsWith('inputs.')) {
     return resolvePath(inputs, source.slice('inputs.'.length))
   }
   if (source.startsWith('context.')) {
     return resolvePath(context, source.slice('context.'.length))
+  }
+  if (source.startsWith('steps.')) {
+    // Accepts "steps.<stepName>.outputs.<outputName>" or shorter paths
+    const rest = source.slice('steps.'.length).split('.')
+    const stepName = rest[0]
+    const step = stepOutputs[stepName]
+    if (!step) return undefined
+    // Skip the literal "outputs" segment if present
+    const tail = rest[1] === 'outputs' ? rest.slice(2) : rest.slice(1)
+    if (tail.length === 0) return step
+    return resolvePath(step, tail.join('.'))
   }
   // Allow bare context field names for convenience
   return context[source]
@@ -62,12 +74,18 @@ export function resolveSource(
 
 export function compare(actual: unknown, operator: string, expected: unknown): boolean {
   switch (operator) {
-    case 'eq': return actual === expected
-    case 'neq': return actual !== expected
-    case 'gt': return (actual as number) > (expected as number)
-    case 'gte': return (actual as number) >= (expected as number)
-    case 'lt': return (actual as number) < (expected as number)
-    case 'lte': return (actual as number) <= (expected as number)
+    case 'eq':
+      return actual === expected
+    case 'neq':
+      return actual !== expected
+    case 'gt':
+      return (actual as number) > (expected as number)
+    case 'gte':
+      return (actual as number) >= (expected as number)
+    case 'lt':
+      return (actual as number) < (expected as number)
+    case 'lte':
+      return (actual as number) <= (expected as number)
     case 'contains':
       if (typeof actual === 'string') return actual.includes(String(expected))
       if (Array.isArray(actual)) return actual.includes(expected)
@@ -165,7 +183,11 @@ export function execSetField(
   })
 }
 
-export function execMerge(data: unknown[], op: HeuristicOperation, context: Record<string, unknown>): unknown[] {
+export function execMerge(
+  data: unknown[],
+  op: HeuristicOperation,
+  context: Record<string, unknown>
+): unknown[] {
   if (!op.contextField) return data
   const mergeSource = resolvePath(context, op.contextField) as Record<string, unknown>[] | undefined
   if (!Array.isArray(mergeSource)) return data
@@ -173,7 +195,10 @@ export function execMerge(data: unknown[], op: HeuristicOperation, context: Reco
   // Merge by index
   return data.map((item, i) => {
     if (i < mergeSource.length && typeof mergeSource[i] === 'object') {
-      return { ...(item as Record<string, unknown>), ...(mergeSource[i] as Record<string, unknown>) }
+      return {
+        ...(item as Record<string, unknown>),
+        ...(mergeSource[i] as Record<string, unknown>)
+      }
     }
     return item
   })
@@ -249,7 +274,11 @@ export function applyOperations(
         break
 
       case 'default':
-        if (current === undefined || current === null || (Array.isArray(current) && current.length === 0)) {
+        if (
+          current === undefined ||
+          current === null ||
+          (Array.isArray(current) && current.length === 0)
+        ) {
           current = op.value
         }
         break
@@ -285,13 +314,17 @@ export function applyOperations(
  * Create a HeuristicFn from a declarative HeuristicDefinition.
  */
 export function createDeclarativeHeuristic(def: HeuristicDefinition): HeuristicFn {
-  return async (inputs: Record<string, unknown>, context: Record<string, unknown>): Promise<unknown> => {
+  return async (
+    inputs: Record<string, unknown>,
+    context: Record<string, unknown>,
+    stepOutputs: Record<string, Record<string, unknown>>
+  ): Promise<unknown> => {
     // If preserveExisting is set and the target field already has data, return it
     if (def.preserveExisting) {
       // The heuristic doesn't know which field it's writing to, but the engine
       // will store the result. The convention is that if the source field itself
       // has data, preserve it.
-      const existing = resolveSource(def.source, inputs, context)
+      const existing = resolveSource(def.source, inputs, context, stepOutputs)
       if (existing !== undefined && existing !== null) {
         if (Array.isArray(existing) && existing.length > 0) return existing
         if (typeof existing === 'object' && Object.keys(existing).length > 0) return existing
@@ -299,7 +332,7 @@ export function createDeclarativeHeuristic(def: HeuristicDefinition): HeuristicF
       }
     }
 
-    const sourceData = resolveSource(def.source, inputs, context)
+    const sourceData = resolveSource(def.source, inputs, context, stepOutputs)
     return applyOperations(sourceData, def.operations, context)
   }
 }

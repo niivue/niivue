@@ -26,7 +26,7 @@ import {
   GearIcon
 } from '@radix-ui/react-icons'
 import {
-  WORKFLOW_BLOCKS,
+  getWorkflowBlocks,
   BLOCK_CATEGORIES,
   type WorkflowBlock,
   type BlockCategory
@@ -85,6 +85,9 @@ export function BlockPalette({
   const [search, setSearch] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
+  // Derive the palette blocks from the currently-loaded tool definitions
+  const allBlocks = useMemo(() => getWorkflowBlocks(tools), [tools])
+
   // Compute which blocks are compatible with the last step's output
   const compatibleBlockIds = useMemo(() => {
     if (!lastStepTool) return new Set<string>()
@@ -94,7 +97,7 @@ export function BlockPalette({
     const outputTypes = Object.values(lastTool.outputs).map((o) => o.type)
     const compatible = new Set<string>()
 
-    for (const block of WORKFLOW_BLOCKS) {
+    for (const block of allBlocks) {
       const blockTool = tools.get(block.tool)
       if (!blockTool) continue
 
@@ -110,18 +113,18 @@ export function BlockPalette({
       }
     }
     return compatible
-  }, [lastStepTool, tools])
+  }, [lastStepTool, tools, allBlocks])
 
   const filteredBlocks = useMemo(() => {
-    if (!search.trim()) return WORKFLOW_BLOCKS
+    if (!search.trim()) return allBlocks
     const q = search.toLowerCase()
-    return WORKFLOW_BLOCKS.filter(
+    return allBlocks.filter(
       (b) =>
         b.label.toLowerCase().includes(q) ||
         b.description.toLowerCase().includes(q) ||
         b.tool.toLowerCase().includes(q)
     )
-  }, [search])
+  }, [search, allBlocks])
 
   const toggleCategory = (cat: string): void => {
     setCollapsed((prev) => ({ ...prev, [cat]: !prev[cat] }))
@@ -187,7 +190,7 @@ export function BlockPalette({
                           onClick={() => onAddBlock(block)}
                         >
                           <span className={isCompatible ? 'text-[var(--accent-9)]' : 'text-neutral-9'}>
-                            {getBlockIcon(block.icon)}
+                            {getBlockIcon(block.icon || '')}
                           </span>
                           <div className="flex-1 min-w-0">
                             <Text size="1" weight="medium" className="text-neutral-12 truncate block">

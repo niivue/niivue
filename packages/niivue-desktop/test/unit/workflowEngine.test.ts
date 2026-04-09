@@ -379,8 +379,10 @@ describe('workflowEngine', () => {
       expect(resolveBinding({ ref: 'inputs.output_dir' }, state)).toBe('/data/output')
     })
 
-    it('returns undefined for missing input keys', () => {
-      expect(resolveBinding({ ref: 'inputs.nonexistent' }, state)).toBeUndefined()
+    it('throws for missing input keys', () => {
+      expect(() => resolveBinding({ ref: 'inputs.nonexistent' }, state)).toThrow(
+        "workflow input 'nonexistent' was not provided"
+      )
     })
 
     it('resolves context.* bindings', () => {
@@ -401,8 +403,10 @@ describe('workflowEngine', () => {
       )
     })
 
-    it('returns undefined for missing step output', () => {
-      expect(resolveBinding({ ref: 'steps.missing.outputs.x' }, state)).toBeUndefined()
+    it('throws for missing step output', () => {
+      expect(() => resolveBinding({ ref: 'steps.missing.outputs.x' }, state)).toThrow(
+        "step 'missing' has not run yet"
+      )
     })
 
     it('throws on invalid inputs ref (missing name)', () => {

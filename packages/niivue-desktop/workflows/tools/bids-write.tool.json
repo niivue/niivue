@@ -30,5 +30,15 @@
       "type": "number",
       "description": "Number of files written to the dataset"
     }
+  },
+  "block": {
+    "id": "write-bids",
+    "label": "Write BIDS Dataset",
+    "description": "Write classified data to a BIDS-compliant directory structure",
+    "category": "Output",
+    "icon": "DownloadIcon",
+    "exposedFields": ["output_dir"],
+    "hiddenFields": ["volumes", "mappings", "config"],
+    "formComponent": "bids-preview"
   }
 }

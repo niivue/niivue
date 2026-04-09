@@ -20,7 +20,7 @@ import type { ModelInfo } from './services/brainchop/types.js'
 import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
 import { WorkflowDialog } from './components/WorkflowDialog.js'
-import { WorkflowDesigner } from './components/WorkflowDesigner.js'
+import { WorkflowDesignerDialog } from './components/WorkflowDesignerDialog.js'
 import { WorkflowTemplateGallery, type TemplateChoice } from './components/WorkflowTemplateGallery.js'
 import { HeuristicDesigner } from './components/HeuristicDesigner.js'
 import { OpenTargetDialog } from './components/OpenTargetDialog.js'
@@ -103,8 +103,6 @@ function MainApp(): JSX.Element {
   // Workflow designer state
   const [workflowDesignerOpen, setWorkflowDesignerOpen] = useState(false)
   const [designerInitialDefinition, setDesignerInitialDefinition] = useState<Record<string, unknown> | null>(null)
-  const [designerStartWithTutorial, setDesignerStartWithTutorial] = useState(false)
-  const [designerStartInSimpleMode, setDesignerStartInSimpleMode] = useState(true)
 
   // Template gallery state
   const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false)
@@ -132,7 +130,6 @@ function MainApp(): JSX.Element {
 
     const handleOpenDesignerTutorial = (): void => {
       setDesignerInitialDefinition(null)
-      setDesignerStartWithTutorial(true)
       setWorkflowDesignerOpen(true)
     }
     electron.ipcRenderer.on('workflow:open-designer-tutorial', handleOpenDesignerTutorial)
@@ -1579,7 +1576,6 @@ function MainApp(): JSX.Element {
           electron.ipcRenderer.invoke('workflow:get-definition', name).then(
             (definition: Record<string, unknown>) => {
               setDesignerInitialDefinition(definition)
-              setDesignerStartInSimpleMode(true)
               setWorkflowDesignerOpen(true)
             }
           )
@@ -1594,44 +1590,38 @@ function MainApp(): JSX.Element {
             setWorkflowName(choice.workflowName)
             setWorkflowInputs(choice.inputs)
             setWorkflowOpen(true)
-          } else if (choice.kind === 'customize' || choice.kind === 'use-as-template' || choice.kind === 'edit-user') {
+          } else if (
+            choice.kind === 'customize' ||
+            choice.kind === 'use-as-template' ||
+            choice.kind === 'edit-user'
+          ) {
             setDesignerInitialDefinition(choice.definition)
-            setDesignerStartInSimpleMode(true)
-            setDesignerStartWithTutorial(false)
             setWorkflowDesignerOpen(true)
-          } else if (choice.kind === 'blank') {
+          } else if (choice.kind === 'blank' || choice.kind === 'advanced') {
             setDesignerInitialDefinition(null)
-            setDesignerStartInSimpleMode(true)
-            setDesignerStartWithTutorial(false)
-            setWorkflowDesignerOpen(true)
-          } else if (choice.kind === 'advanced') {
-            setDesignerInitialDefinition(null)
-            setDesignerStartInSimpleMode(false)
-            setDesignerStartWithTutorial(false)
             setWorkflowDesignerOpen(true)
           }
         }}
       />
-      <WorkflowDesigner
+      <WorkflowDesignerDialog
         open={workflowDesignerOpen}
         onClose={() => {
           setWorkflowDesignerOpen(false)
           setDesignerInitialDefinition(null)
-          setDesignerStartWithTutorial(false)
         }}
         onSave={(schema) => {
-          electron.ipcRenderer.invoke('workflow:save', schema).then(() => {
-            console.log('Workflow saved:', schema)
-            setWorkflowDesignerOpen(false)
-            setDesignerInitialDefinition(null)
-            setDesignerStartWithTutorial(false)
-          }).catch((err: Error) => {
-            console.error('Failed to save workflow:', err)
-          })
+          electron.ipcRenderer
+            .invoke('workflow:save', schema)
+            .then(() => {
+              console.log('Workflow saved:', schema)
+              setWorkflowDesignerOpen(false)
+              setDesignerInitialDefinition(null)
+            })
+            .catch((err: Error) => {
+              console.error('Failed to save workflow:', err)
+            })
         }}
         initialDefinition={designerInitialDefinition}
-        startWithTutorial={designerStartWithTutorial}
-        startInSimpleMode={designerStartInSimpleMode}
       />
       <HeuristicDesigner
         open={heuristicDesignerOpen}

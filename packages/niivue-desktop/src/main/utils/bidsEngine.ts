@@ -36,7 +36,14 @@ interface DcmSidecar {
   AcquisitionDate?: string
   AcquisitionDateTime?: string
   StudyDate?: string
-  BidsGuess?: string[] | { datatype?: string; suffix?: string; entities?: Record<string, string>; filename_suffix?: string }
+  BidsGuess?:
+    | string[]
+    | {
+        datatype?: string
+        suffix?: string
+        entities?: Record<string, string>
+        filename_suffix?: string
+      }
   [key: string]: unknown
 }
 
@@ -168,7 +175,10 @@ interface BidsGuessEntities {
   [key: string]: string
 }
 
-export function parseBidsGuessSuffix(suffixStr: string): { suffix: string; entities: BidsGuessEntities } {
+export function parseBidsGuessSuffix(suffixStr: string): {
+  suffix: string
+  entities: BidsGuessEntities
+} {
   const entities: BidsGuessEntities = { task: '', acq: '' }
   // Remove leading underscore
   const str = suffixStr.replace(/^_/, '')
@@ -188,7 +198,9 @@ export function parseBidsGuessSuffix(suffixStr: string): { suffix: string; entit
   return { suffix, entities }
 }
 
-export function classifyByBidsGuess(sidecar: DcmSidecar): (Classification & { entities: BidsGuessEntities }) | null {
+export function classifyByBidsGuess(
+  sidecar: DcmSidecar
+): (Classification & { entities: BidsGuessEntities }) | null {
   const guess = sidecar.BidsGuess
   if (!guess) return null
 
@@ -236,9 +248,12 @@ export function classifyByBidsGuess(sidecar: DcmSidecar): (Classification & { en
 }
 
 const PHASE_DIR_MAP: Record<string, string> = {
-  j: 'AP', 'j-': 'PA',
-  i: 'LR', 'i-': 'RL',
-  k: 'IS', 'k-': 'SI'
+  j: 'AP',
+  'j-': 'PA',
+  i: 'LR',
+  'i-': 'RL',
+  k: 'IS',
+  'k-': 'SI'
 }
 
 interface ExtractedEntities {
@@ -322,7 +337,10 @@ export function classifySeries(sidecarPath: string, index: number): BidsSeriesMa
   const heuristicResult = descResult || sidecarResult
   if (guessResult && heuristicResult) {
     // Both BidsGuess and heuristic available
-    if (guessResult.datatype === heuristicResult.datatype && guessResult.suffix === heuristicResult.suffix) {
+    if (
+      guessResult.datatype === heuristicResult.datatype &&
+      guessResult.suffix === heuristicResult.suffix
+    ) {
       // Agreement → high confidence
       datatype = guessResult.datatype
       suffix = guessResult.suffix
@@ -345,7 +363,10 @@ export function classifySeries(sidecarPath: string, index: number): BidsSeriesMa
     task = guessResult.task
   } else if (descResult && sidecarResult) {
     // No BidsGuess — original logic
-    if (descResult.datatype === sidecarResult.datatype && descResult.suffix === sidecarResult.suffix) {
+    if (
+      descResult.datatype === sidecarResult.datatype &&
+      descResult.suffix === sidecarResult.suffix
+    ) {
       confidence = 'high'
       reason = `Both signals agree: ${descResult.reason}`
     } else {
@@ -447,14 +468,19 @@ export function detectSubjectsAndSessions(
   mappings: BidsSeriesMapping[]
 ): DetectedSubject[] {
   // Parse PatientID and AcquisitionDate from each sidecar
-  const subjectMap = new Map<string, { indices: number[]; dates: Map<string, number[]>; sidecarPath: string }>()
+  const subjectMap = new Map<
+    string,
+    { indices: number[]; dates: Map<string, number[]>; sidecarPath: string }
+  >()
 
   for (let i = 0; i < sidecarPaths.length; i++) {
     try {
       const raw = fs.readFileSync(sidecarPaths[i], 'utf-8')
       const sidecar: DcmSidecar = JSON.parse(raw)
       const patientId = String(sidecar.PatientID || sidecar.PatientName || 'unknown').trim()
-      const acqDate = String(sidecar.AcquisitionDate || sidecar.AcquisitionDateTime || sidecar.StudyDate || '').trim()
+      const acqDate = String(
+        sidecar.AcquisitionDate || sidecar.AcquisitionDateTime || sidecar.StudyDate || ''
+      ).trim()
 
       if (!subjectMap.has(patientId)) {
         subjectMap.set(patientId, { indices: [], dates: new Map(), sidecarPath: sidecarPaths[i] })
@@ -508,13 +534,60 @@ export function detectSubjectsAndSessions(
   return subjects
 }
 
+/**
+ * Apply subject/session labels and exclusion status from a DetectedSubject
+ * list onto a series-mapping list. Returns a new mapping array without
+ * mutating the input.
+ *
+ * Used by the bids-classify and detect-subjects heuristics to propagate user
+ * edits (e.g. toggling a subject's excluded flag in the UI) back into the
+ * individual series mappings.
+ */
+export function applySubjectsToMappings(
+  mappings: BidsSeriesMapping[],
+  subjects: DetectedSubject[]
+): BidsSeriesMapping[] {
+  const updated = mappings.map((m) => ({ ...m }))
+  for (const sub of subjects) {
+    for (const session of sub.sessions) {
+      const sessionExcluded = sub.excluded === true || session.excluded === true
+      const reason = sub.excluded
+        ? 'Subject excluded'
+        : session.excluded
+          ? 'Session excluded'
+          : undefined
+      for (const idx of session.seriesIndices) {
+        if (idx >= updated.length) continue
+        updated[idx].subject = sub.label
+        updated[idx].session = session.label
+        if (sessionExcluded) {
+          updated[idx].excluded = true
+          updated[idx].exclusionReason = reason
+        } else if (
+          updated[idx].exclusionReason === 'Subject excluded' ||
+          updated[idx].exclusionReason === 'Session excluded'
+        ) {
+          // Clear a previously-applied subject/session exclusion that no longer holds
+          updated[idx].excluded = false
+          updated[idx].exclusionReason = undefined
+        }
+      }
+    }
+  }
+  return updated
+}
+
 function readNiftiVolumeCount(niftiPath: string): number {
   try {
     let headerBuf: Buffer
     if (niftiPath.endsWith('.nii.gz')) {
       const compressed = fs.readFileSync(niftiPath)
       const decompressed = zlib.gunzipSync(compressed)
-      headerBuf = Buffer.from(decompressed.buffer, decompressed.byteOffset, Math.min(decompressed.length, 352))
+      headerBuf = Buffer.from(
+        decompressed.buffer,
+        decompressed.byteOffset,
+        Math.min(decompressed.length, 352)
+      )
     } else {
       const fd = fs.openSync(niftiPath, 'r')
       headerBuf = Buffer.alloc(352)
@@ -530,7 +603,10 @@ function readNiftiVolumeCount(niftiPath: string): number {
   }
 }
 
-export function classifyAll(sidecarPaths: string[]): { mappings: BidsSeriesMapping[]; detectedSubjects: DetectedSubject[] } {
+export function classifyAll(sidecarPaths: string[]): {
+  mappings: BidsSeriesMapping[]
+  detectedSubjects: DetectedSubject[]
+} {
   const mappings = sidecarPaths.map((p, i) => classifySeries(p, i))
 
   // Auto-exclude low-volume functional series
@@ -572,8 +648,10 @@ export function classifyAll(sidecarPaths: string[]): { mappings: BidsSeriesMappi
 }
 
 export function suggestFieldmapMappings(mappings: BidsSeriesMapping[]): FieldmapIntendedFor[] {
-  const fmaps = mappings.filter(m => !m.excluded && m.datatype === 'fmap')
-  const targets = mappings.filter(m => !m.excluded && (m.datatype === 'func' || m.datatype === 'dwi'))
+  const fmaps = mappings.filter((m) => !m.excluded && m.datatype === 'fmap')
+  const targets = mappings.filter(
+    (m) => !m.excluded && (m.datatype === 'func' || m.datatype === 'dwi')
+  )
 
   if (fmaps.length === 0 || targets.length === 0) return []
 
@@ -581,9 +659,9 @@ export function suggestFieldmapMappings(mappings: BidsSeriesMapping[]): Fieldmap
 
   for (const fm of fmaps) {
     // Match by same subject, preferring same session but falling back to same subject only
-    let eligible = targets.filter(t => t.subject === fm.subject && t.session === fm.session)
+    let eligible = targets.filter((t) => t.subject === fm.subject && t.session === fm.session)
     if (eligible.length === 0) {
-      eligible = targets.filter(t => t.subject === fm.subject)
+      eligible = targets.filter((t) => t.subject === fm.subject)
     }
     if (eligible.length === 0) continue
 
@@ -594,7 +672,7 @@ export function suggestFieldmapMappings(mappings: BidsSeriesMapping[]): Fieldmap
     if (fmPE && fm.suffix === 'epi') {
       // Opposite polarity: j vs j-, i vs i-
       const opposite = fmPE.endsWith('-') ? fmPE.slice(0, -1) : fmPE + '-'
-      const peMatched = eligible.filter(t => {
+      const peMatched = eligible.filter((t) => {
         const tPE = t.sidecarData?.original?.PhaseEncodingDirection as string | undefined
         return tPE === opposite
       })
@@ -605,7 +683,7 @@ export function suggestFieldmapMappings(mappings: BidsSeriesMapping[]): Fieldmap
 
     result.push({
       fmapIndex: fm.index,
-      targetIndices: matched.map(t => t.index)
+      targetIndices: matched.map((t) => t.index)
     })
   }
 
@@ -615,9 +693,15 @@ export function suggestFieldmapMappings(mappings: BidsSeriesMapping[]): Fieldmap
 export function parseEventFile(filePath: string): ParseEventFileResult {
   try {
     const content = fs.readFileSync(filePath, 'utf-8')
-    const lines = content.split(/\r?\n/).filter(l => l.trim() !== '')
+    const lines = content.split(/\r?\n/).filter((l) => l.trim() !== '')
     if (lines.length === 0) {
-      return { success: false, columns: [], previewRows: [], detectedDelimiter: '\t', error: 'File is empty' }
+      return {
+        success: false,
+        columns: [],
+        previewRows: [],
+        detectedDelimiter: '\t',
+        error: 'File is empty'
+      }
     }
 
     // Auto-detect delimiter
@@ -638,10 +722,10 @@ export function parseEventFile(filePath: string): ParseEventFileResult {
       return line.split(delimiter)
     }
 
-    const columns = splitLine(lines[0]).map(c => c.trim())
+    const columns = splitLine(lines[0]).map((c) => c.trim())
     const previewRows: string[][] = []
     for (let i = 1; i < Math.min(lines.length, 6); i++) {
-      previewRows.push(splitLine(lines[i]).map(c => c.trim()))
+      previewRows.push(splitLine(lines[i]).map((c) => c.trim()))
     }
 
     return {

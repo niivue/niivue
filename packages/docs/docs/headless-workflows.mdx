@@ -1,0 +1,536 @@
+---
+title: Headless Workflows
+sidebar_position: 19
+---
+
+# Headless Workflows
+
+NiiVue Desktop includes a declarative workflow engine that connects tools into processing pipelines. While workflows can be run interactively through the desktop UI with forms and heuristics, they can also be run **headless** — fully automated with no user interaction. This is useful for batch processing, scripting, CI pipelines, and integration with external tools.
+
+## Workflow Anatomy
+
+A workflow is a JSON file with these top-level sections:
+
+```json
+{
+  "name": "my-workflow",
+  "version": "1.0.0",
+  "description": "What this workflow does",
+  "menu": "Processing",
+  "inputs": { ... },
+  "context": { ... },
+  "steps": { ... },
+  "outputs": { ... }
+}
+```
+
+| Section | Purpose |
+|---------|---------|
+| **inputs** | Data provided when launching the workflow (e.g. a DICOM folder path) |
+| **context** | Metadata accumulated during the run — can be auto-populated by heuristics or set manually |
+| **steps** | Ordered tool pipeline — each step invokes a tool with bound inputs |
+| **outputs** | Final results, referencing step outputs |
+
+An optional `form` section defines the interactive UI, but is ignored in headless mode.
+
+## Input Bindings
+
+Step inputs are bound to data sources using `ref` or `constant`:
+
+```json
+"inputs": {
+  "dicom_dir": { "ref": "inputs.dicom_dir" },
+  "compress":  { "constant": "y" },
+  "cost":      { "ref": "context.cost" },
+  "volumes":   { "ref": "steps.convert.outputs.volumes" }
+}
+```
+
+Binding paths follow these patterns:
+- `inputs.X` — workflow-level input
+- `context.X` — context field (from heuristics, defaults, or overrides)
+- `context` — the entire context object
+- `steps.Y.outputs.Z` — output from a previous step
+
+## Available Tools
+
+Workflows compose these built-in tools:
+
+| Tool | Description | Key Inputs |
+|------|-------------|------------|
+| **dcm2niix** | Convert DICOM to NIfTI | `dicom_dir`, `compress`, `bids`, `pattern` |
+| **niimath** | NIfTI math operations (smooth, threshold, mask, etc.) | `nifti_paths`, `operation`, `operand` |
+| **allineate** | Registration and skull stripping via MNI152 template | `nifti_paths`, `cost` |
+| **bids-classify** | Auto-classify DICOM series to BIDS types | `sidecars`, `overrides` |
+| **bids-validate** | Validate BIDS dataset structure | `mappings`, `config` |
+| **bids-write** | Write BIDS-compliant dataset to disk | `volumes`, `mappings`, `config` |
+| **brainchop** | AI brain segmentation | `nifti_paths` |
+| **deface** | Remove facial features from anatomical scans | `nifti_paths` |
+| **tissue-segment** | Tissue segmentation | `nifti_paths` |
+| **atlas-parcellate** | Apply atlas parcellations | `nifti_paths` |
+| **quality-check** | Per-volume quality metrics | `volumes`, `series_list` |
+| **nifti-convert** | NIfTI format conversion | `nifti_paths` |
+
+## Supported Types
+
+Tool inputs and outputs use these type names:
+
+| Type | Description |
+|------|-------------|
+| `string`, `number`, `boolean` | Scalar values |
+| `string[]`, `number[]`, `json[]` | Arrays |
+| `volume` / `volume[]` | NIfTI file path(s) |
+| `dicom-folder` | Path to a DICOM directory |
+| `directory` | Path to an output directory |
+| `mask` | Binary mask volume |
+| `series-mapping[]` | BIDS series classification array |
+| `subject[]` | Detected subject/session metadata |
+| `bids-dir` | Path to a BIDS dataset directory |
+| `object` | Arbitrary JSON object |
+
+## Example: Simple DICOM to NIfTI
+
+A minimal workflow that converts DICOM files to compressed NIfTI:
+
+```json
+{
+  "name": "dicom-to-nifti",
+  "version": "1.0.0",
+  "description": "Convert DICOM series to NIfTI volumes",
+  "menu": "Import",
+
+  "inputs": {
+    "dicom_dir": {
+      "type": "dicom-folder",
+      "description": "DICOM source directory"
+    }
+  },
+
+  "context": {
+    "fields": {
+      "output_dir": {
+        "type": "directory",
+        "description": "Destination directory for converted NIfTI files"
+      },
+      "compress": {
+        "type": "string",
+        "description": "Compression method",
+        "default": "y",
+        "enum": ["y", "n"]
+      }
+    }
+  },
+
+  "steps": {
+    "convert": {
+      "tool": "dcm2niix",
+      "inputs": {
+        "dicom_dir": { "ref": "inputs.dicom_dir" },
+        "compress": { "ref": "context.compress" },
+        "bids": { "constant": "y" }
+      }
+    }
+  },
+
+  "outputs": {
+    "volumes": {
+      "type": "volume[]",
+      "ref": "steps.convert.outputs.volumes"
+    }
+  }
+}
+```
+
+## Example: Multi-Step Pipeline
+
+A workflow that converts DICOM, then skull-strips the results:
+
+```json
+{
+  "name": "dicom-skull-strip",
+  "version": "1.0.0",
+  "description": "Convert DICOM to NIfTI and skull-strip anatomical images",
+  "menu": "Processing",
+
+  "inputs": {
+    "dicom_dir": {
+      "type": "dicom-folder",
+      "description": "DICOM source directory"
+    }
+  },
+
+  "context": {
+    "fields": {
+      "output_dir": {
+        "type": "directory",
+        "description": "Destination for skull-stripped files"
+      },
+      "cost": {
+        "type": "string",
+        "description": "Allineate cost function (ls for T1, hel for other contrasts)",
+        "default": "ls",
+        "enum": ["ls", "hel", "mi", "nmi", "cr", "ncc"]
+      }
+    }
+  },
+
+  "steps": {
+    "convert": {
+      "tool": "dcm2niix",
+      "inputs": {
+        "dicom_dir": { "ref": "inputs.dicom_dir" },
+        "compress": { "constant": "y" },
+        "bids": { "constant": "y" }
+      }
+    },
+    "skull_strip": {
+      "tool": "allineate",
+      "inputs": {
+        "nifti_paths": { "ref": "steps.convert.outputs.volumes" },
+        "cost": { "ref": "context.cost" },
+        "output_dir": { "ref": "context.output_dir" }
+      }
+    }
+  },
+
+  "outputs": {
+    "stripped_volumes": {
+      "type": "volume[]",
+      "ref": "steps.skull_strip.outputs.output_paths"
+    },
+    "output_dir": {
+      "type": "string",
+      "ref": "steps.skull_strip.outputs.output_dir"
+    }
+  }
+}
+```
+
+Steps execute in order. The `skull_strip` step references `steps.convert.outputs.volumes`, so the engine automatically knows `convert` must finish first.
+
+## Output Mappings
+
+Step outputs are always available to downstream steps via `steps.<stepName>.outputs.<outputName>` and to heuristics via the `stepOutputs` argument — no manual wiring needed.
+
+If you want a step output to also appear as a named **context field** (for use by a custom heuristic, form display, or another workflow that reads `context.X`), declare an explicit `outputMappings`:
+
+```json
+"classify": {
+  "tool": "bids-classify",
+  "inputs": { ... },
+  "outputMappings": {
+    "mappings": "series_list",
+    "subjects": "subjects"
+  }
+}
+```
+
+The keys are tool output names; the values are context field names where the data lands. Most workflows don't need this — the unified `steps.X.outputs.Y` reference is enough.
+
+## Conditional Steps
+
+Skip a step when a context field is falsy:
+
+```json
+"deface": {
+  "tool": "deface",
+  "condition": "context.deface_enabled",
+  "inputs": {
+    "nifti_paths": { "ref": "steps.convert.outputs.volumes" }
+  }
+}
+```
+
+When `context.deface_enabled` is `false` or missing, the step is skipped entirely.
+
+## Context Fields and Heuristics
+
+Context fields can declare a `heuristic` — a named function that auto-populates the field from earlier step outputs. In headless mode, all heuristics run automatically before the remaining steps execute.
+
+```json
+"context": {
+  "fields": {
+    "series_list": {
+      "type": "series-mapping[]",
+      "description": "Classified series with BIDS datatype and suffix",
+      "heuristic": "bids-classify"
+    },
+    "subjects": {
+      "type": "subject[]",
+      "description": "Detected subjects and sessions",
+      "heuristic": "detect-subjects"
+    }
+  }
+}
+```
+
+Built-in heuristics include:
+- **bids-classify** — Auto-classify DICOM series into BIDS datatypes and suffixes
+- **detect-subjects** — Extract subject/session info from DICOM headers
+- **list-dicom-series** — List available DICOM series CRC numbers
+- **filter-high-confidence** — Filter series to only high-confidence classifications
+
+## Running Headless
+
+### The Headless API
+
+Import `runWorkflowHeadless` from the workflow API:
+
+```typescript
+import { runWorkflowHeadless } from './workflowApi'
+
+const result = await runWorkflowHeadless({
+  workflowName: 'dicom-to-bids',
+  inputs: {
+    dicom_dir: '/path/to/dicoms'
+  },
+  contextOverrides: {
+    output_dir: '/path/to/output',
+    dataset_name: 'My Study',
+    license: 'CC0'
+  },
+  onProgress: (step, status) => {
+    console.log(`[${step}] ${status}`)
+  }
+})
+
+console.log('Outputs:', result.outputs)
+console.log('Final context:', result.context)
+```
+
+### HeadlessWorkflowOptions
+
+```typescript
+interface HeadlessWorkflowOptions {
+  workflowName: string                          // Must match a registered workflow name
+  inputs: Record<string, unknown>               // Workflow-level inputs
+  contextOverrides?: Record<string, unknown>    // Override heuristic-computed values
+  onProgress?: (step: string, status: string) => void  // Progress callback
+}
+```
+
+### Execution Sequence
+
+When `runWorkflowHeadless` is called, the engine:
+
+1. **Initializes** the workflow run with the provided inputs
+2. **Runs auto-steps** — steps that depend only on `inputs.*` or constants (no context dependencies)
+3. **Runs all heuristics** — auto-populates context fields from step outputs
+4. **Applies context overrides** — your `contextOverrides` replace heuristic values
+5. **Validates** that all required inputs are satisfied
+6. **Executes remaining steps** in order, resolving bindings as it goes
+7. **Returns** the final `outputs` and `context`
+
+### Context Overrides
+
+Context overrides let you control values that would normally come from heuristics or user interaction. This is the key to headless operation — you supply the decisions that a user would make in the form UI.
+
+```typescript
+// Override BIDS classification for specific series
+contextOverrides: {
+  series_list: [
+    { seriesCRC: 12345, datatype: 'anat', suffix: 'T1w', confidence: 1.0 },
+    { seriesCRC: 67890, datatype: 'func', suffix: 'bold', confidence: 1.0 }
+  ],
+  output_dir: '/data/bids-output',
+  dataset_name: 'Longitudinal Study',
+  skull_strip_config: { engine: 'allineate', scope: 'anat' }
+}
+```
+
+If you omit a context override, the heuristic value (or the field's `default`) is used instead.
+
+## Creating Custom Workflows
+
+### File Location
+
+Place workflow files in either:
+- **Built-in:** `packages/niivue-desktop/workflows/workflows/` (shipped with the app)
+- **User:** `~/Library/Application Support/NiiVue Desktop/workflows/` on macOS (per-user, editable at runtime)
+
+User workflows follow the same schema and can reference all built-in tools.
+
+### Schema Validation
+
+Reference the schema for editor support (autocomplete, validation):
+
+```json
+{
+  "$schema": "../schemas/workflow.schema.json",
+  "name": "my-custom-workflow",
+  ...
+}
+```
+
+### Workflow Name Requirements
+
+- Must be **kebab-case**: lowercase letters, digits, and hyphens
+- Must start with a letter
+- Pattern: `^[a-z][a-z0-9-]*$`
+
+### Menu Categories
+
+Workflows appear under one of three menu headings:
+
+| Menu | Use For |
+|------|---------|
+| `Import` | Workflows that bring data into the system (DICOM conversion, BIDS import) |
+| `Processing` | Workflows that transform existing data (skull stripping, segmentation) |
+| `Export` | Workflows that write data out (format conversion, dataset packaging) |
+
+## Full BIDS Conversion Example
+
+Here's a complete headless script that converts a DICOM directory to a BIDS dataset:
+
+```typescript
+import { runWorkflowHeadless, loadDefinitionsFromPath } from './workflowApi'
+
+// Load workflow and tool definitions
+await loadDefinitionsFromPath('/path/to/workflows')
+
+const result = await runWorkflowHeadless({
+  workflowName: 'dicom-to-bids',
+  inputs: {
+    dicom_dir: '/data/raw/dicoms'
+  },
+  contextOverrides: {
+    output_dir: '/data/bids',
+    dataset_name: 'Motor Cortex Study',
+    dataset_version: '1.9.0',
+    license: 'CC-BY-4.0',
+    authors: 'Smith J, Doe A',
+    readme: 'Motor cortex fMRI study, 20 subjects, 2 sessions each.'
+  },
+  onProgress: (step, status) => {
+    console.log(`  ${step}: ${status}`)
+  }
+})
+
+console.log('BIDS dataset written to:', result.outputs.bids_dir)
+```
+
+The engine will:
+1. Run `dcm2niix` to convert the DICOM files
+2. Run `bids-classify` heuristic to auto-detect series types
+3. Run `detect-subjects` heuristic to find subjects/sessions
+4. Apply your overrides (dataset name, authors, etc.)
+5. Validate the proposed BIDS structure
+6. Write the final BIDS dataset
+
+## Niimath Operations Reference
+
+The `niimath` tool supports these operations via the `operation` input:
+
+| Operation | Description |
+|-----------|-------------|
+| `-s` | Gaussian smoothing (operand = sigma in mm) |
+| `-thr` | Lower threshold (zero below value) |
+| `-uthr` | Upper threshold (zero above value) |
+| `-bin` | Binarize (non-zero becomes 1) |
+| `-mul`, `-add`, `-sub`, `-div` | Arithmetic with scalar or volume |
+| `-mas` | Apply binary mask |
+| `-edge` | Edge detection |
+| `-ero`, `-dil` | Erode / dilate |
+| `-fillh` | Fill holes |
+| `-Tmean`, `-Tstd`, `-Tmax`, `-Tmin` | Temporal statistics |
+| `-nan` | Replace NaN with zero |
+| `-abs`, `-sqr`, `-sqrt`, `-log`, `-exp` | Math functions |
+| `-rank` | Rank-order values |
+
+## Adding a Custom Tool
+
+Tools live as a single JSON file in `packages/niivue-desktop/workflows/tools/<name>.tool.json`. The same file declares the tool's interface, its declarative CLI invocation, and (optionally) its appearance in the visual workflow designer. No registration in TypeScript is required for declarative CLI tools.
+
+A minimal tool JSON looks like:
+
+```json
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "my-smoother",
+  "version": "1.0.0",
+  "description": "Custom Gaussian smoother",
+  "inputs": {
+    "nifti_path": { "type": "volume", "description": "Input volume" },
+    "sigma": { "type": "number", "description": "Smoothing kernel sigma (mm)", "default": 2 }
+  },
+  "outputs": {
+    "output_path": { "type": "volume", "description": "Smoothed volume" }
+  },
+  "block": {
+    "id": "my-smoother",
+    "label": "Smooth (custom)",
+    "description": "Apply a Gaussian smoother",
+    "category": "Processing",
+    "icon": "GearIcon",
+    "exposedFields": ["nifti_path", "sigma"]
+  },
+  "exec": {
+    "binary": {
+      "name": "smoother",
+      "paths": { "darwin": "native-binaries/darwin/smoother" },
+      "packagedPaths": { "darwin": "native-binaries/smoother/darwin/smoother" }
+    },
+    "outputDir": { "tempPrefix": "wf-smoother-" },
+    "outputFile": {
+      "template": "{{inputBasename}}_smoothed.nii.gz",
+      "stripExtensions": [".nii.gz", ".nii"]
+    },
+    "args": [
+      { "input": "nifti_path" },
+      { "flag": "-s", "input": "sigma" },
+      { "value": "{{outputFile}}" }
+    ],
+    "outputs": {
+      "output_path": { "collect": "outputFiles" }
+    }
+  }
+}
+```
+
+The `block` section is optional — without it, the tool is still usable from workflow JSON but doesn't appear in the visual designer's palette. With it, the tool becomes a draggable block that users can add to custom workflows.
+
+A tool that needs custom logic (e.g. a TypeScript executor instead of a CLI binary) can omit the `exec` section and register itself via `registerToolExecutor` in `src/main/utils/toolRegistry.ts`. The same file also documents how to register named **post-processors** that transform a declarative tool's raw outputs.
+
+## Adding a Custom Heuristic
+
+Heuristics auto-populate context fields. Two flavours are supported:
+
+**Declarative** (preferred): a `.heuristic.json` file in `packages/niivue-desktop/workflows/heuristics/` describing a chain of operations (`filter`, `map`, `lookup`, `set-field`, etc.) over a source path. The source can reference `inputs.X`, `context.Y`, or `steps.<stepName>.outputs.<outputName>`. See `filter-high-confidence.heuristic.json` for a worked example. Declarative heuristics need no TypeScript code.
+
+**Programmatic**: a `HeuristicFn` registered via `registerHeuristic` in `src/main/utils/heuristicRegistry.ts`. The function signature is:
+
+```typescript
+type HeuristicFn = (
+  inputs: Record<string, unknown>,
+  context: Record<string, unknown>,
+  stepOutputs: Record<string, Record<string, unknown>>
+) => Promise<unknown>
+```
+
+Use the third argument to read step outputs directly — there is no `_stepOutputs_*` context-key convention.
+
+## Headless CLI
+
+A thin wrapper at `src/main/cli/runWorkflow.ts` lets you run any workflow from the command line. From a built copy of the desktop app:
+
+```bash
+node out/main/cli/runWorkflow.js \
+  --workflows-dir packages/niivue-desktop/workflows \
+  --workflow dicom-to-bids \
+  --input dicom_dir=/data/raw/dicoms \
+  --context output_dir=/data/bids \
+  --context dataset_name="Motor Cortex Study"
+```
+
+The CLI loads workflow definitions from the directory you point it at and calls the same `runWorkflowHeadless` engine that the desktop UI uses, so anything that runs in the UI runs here and vice-versa. The result (final outputs and context) is printed to stdout as JSON.
+
+A unit test (`test/unit/headlessWorkflowParity.test.ts`) verifies that every workflow on disk loads cleanly through the engine — if a workflow validates here, it can be run headlessly.
+
+## Tips
+
+- **Start simple.** Begin with a two-step workflow and add complexity incrementally.
+- **Use constants for fixed values.** If a tool input never changes, bind it with `{ "constant": "y" }` rather than adding a context field.
+- **Context fields have defaults.** Set sensible `default` values so headless runs need fewer overrides.
+- **Heuristics reduce boilerplate.** Let `bids-classify` and `detect-subjects` do the heavy lifting; override only the fields you need to customize.
+- **Conditional steps keep workflows flexible.** Add boolean context fields with `condition` to make preprocessing steps optional.
+- **Check tool definitions.** Each `*.tool.json` file documents the exact inputs, outputs, and supported enum values for a tool.

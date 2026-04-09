@@ -219,7 +219,7 @@ function OperationEditor({
             <TextField.Root
               value={operation.contextField || ''}
               onChange={(e) => onUpdate({ ...operation, contextField: e.target.value || undefined })}
-              placeholder="e.g. _stepOutputs_convert_sidecars"
+              placeholder="e.g. steps.convert.outputs.sidecars"
               size="1"
               className="flex-1 font-mono"
             />

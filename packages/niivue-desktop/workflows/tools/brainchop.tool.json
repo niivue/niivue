@@ -33,5 +33,19 @@
       "type": "volume",
       "description": "Path to the skull-stripped NIfTI volume"
     }
+  },
+  "block": {
+    "id": "skull-strip",
+    "label": "Skull Strip",
+    "description": "Remove non-brain tissue using ML-based extraction",
+    "category": "Processing",
+    "icon": "ScissorsIcon",
+    "defaults": {
+      "model": "brain-extract-mindgrab",
+      "dilation": 3
+    },
+    "exposedFields": ["nifti_path"],
+    "hiddenFields": ["model", "dilation"],
+    "formComponent": "skull-strip-editor"
   }
 }
