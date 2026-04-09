@@ -154,6 +154,69 @@ export interface BidsValidationResult {
   warnings: BidsValidationIssue[]
 }
 
+/** A single field-level fix the user can apply to a BIDS JSON sidecar */
+export interface SidecarFieldSuggestion {
+  /** JSON key, e.g. "RepetitionTime" */
+  field: string
+  /** Value currently stored in the sidecar (may be undefined) */
+  currentValue: unknown
+  /** Proposed value — used to prefill the form */
+  suggestedValue: unknown
+  /** Expected data shape for form rendering */
+  kind: 'string' | 'number' | 'array-number' | 'array-string' | 'enum'
+  /** For kind === 'enum' */
+  options?: string[]
+  /** Human-readable reason derived from validator output */
+  reason: string
+  /** Validator issue codes that triggered this suggestion */
+  issueCodes: string[]
+}
+
+/** A single JSON sidecar that needs editing, with its associated issues */
+export interface SidecarFixProposal {
+  /** Absolute path on disk to the JSON file */
+  sidecarPath: string
+  /** Path relative to dataset root (what the user sees) */
+  relativePath: string
+  /** Full current JSON content */
+  content: Record<string, unknown>
+  /** Field-level editors to render — always at least one entry */
+  suggestions: SidecarFieldSuggestion[]
+  /** Validator issues this sidecar is implicated in */
+  issues: BidsValidationIssue[]
+}
+
+export interface BidsFixAnalysisResult {
+  success: boolean
+  proposals?: SidecarFixProposal[]
+  error?: string
+}
+
+export interface SidecarUpdateResult {
+  ok: boolean
+  content?: Record<string, unknown>
+  error?: string
+}
+
+/** A single auto-applied fix from the bids-fix-sidecars pass */
+export interface SidecarAutoFixRecord {
+  sidecarPath: string
+  relativePath: string
+  field: string
+  oldValue: unknown
+  newValue: unknown
+  reason: string
+}
+
+/** Combined result of the auto-fix + re-validate pipeline */
+export interface BidsAutoFixResult {
+  success: boolean
+  fixesApplied?: SidecarAutoFixRecord[]
+  validation?: BidsValidationResult
+  proposals?: SidecarFixProposal[]
+  error?: string
+}
+
 export interface ParticipantDemographics {
   age: string
   sex: string

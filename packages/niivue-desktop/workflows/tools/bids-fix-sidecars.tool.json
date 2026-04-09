@@ -1,0 +1,44 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "bids-fix-sidecars",
+  "version": "1.0.0",
+  "description": "Run bids-validator against a written dataset, auto-apply unambiguous JSON sidecar fixes, and surface the rest for the user to edit",
+  "inputs": {
+    "bids_dir": {
+      "type": "bids-dir",
+      "description": "Path to the written BIDS dataset directory"
+    }
+  },
+  "outputs": {
+    "bids_dir": {
+      "type": "bids-dir",
+      "description": "Path to the updated BIDS dataset directory (same as input)"
+    },
+    "valid": {
+      "type": "boolean",
+      "description": "Whether the dataset passes bids-validator after fixes"
+    },
+    "fixes_applied": {
+      "type": "number",
+      "description": "Number of sidecar fields auto-populated (e.g. TaskName from filename)"
+    },
+    "remaining_errors": {
+      "type": "number",
+      "description": "Number of validator errors still present after auto-fixing"
+    },
+    "remaining_warnings": {
+      "type": "number",
+      "description": "Number of validator warnings still present after auto-fixing"
+    }
+  },
+  "block": {
+    "id": "fix-bids-sidecars",
+    "label": "Fix BIDS Sidecars",
+    "description": "Auto-fix what can be derived, then let the user edit remaining JSON sidecar issues in a form",
+    "category": "Quality",
+    "icon": "MagicWandIcon",
+    "exposedFields": [],
+    "hiddenFields": ["bids_dir"],
+    "formComponent": "bids-sidecar-fix"
+  }
+}

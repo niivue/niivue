@@ -8,6 +8,7 @@ import type {
   ParticipantDemographics,
   FieldmapIntendedFor
 } from '../../../../common/bidsTypes.js'
+import { BidsSidecarFixForm } from './BidsSidecarFixForm.js'
 
 const electron = window.electron
 
@@ -89,7 +90,9 @@ export function StepValidation({
       <button
         key={i}
         className={`text-left w-full text-xs px-2 py-1 rounded ${
-          isError ? 'bg-[var(--red-3)] text-[var(--red-11)]' : 'bg-[var(--yellow-3)] text-[var(--yellow-11)]'
+          isError
+            ? 'bg-[var(--red-3)] text-[var(--red-11)]'
+            : 'bg-[var(--yellow-3)] text-[var(--yellow-11)]'
         } ${clickable ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}`}
         onClick={() => clickable && onNavigateToIssue(issue)}
         disabled={!clickable}
@@ -146,6 +149,17 @@ export function StepValidation({
                 No issues found.
               </Text>
             )}
+          </div>
+        )}
+
+        {displayResult && !displayResult.valid && outputPath && (
+          <div className="w-full">
+            <BidsSidecarFixForm
+              datasetDir={outputPath}
+              validationResult={displayResult}
+              mappings={mappings}
+              onRevalidated={(r) => setPostWriteResult(r)}
+            />
           </div>
         )}
       </div>

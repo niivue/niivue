@@ -15,6 +15,9 @@ import type {
   BidsValidationResult,
   BidsValidatePayload,
   BidsSeriesMapping,
+  BidsFixAnalysisResult,
+  BidsAutoFixResult,
+  SidecarUpdateResult,
   FieldmapIntendedFor,
   ParseEventFileResult
 } from '../common/bidsTypes.js'
@@ -144,6 +147,27 @@ const api = {
   ): Promise<BidsValidationResult> => {
     return ipcRenderer.invoke('bids:validate-written', { dirPath, mappings })
   },
+  bidsAnalyzeFixes: (
+    dirPath: string,
+    result: BidsValidationResult
+  ): Promise<BidsFixAnalysisResult> => {
+    return ipcRenderer.invoke('bids:analyze-fixes', { dirPath, result })
+  },
+  bidsReadSidecar: (sidecarPath: string): Promise<Record<string, unknown> | null> => {
+    return ipcRenderer.invoke('bids:read-sidecar', sidecarPath)
+  },
+  bidsUpdateSidecar: (
+    sidecarPath: string,
+    updates: Record<string, unknown>
+  ): Promise<SidecarUpdateResult> => {
+    return ipcRenderer.invoke('bids:update-sidecar', { sidecarPath, updates })
+  },
+  bidsAutoFixSidecars: (
+    dirPath: string,
+    mappings?: BidsSeriesMapping[]
+  ): Promise<BidsAutoFixResult> => {
+    return ipcRenderer.invoke('bids:auto-fix-sidecars', { dirPath, mappings })
+  },
   bidsWrite: (payload: BidsWritePayload): Promise<BidsWriteResult> => {
     return ipcRenderer.invoke('bids:write', payload)
   },
@@ -165,11 +189,25 @@ const api = {
     stationaryPath: string,
     outputPath: string,
     opts: string[]
-  ): Promise<{ success: boolean; stdout: string; stderr: string; code: number; outputPath: string }> => {
+  ): Promise<{
+    success: boolean
+    stdout: string
+    stderr: string
+    code: number
+    outputPath: string
+  }> => {
     return ipcRenderer.invoke('headless:allineate', movingPath, stationaryPath, outputPath, opts)
   },
   // allineate registration
-  allineateRun: (args: string[]): Promise<{ success: boolean; stdout: string; stderr: string; code: number; error?: string }> => {
+  allineateRun: (
+    args: string[]
+  ): Promise<{
+    success: boolean
+    stdout: string
+    stderr: string
+    code: number
+    error?: string
+  }> => {
     return ipcRenderer.invoke('allineate:run', args)
   },
   allineateRegister: (
@@ -177,7 +215,14 @@ const api = {
     stationaryPath: string,
     outputPath: string,
     opts: string[] = []
-  ): Promise<{ success: boolean; stdout: string; stderr: string; code: number; outputPath: string; error?: string }> => {
+  ): Promise<{
+    success: boolean
+    stdout: string
+    stderr: string
+    code: number
+    outputPath: string
+    error?: string
+  }> => {
     return ipcRenderer.invoke('allineate:register', movingPath, stationaryPath, outputPath, opts)
   },
   // Workflow engine methods
@@ -190,7 +235,12 @@ const api = {
   workflowStart: (
     name: string,
     inputs: Record<string, unknown>
-  ): Promise<{ runId: string; runState: WorkflowRunState; definition: WorkflowDefinition; autoSteps: string[] }> => {
+  ): Promise<{
+    runId: string
+    runState: WorkflowRunState
+    definition: WorkflowDefinition
+    autoSteps: string[]
+  }> => {
     return ipcRenderer.invoke('workflow:start', { name, inputs })
   },
   workflowRunAutoSteps: (

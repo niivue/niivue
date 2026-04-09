@@ -59,6 +59,10 @@
         "type": "object",
         "description": "Skull stripping configuration (engine, scope, selections)",
         "default": {}
+      },
+      "bids_dir": {
+        "type": "string",
+        "description": "Path to the written BIDS dataset directory"
       }
     }
   },
@@ -99,6 +103,13 @@
         "fields": ["series_list", "subjects"],
         "component": "bids-preview",
         "buttonText": "Write BIDS"
+      },
+      {
+        "title": "Fix BIDS Sidecars",
+        "description": "Auto-apply unambiguous JSON sidecar fixes and let you edit any remaining validator issues",
+        "fields": [],
+        "component": "bids-sidecar-fix",
+        "buttonText": "Finish"
       }
     ]
   },
@@ -134,6 +145,15 @@
         "mappings": { "ref": "context.series_list" },
         "config": { "ref": "context" },
         "output_dir": { "ref": "context.output_dir" }
+      },
+      "outputMappings": {
+        "bids_dir": "bids_dir"
+      }
+    },
+    "fix_sidecars": {
+      "tool": "bids-fix-sidecars",
+      "inputs": {
+        "bids_dir": { "ref": "steps.write.outputs.bids_dir" }
       }
     }
   },

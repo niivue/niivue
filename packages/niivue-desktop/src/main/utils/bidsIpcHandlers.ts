@@ -4,7 +4,11 @@ import path from 'node:path'
 import os from 'node:os'
 
 const debugLog = (msg: string): void => {
-  try { fs.appendFileSync('/tmp/bids-validator-debug.log', `${new Date().toISOString()} [ipc] ${msg}\n`) } catch { /* */ }
+  try {
+    fs.appendFileSync('/tmp/bids-validator-debug.log', `${new Date().toISOString()} [ipc] ${msg}\n`)
+  } catch {
+    /* */
+  }
 }
 import { spawnDcm2niix } from './runDcm2niix.js'
 import {
@@ -15,11 +19,18 @@ import {
 } from './bidsEngine.js'
 import { writeDataset } from './bidsWriter.js'
 import { validateBidsDirectory, validateWithTempWrite } from './bidsExternalValidator.js'
+import {
+  analyzeValidatorIssues,
+  autoFixUnambiguous,
+  readSidecar,
+  updateSidecar
+} from './bidsSidecarFixer.js'
 import type {
   BidsConvertAndClassifyPayload,
   BidsWritePayload,
   BidsValidatePayload,
-  BidsSeriesMapping
+  BidsSeriesMapping,
+  BidsValidationResult
 } from '../../common/bidsTypes.js'
 
 export function registerBidsIpcHandlers(): void {
@@ -166,6 +177,71 @@ export function registerBidsIpcHandlers(): void {
           warnings: []
         }
       }
+    }
+  )
+
+  /**
+   * Analyze a validator result against a written dataset directory and
+   * return per-sidecar fix proposals. Only sidecars with at least one
+   * editable suggestion are returned.
+   */
+  ipcMain.handle(
+    'bids:analyze-fixes',
+    async (_evt, payload: { dirPath: string; result: BidsValidationResult }) => {
+      try {
+        const proposals = analyzeValidatorIssues(payload.dirPath, payload.result)
+        return { success: true, proposals }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return { success: false, error: msg }
+      }
+    }
+  )
+
+  /**
+   * Read a BIDS JSON sidecar from disk.
+   */
+  ipcMain.handle('bids:read-sidecar', async (_evt, sidecarPath: string) => {
+    return readSidecar(sidecarPath)
+  })
+
+  /**
+   * Run the full sidecar-fix cycle against a written dataset:
+   *   1. apply unambiguous auto-fixes (e.g. TaskName from filename)
+   *   2. re-run the external bids-validator
+   *   3. return the fresh validation result and editable fix proposals
+   *
+   * Used by both the `bids-fix-sidecars` workflow tool and the interactive
+   * BidsSidecarFixForm component.
+   */
+  ipcMain.handle(
+    'bids:auto-fix-sidecars',
+    async (_evt, payload: { dirPath: string; mappings?: BidsSeriesMapping[] }) => {
+      try {
+        const auto = autoFixUnambiguous(payload.dirPath)
+        const validation = await validateBidsDirectory(payload.dirPath, payload.mappings ?? [])
+        const proposals = analyzeValidatorIssues(payload.dirPath, validation)
+        return {
+          success: true,
+          fixesApplied: auto.fixes,
+          validation,
+          proposals
+        }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return { success: false, error: msg }
+      }
+    }
+  )
+
+  /**
+   * Apply user edits to a sidecar on disk. Empty strings / empty arrays /
+   * null values delete the corresponding key.
+   */
+  ipcMain.handle(
+    'bids:update-sidecar',
+    async (_evt, payload: { sidecarPath: string; updates: Record<string, unknown> }) => {
+      return updateSidecar(payload.sidecarPath, payload.updates)
     }
   )
 

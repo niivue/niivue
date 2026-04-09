@@ -3,7 +3,15 @@ import type { ToolExecutor } from '../../common/workflowTypes.js'
 import { classifyAll, extractDemographics } from './bidsEngine.js'
 import { validateProposedDataset } from './bidsValidator.js'
 import { writeDataset } from './bidsWriter.js'
-import type { BidsDatasetConfig, BidsSeriesMapping, DetectedSubject, DetectedSession, ParticipantDemographics } from '../../common/bidsTypes.js'
+import { autoFixUnambiguous } from './bidsSidecarFixer.js'
+import { validateBidsDirectory } from './bidsExternalValidator.js'
+import type {
+  BidsDatasetConfig,
+  BidsSeriesMapping,
+  DetectedSubject,
+  DetectedSession,
+  ParticipantDemographics
+} from '../../common/bidsTypes.js'
 
 // ── Post-processor registry ─────────────────────────────────────────
 
@@ -26,14 +34,19 @@ export function getPostProcessor(name: string): PostProcessor | undefined {
  * (age, sex) from DICOM header fields (PatientID, PatientAge, PatientSex, etc.).
  */
 function extractSubjectsFromSidecars(sidecarPaths: string[]): DetectedSubject[] {
-  const subjectMap = new Map<string, { sidecarPath: string; indices: number[]; dates: Map<string, number[]> }>()
+  const subjectMap = new Map<
+    string,
+    { sidecarPath: string; indices: number[]; dates: Map<string, number[]> }
+  >()
 
   for (let i = 0; i < sidecarPaths.length; i++) {
     try {
       const raw = fs.readFileSync(sidecarPaths[i], 'utf-8')
       const sidecar = JSON.parse(raw)
       const patientId = String(sidecar.PatientID || sidecar.PatientName || 'unknown').trim()
-      const acqDate = String(sidecar.AcquisitionDate || sidecar.AcquisitionDateTime || sidecar.StudyDate || '').trim()
+      const acqDate = String(
+        sidecar.AcquisitionDate || sidecar.AcquisitionDateTime || sidecar.StudyDate || ''
+      ).trim()
 
       if (!subjectMap.has(patientId)) {
         subjectMap.set(patientId, { sidecarPath: sidecarPaths[i], indices: [], dates: new Map() })
@@ -114,7 +127,10 @@ const bidsValidateExecutor: ToolExecutor = async (inputs) => {
     name: (context.dataset_name as string) || '',
     bidsVersion: (context.dataset_version as string) || '1.9.0',
     license: (context.license as string) || 'CC0',
-    authors: (context.authors as string || '').split(',').map((a: string) => a.trim()).filter(Boolean),
+    authors: ((context.authors as string) || '')
+      .split(',')
+      .map((a: string) => a.trim())
+      .filter(Boolean),
     readme: (context.readme as string) || '',
     outputDir: (context.output_dir as string) || ''
   }
@@ -139,7 +155,10 @@ const bidsWriteExecutor: ToolExecutor = async (inputs) => {
     name: (context.dataset_name as string) || '',
     bidsVersion: (context.dataset_version as string) || '1.9.0',
     license: (context.license as string) || 'CC0',
-    authors: (context.authors as string || '').split(',').map((a: string) => a.trim()).filter(Boolean),
+    authors: ((context.authors as string) || '')
+      .split(',')
+      .map((a: string) => a.trim())
+      .filter(Boolean),
     readme: (context.readme as string) || '',
     outputDir
   }
@@ -156,7 +175,9 @@ const bidsWriteExecutor: ToolExecutor = async (inputs) => {
     }
   }
 
-  const fieldmapIntendedFor = context._fieldmapIntendedFor as import('../../common/bidsTypes.js').FieldmapIntendedFor[] | undefined
+  const fieldmapIntendedFor = context._fieldmapIntendedFor as
+    | import('../../common/bidsTypes.js').FieldmapIntendedFor[]
+    | undefined
 
   const result = writeDataset(config, mappings, undefined, allDemographics, fieldmapIntendedFor)
   return {
@@ -165,12 +186,40 @@ const bidsWriteExecutor: ToolExecutor = async (inputs) => {
   }
 }
 
+/**
+ * bids-fix-sidecars — the headless path. Applies unambiguous fixes
+ * (TaskName from filename) to the dataset in place, then re-runs the
+ * external bids-validator and reports the resulting state. In the
+ * interactive path (WorkflowDialog form component) the form has already
+ * done the auto-fix + user edits by the time this executor runs, so
+ * re-running the auto-fix is a no-op and the re-validation reports the
+ * final state.
+ */
+const bidsFixSidecarsExecutor: ToolExecutor = async (inputs) => {
+  const bidsDir = inputs.bids_dir as string
+  if (!bidsDir || typeof bidsDir !== 'string') {
+    throw new Error('bids-fix-sidecars: bids_dir input is required')
+  }
+
+  const auto = autoFixUnambiguous(bidsDir)
+  const validation = await validateBidsDirectory(bidsDir, [])
+
+  return {
+    bids_dir: bidsDir,
+    valid: validation.valid,
+    fixes_applied: auto.fixes.length,
+    remaining_errors: validation.errors.length,
+    remaining_warnings: validation.warnings.length
+  }
+}
+
 // ── Tool executor registry ──────────────────────────────────────────
 
 const toolExecutors = new Map<string, ToolExecutor>([
   ['bids-classify', bidsClassifyExecutor],
   ['bids-validate', bidsValidateExecutor],
-  ['bids-write', bidsWriteExecutor]
+  ['bids-write', bidsWriteExecutor],
+  ['bids-fix-sidecars', bidsFixSidecarsExecutor]
 ])
 
 export function getToolExecutor(name: string): ToolExecutor | undefined {

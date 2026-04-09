@@ -10,6 +10,9 @@ import type {
   BidsValidationResult,
   BidsValidatePayload,
   BidsSeriesMapping,
+  BidsFixAnalysisResult,
+  BidsAutoFixResult,
+  SidecarUpdateResult,
   FieldmapIntendedFor,
   ParseEventFileResult
 } from '../../common/bidsTypes.js'
@@ -85,6 +88,19 @@ declare global {
         dirPath: string,
         mappings: BidsSeriesMapping[]
       ) => Promise<BidsValidationResult>
+      bidsAnalyzeFixes: (
+        dirPath: string,
+        result: BidsValidationResult
+      ) => Promise<BidsFixAnalysisResult>
+      bidsReadSidecar: (sidecarPath: string) => Promise<Record<string, unknown> | null>
+      bidsUpdateSidecar: (
+        sidecarPath: string,
+        updates: Record<string, unknown>
+      ) => Promise<SidecarUpdateResult>
+      bidsAutoFixSidecars: (
+        dirPath: string,
+        mappings?: BidsSeriesMapping[]
+      ) => Promise<BidsAutoFixResult>
       bidsWrite: (payload: BidsWritePayload) => Promise<BidsWriteResult>
       bidsSelectOutputDir: () => Promise<string | null>
       bidsSuggestFieldmapMappings: (mappings: BidsSeriesMapping[]) => Promise<FieldmapIntendedFor[]>

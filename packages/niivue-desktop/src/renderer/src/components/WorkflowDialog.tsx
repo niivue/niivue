@@ -4,9 +4,11 @@ import { ExclamationTriangleIcon } from '@radix-ui/react-icons'
 import type { ContextFieldDef } from '../../../common/workflowTypes.js'
 import type {
   BidsSeriesMapping,
+  BidsValidationResult,
   FieldmapIntendedFor,
   ParticipantDemographics,
-  DetectedSubject
+  DetectedSubject,
+  SidecarAutoFixRecord
 } from '../../../common/bidsTypes.js'
 import { Niivue, NVImage, SLICE_TYPE } from '@niivue/niivue'
 import { WizardShell, type WizardStep } from './Wizard/index.js'
@@ -17,6 +19,7 @@ import { StepClassification } from './BidsWizard/StepClassification.js'
 import { StepSubjectSession } from './BidsWizard/StepSubjectSession.js'
 import { StepSkullStrip } from './BidsWizard/StepSkullStrip.js'
 import { StepBidsPreview } from './BidsWizard/StepBidsPreview.js'
+import { BidsSidecarFixForm } from './BidsWizard/BidsSidecarFixForm.js'
 
 // ── Classification table adapter ─────────────────────────────────────
 
@@ -456,12 +459,78 @@ interface CustomComponentProps {
   onLoadFile?: (niftiPath: string) => Promise<void>
 }
 
+/**
+ * Form component for the `bids-fix-sidecars` tool. Reads `bids_dir` from
+ * context (populated by a preceding bids-write step), runs the auto-fix
+ * pass via BidsSidecarFixForm in `autoFixOnMount` mode, and writes a
+ * summary of the result back into context so downstream steps can react.
+ */
+function BidsSidecarFixAdapter({
+  context,
+  onFieldChange
+}: CustomComponentProps): React.ReactElement {
+  const bidsDir = (context.bids_dir as string) || ''
+  // Memoize so the BidsSidecarFixForm doesn't see a new array on every render.
+  const mappings = useMemo(
+    () => (context.series_list as BidsSeriesMapping[]) || [],
+    [context.series_list]
+  )
+
+  const handleAutoFixed = useCallback(
+    (fixes: SidecarAutoFixRecord[], validation: BidsValidationResult) => {
+      onFieldChange('_sidecar_fix_state', {
+        fixesApplied: fixes.length,
+        valid: validation.valid,
+        remainingErrors: validation.errors.length,
+        remainingWarnings: validation.warnings.length
+      })
+    },
+    [onFieldChange]
+  )
+
+  const handleRevalidated = useCallback(
+    (validation: BidsValidationResult) => {
+      onFieldChange('_sidecar_fix_state', {
+        valid: validation.valid,
+        remainingErrors: validation.errors.length,
+        remainingWarnings: validation.warnings.length
+      })
+    },
+    [onFieldChange]
+  )
+
+  if (!bidsDir) {
+    return (
+      <Callout.Root color="red">
+        <Callout.Icon>
+          <ExclamationTriangleIcon />
+        </Callout.Icon>
+        <Callout.Text>
+          No BIDS dataset directory found in the workflow context. Add a &ldquo;Write BIDS
+          Dataset&rdquo; step before this one and map its output to <code>bids_dir</code>.
+        </Callout.Text>
+      </Callout.Root>
+    )
+  }
+
+  return (
+    <BidsSidecarFixForm
+      datasetDir={bidsDir}
+      mappings={mappings}
+      autoFixOnMount
+      onAutoFixed={handleAutoFixed}
+      onRevalidated={handleRevalidated}
+    />
+  )
+}
+
 const COMPONENT_REGISTRY: Record<string, React.FC<CustomComponentProps>> = {
   'subject-select': SubjectSelectAdapter,
   'bids-classification-table': ClassificationAdapter,
   'subject-session-editor': SubjectSessionAdapter,
   'skull-strip-editor': SkullStripAdapter,
-  'bids-preview': StepBidsPreview
+  'bids-preview': StepBidsPreview,
+  'bids-sidecar-fix': BidsSidecarFixAdapter
 }
 
 // ── Main WorkflowDialog ──────────────────────────────────────────────
