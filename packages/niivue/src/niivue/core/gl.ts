@@ -223,7 +223,6 @@ export function requestCORSIfNotSameOrigin(img: HTMLImageElement, url: string): 
  * @param bmpTexture - Current bitmap texture reference (will be deleted if not null)
  * @param matCapTexture - Current matcap texture reference (will be deleted if not null)
  * @param onBmpTextureLoaded - Callback when bitmap texture loaded with width/height ratio
- * @param onDrawScene - Callback to redraw scene
  * @returns Promise resolving to the created texture
  */
 export async function loadPngAsTexture(
@@ -235,8 +234,7 @@ export async function loadPngAsTexture(
     fontTexture: WebGLTexture | null,
     bmpTexture: WebGLTexture | null,
     matCapTexture: WebGLTexture | null,
-    onBmpTextureLoaded?: (widthHeightRatio: number) => void,
-    onDrawScene?: () => void
+    onBmpTextureLoaded?: (widthHeightRatio: number) => void
 ): Promise<WebGLTexture | null> {
     return new Promise((resolve, reject) => {
         const img = new Image()
@@ -294,9 +292,10 @@ export async function loadPngAsTexture(
             // Upload the image into the texture.
             gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img)
             resolve(pngTexture)
-            if (textureNum !== 4 && onDrawScene) {
-                onDrawScene()
-            }
+            // PR1567
+            // if (textureNum !== 4 && onDrawScene) {
+            //    onDrawScene()
+            // }
         }
         img.onerror = reject
         requestCORSIfNotSameOrigin(img, pngUrl)
