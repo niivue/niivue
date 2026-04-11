@@ -12280,20 +12280,9 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
      * @internal
      */
     async loadPngAsTexture(pngUrl: string, textureNum: number): Promise<WebGLTexture | null> {
-        const texture = await glUtils.loadPngAsTexture(
-            this.gl,
-            pngUrl,
-            textureNum,
-            this.fontShader,
-            this.bmpShader,
-            this.fontTexture,
-            this.bmpTexture,
-            this.matCapTexture,
-            (widthHeightRatio) => {
-                this.bmpTextureWH = widthHeightRatio
-            }
-        )
-
+        const texture = await glUtils.loadPngAsTexture(this.gl, pngUrl, textureNum, this.fontShader, this.bmpShader, this.fontTexture, this.bmpTexture, this.matCapTexture, (widthHeightRatio) => {
+            this.bmpTextureWH = widthHeightRatio
+        })
         // Update the appropriate texture property based on textureNum
         if (textureNum === 3) {
             this.fontTexture = texture
