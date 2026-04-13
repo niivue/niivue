@@ -31,7 +31,8 @@
       }
       var nv1 = new niivue.Niivue()
       await nv1.attachTo("gl1")
-      await nv1.loadFont("../fonts/Poem.png", "../fonts/Poem.json")
+      const fontUrl = "https://raw.githubusercontent.com/niivue/fonts/main/fonts/Poem"
+      await nv1.loadFont(fontUrl + ".png", fontUrl + ".json")
       nv1.opts.loadingText = "麻雀虽小"
       nv1.drawScene()
     </script>
