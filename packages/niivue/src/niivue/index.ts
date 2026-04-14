@@ -11767,6 +11767,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
                 if (this.opts.isColorbar) {
                     this.drawColorbar()
                 }
+                this.drawAnchoredLabels()
                 return
             }
             this.drawLoadingText(this.opts.loadingText)
@@ -11816,6 +11817,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             if (this.opts.isColorbar) {
                 this.drawColorbar()
             }
+            this.drawAnchoredLabels()
             return
         }
 
@@ -12193,6 +12195,10 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         posString = pos[0].toFixed(2) + '×' + pos[1].toFixed(2) + '×' + pos[2].toFixed(2)
         this.readyForSync = true // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
         this.sync()
+        const has3DTile = this.screenSlices.some((s) => s.axCorSag === SLICE_TYPE.RENDER)
+        if (!has3DTile) {
+            this.draw3DLabels(mat4.create(), [0, 0, 0, 0], true)
+        }
         this.drawAnchoredLabels()
         this.drawBoundsBorder()
         return posString
