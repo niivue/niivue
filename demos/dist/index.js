@@ -53415,6 +53415,7 @@ var Niivue = class extends EventTarget {
         if (this.opts.isColorbar) {
           this.drawColorbar();
         }
+        this.drawAnchoredLabels();
         return;
       }
       this.drawLoadingText(this.opts.loadingText);
@@ -53456,6 +53457,7 @@ var Niivue = class extends EventTarget {
       if (this.opts.isColorbar) {
         this.drawColorbar();
       }
+      this.drawAnchoredLabels();
       return;
     }
     if (this.opts.isColorbar) {
@@ -53718,6 +53720,10 @@ var Niivue = class extends EventTarget {
     posString = pos[0].toFixed(2) + "\xD7" + pos[1].toFixed(2) + "\xD7" + pos[2].toFixed(2);
     this.readyForSync = true;
     this.sync();
+    const has3DTile = this.screenSlices.some((s) => s.axCorSag === 4 /* RENDER */);
+    if (!has3DTile) {
+      this.draw3DLabels(mat4_exports.create(), [0, 0, 0, 0], true);
+    }
     this.drawAnchoredLabels();
     this.drawBoundsBorder();
     return posString;
