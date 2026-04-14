@@ -780,7 +780,29 @@ declare class NVImage {
     init(dataBuffer?: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null, name?: string, colormap?: string, opacity?: number, _pairedImgData?: ArrayBuffer | null, cal_min?: number, cal_max?: number, trustCalMinMax?: boolean, percentileFrac?: number, ignoreZeroVoxels?: boolean, useQFormNotSForm?: boolean, colormapNegative?: string, frame4D?: number, imageType?: ImageType, cal_minNeg?: number, cal_maxNeg?: number, colorbarVisible?: boolean, colormapLabel?: LUT | null, colormapType?: number, imgRaw?: ArrayBuffer | ArrayBufferLike | null): void;
     static new(dataBuffer: ArrayBuffer | ArrayBuffer[] | ArrayBufferLike | null, name: string, colormap: string, opacity: number, pairedImgData: ArrayBuffer | null, cal_min: number, cal_max: number, trustCalMinMax: boolean, percentileFrac: number, ignoreZeroVoxels: boolean, useQFormNotSForm: boolean, colormapNegative: string, frame4D: number, imageType: ImageType, cal_minNeg: number, cal_maxNeg: number, colorbarVisible: boolean, colormapLabel: LUT | null, colormapType: number, zarrData: null | unknown): Promise<NVImage>;
     computeObliqueAngle(mtx44: mat4): number;
+    /**
+     * Convert vector field from Float32 to RGBA representation.
+     * Note: We use RGBA rather than RGB and use least significant bits to store vector polarity.
+     * This allows a single bitmap to store BOTH (unsigned) color magnitude and signed vector direction.
+     *
+     * @param nvImage - The NVImage instance
+     * @param inImg - Input Float32Array containing vector field data
+     * @returns Uint8Array with RGBA encoded vector data
+     */
     float32V1asRGBA(inImg: Float32Array): Uint8Array;
+    /**
+     * Load and process diffusion tensor vector (V1) data with optional flips.
+     * The vectors must be of unit length.
+     * Modifies the nvImage.img property with the processed RGBA data.
+     *
+     * @param nvImage - The NVImage instance
+     * @param isFlipX - Flip X component (default: false)
+     * @param isFlipY - Flip Y component (default: false)
+     * @param isFlipZ - Flip Z component (default: false)
+     * @example nv1.loadVolumes(volumeList); nv1.volumes[1].loadImgV1();
+     * @returns true if successful, false if V1 data is not available
+     * @see {@link https://niivue.com/demos/features/modulate.html | live demo usage}
+     */
     loadImgV1(isFlipX?: boolean, isFlipY?: boolean, isFlipZ?: boolean): boolean;
     calculateOblique(): void;
     readECAT(buffer: ArrayBuffer): ArrayBuffer;

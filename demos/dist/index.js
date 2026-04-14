@@ -32286,9 +32286,31 @@ var NVImage = class _NVImage {
   computeObliqueAngle(mtx44) {
     return computeObliqueAngle(mtx44);
   }
+  /**
+   * Convert vector field from Float32 to RGBA representation.
+   * Note: We use RGBA rather than RGB and use least significant bits to store vector polarity.
+   * This allows a single bitmap to store BOTH (unsigned) color magnitude and signed vector direction.
+   *
+   * @param nvImage - The NVImage instance
+   * @param inImg - Input Float32Array containing vector field data
+   * @returns Uint8Array with RGBA encoded vector data
+   */
   float32V1asRGBA(inImg) {
     return float32V1asRGBA(this, inImg);
   }
+  /**
+   * Load and process diffusion tensor vector (V1) data with optional flips.
+   * The vectors must be of unit length.
+   * Modifies the nvImage.img property with the processed RGBA data.
+   *
+   * @param nvImage - The NVImage instance
+   * @param isFlipX - Flip X component (default: false)
+   * @param isFlipY - Flip Y component (default: false)
+   * @param isFlipZ - Flip Z component (default: false)
+   * @example nv1.loadVolumes(volumeList); nv1.volumes[1].loadImgV1();
+   * @returns true if successful, false if V1 data is not available
+   * @see {@link https://niivue.com/demos/features/modulate.html | live demo usage}
+   */
   loadImgV1(isFlipX = false, isFlipY = false, isFlipZ = false) {
     return loadImgV1(this, isFlipX, isFlipY, isFlipZ);
   }
