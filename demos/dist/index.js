@@ -33485,13 +33485,13 @@ function migrateLegacyDocument(input) {
           }
         }
       }
-      if (copy6.colormap && !Array.isArray(copy6.colormap)) {
+      if (copy6.colormap && typeof copy6.colormap !== "string" && !Array.isArray(copy6.colormap)) {
         const arr = extractNumberArray(copy6.colormap);
         if (arr) {
           copy6.colormap = arr;
         }
       }
-      if (copy6.colormapNegative && !Array.isArray(copy6.colormapNegative)) {
+      if (copy6.colormapNegative && typeof copy6.colormapNegative !== "string" && !Array.isArray(copy6.colormapNegative)) {
         const arr = extractNumberArray(copy6.colormapNegative);
         if (arr) {
           copy6.colormapNegative = arr;
