@@ -16357,8 +16357,8 @@ var NVMeshLoaders = class _NVMeshLoaders {
     }
     const vers = reader.getUint32(992, true);
     const hdr_sz = reader.getUint32(996, true);
-    if (vers > 2 || hdr_sz !== 1e3 || magic !== 1128354388) {
-      throw new Error("Not a valid TRK file");
+    if (vers > 3 || hdr_sz !== 1e3 || magic !== 1128354388) {
+      throw new Error(`Not a valid TRK file expected version \u22643 (${vers}), header size 1000 (${hdr_sz}) and magic of 1128354388 (${magic})`);
     }
     const n_scalars = reader.getInt16(36, true);
     const dpv = [];
@@ -23036,7 +23036,7 @@ function requestCORSIfNotSameOrigin(img, url) {
     img.crossOrigin = "";
   }
 }
-async function loadPngAsTexture(gl, pngUrl, textureNum, fontShader, bmpShader, fontTexture, bmpTexture, matCapTexture, onBmpTextureLoaded, onDrawScene) {
+async function loadPngAsTexture(gl, pngUrl, textureNum, fontShader, bmpShader, fontTexture, bmpTexture, matCapTexture, onBmpTextureLoaded) {
   return new Promise((resolve2, reject) => {
     const img = new Image();
     img.onload = () => {
@@ -23082,9 +23082,6 @@ async function loadPngAsTexture(gl, pngUrl, textureNum, fontShader, bmpShader, f
       gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, img);
       resolve2(pngTexture);
-      if (textureNum !== 4 && onDrawScene) {
-        onDrawScene();
-      }
     };
     img.onerror = reject;
     requestCORSIfNotSameOrigin(img, pngUrl);
@@ -39862,9 +39859,15 @@ function calculateTextWidth(params) {
     return 0;
   }
   let w = 0;
-  const bytes = new TextEncoder().encode(str6);
-  for (let i = 0; i < str6.length; i++) {
-    w += scale6 * fontMets.mets[bytes[i]].xadv;
+  for (const char of str6) {
+    const codePoint = char.codePointAt(0);
+    const metric = fontMets.mets[codePoint];
+    if (!metric) {
+      console.warn(`calculateTextWidth() : Missing font metric for code point ${codePoint} in string "${str6}"`);
+      continue;
+    } else {
+      w += scale6 * metric.xadv;
+    }
   }
   return w;
 }
@@ -39873,11 +39876,15 @@ function calculateTextHeight(params) {
   if (!str6) {
     return 0;
   }
-  const byteSet = new Set(Array.from(str6));
-  const bytes = new TextEncoder().encode(Array.from(byteSet).join(""));
-  const tallest = Object.values(fontMets.mets).filter((_, index) => bytes.includes(index)).reduce((a, b) => a.lbwh[3] > b.lbwh[3] ? a : b);
-  const height = tallest.lbwh[3];
-  return scale6 * height;
+  let maxH = 0;
+  for (const char of str6) {
+    const codePoint = char.codePointAt(0);
+    const metric = fontMets.mets[codePoint];
+    if (metric?.lbwh?.[3] > maxH) {
+      maxH = metric.lbwh[3];
+    }
+  }
+  return scale6 * maxH;
 }
 function calculateTextBelowPosition(params, getTextWidth) {
   const { xy, str: str6, fontPx, canvasWidth } = params;
@@ -48550,18 +48557,18 @@ var Niivue = class extends EventTarget {
       size: this.fontMetrics.atlas.size,
       mets: {}
     };
-    for (let id = 0; id < 256; id++) {
-      this.fontMets.mets[id] = {
-        xadv: 0,
-        uv_lbwh: [0, 0, 0, 0],
-        lbwh: [0, 0, 0, 0]
-      };
-    }
     const scaleW = this.fontMetrics.atlas.width;
     const scaleH = this.fontMetrics.atlas.height;
     for (let i = 0; i < this.fontMetrics.glyphs.length; i++) {
       const glyph = this.fontMetrics.glyphs[i];
       const id = glyph.unicode;
+      if (!this.fontMets.mets[id]) {
+        this.fontMets.mets[id] = {
+          xadv: 0,
+          uv_lbwh: [0, 0, 0, 0],
+          lbwh: [0, 0, 0, 0]
+        };
+      }
       this.fontMets.mets[id].xadv = glyph.advance;
       if (glyph.planeBounds === void 0) {
         continue;
@@ -51057,15 +51064,20 @@ var Niivue = class extends EventTarget {
       throw new Error("fontShader undefined");
     }
     const metrics = this.fontMets.mets[char];
-    const l = xy[0] + scale6 * metrics.lbwh[0];
-    const b = -(scale6 * metrics.lbwh[1]);
-    const w = scale6 * metrics.lbwh[2];
-    const h = scale6 * metrics.lbwh[3];
-    const t = xy[1] + (b - h) + scale6;
-    this.gl.uniform4f(this.fontShader.uniforms.leftTopWidthHeight, l, t, w, h);
-    this.gl.uniform4fv(this.fontShader.uniforms.uvLeftTopWidthHeight, metrics.uv_lbwh);
-    this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
-    return scale6 * metrics.xadv;
+    if (!metrics) {
+      console.warn(`drawChar() : Missing font metric for char : "${char}"`);
+      return 0;
+    } else {
+      const l = xy[0] + scale6 * metrics.lbwh[0];
+      const b = -(scale6 * metrics.lbwh[1]);
+      const w = scale6 * metrics.lbwh[2];
+      const h = scale6 * metrics.lbwh[3];
+      const t = xy[1] + (b - h) + scale6;
+      this.gl.uniform4f(this.fontShader.uniforms.leftTopWidthHeight, l, t, w, h);
+      this.gl.uniform4fv(this.fontShader.uniforms.uvLeftTopWidthHeight, metrics.uv_lbwh);
+      this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4);
+      return scale6 * metrics.xadv;
+    }
   }
   /**
    * Render loading text centered on the canvas.
@@ -51108,10 +51120,10 @@ var Niivue = class extends EventTarget {
     let screenPxRange = size / this.fontMets.size * this.fontMets.distanceRange;
     screenPxRange = Math.max(screenPxRange, 1);
     this.gl.uniform1f(this.fontShader.uniforms.screenPxRange, screenPxRange);
-    const bytes = new TextEncoder().encode(str6);
     this.gl.bindVertexArray(this.genericVAO);
-    for (let i = 0; i < str6.length; i++) {
-      xy[0] += this.drawChar(xy, size, bytes[i]);
+    for (const char of str6) {
+      const codePoint = char.codePointAt(0);
+      xy[0] += this.drawChar(xy, size, codePoint);
     }
     this.gl.bindVertexArray(this.unusedVAO);
   }
@@ -53780,22 +53792,9 @@ var Niivue = class extends EventTarget {
    * @internal
    */
   async loadPngAsTexture(pngUrl, textureNum) {
-    const texture = await loadPngAsTexture(
-      this.gl,
-      pngUrl,
-      textureNum,
-      this.fontShader,
-      this.bmpShader,
-      this.fontTexture,
-      this.bmpTexture,
-      this.matCapTexture,
-      (widthHeightRatio) => {
-        this.bmpTextureWH = widthHeightRatio;
-      },
-      () => {
-        this.drawScene();
-      }
-    );
+    const texture = await loadPngAsTexture(this.gl, pngUrl, textureNum, this.fontShader, this.bmpShader, this.fontTexture, this.bmpTexture, this.matCapTexture, (widthHeightRatio) => {
+      this.bmpTextureWH = widthHeightRatio;
+    });
     if (textureNum === 3) {
       this.fontTexture = texture;
     } else if (textureNum === 4) {
@@ -53803,6 +53802,7 @@ var Niivue = class extends EventTarget {
     } else if (textureNum === 5) {
       this.matCapTexture = texture;
     }
+    this.drawScene();
     return texture;
   }
   /**
