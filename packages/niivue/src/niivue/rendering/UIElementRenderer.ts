@@ -46,10 +46,17 @@ export function calculateTextWidth(params: TextWidthParams): number {
     }
 
     let w = 0
-    const bytes = new TextEncoder().encode(str)
-    for (let i = 0; i < str.length; i++) {
-        w += scale * fontMets.mets[bytes[i]].xadv
+    for (const char of str) {
+        const codePoint = char.codePointAt(0)!
+        const metric = fontMets.mets[codePoint]
+        if (!metric) {
+            console.warn(`calculateTextWidth() : Missing font metric for code point ${codePoint} in string "${str}"`)
+            continue
+        } else {
+            w += scale * metric.xadv
+        }
     }
+
     return w
 }
 
@@ -73,14 +80,17 @@ export function calculateTextHeight(params: TextHeightParams): number {
         return 0
     }
 
-    const byteSet = new Set(Array.from(str))
-    const bytes = new TextEncoder().encode(Array.from(byteSet).join(''))
+    let maxH = 0
 
-    const tallest = Object.values(fontMets.mets)
-        .filter((_, index) => bytes.includes(index))
-        .reduce((a, b) => (a.lbwh[3] > b.lbwh[3] ? a : b))
-    const height = tallest.lbwh[3]
-    return scale * height
+    for (const char of str) {
+        const codePoint = char.codePointAt(0)!
+        const metric = fontMets.mets[codePoint]
+        if (metric?.lbwh?.[3] > maxH) {
+            maxH = metric.lbwh[3]
+        }
+    }
+
+    return scale * maxH
 }
 
 /**
