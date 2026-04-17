@@ -5249,7 +5249,7 @@ var forEach3 = (function() {
 // package.json
 var package_default = {
   name: "@niivue/niivue",
-  version: "0.68.1",
+  version: "0.68.2",
   description: "minimal webgl2 nifti image viewer",
   types: "./build/niivue/index.d.ts",
   main: "./build/niivue/index.js",
