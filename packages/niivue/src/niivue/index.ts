@@ -6107,7 +6107,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         // Run the blur in a Web Worker so the main thread is never blocked.
         // Falls back to the synchronous path if the Worker is unavailable
         // (restrictive CSP, SSR environment, or bundler interference).
-        const hasAnyVoxel = bitmapDataSource.some(v => v !== 0);
+        const hasAnyVoxel = bitmapDataSource.some((v) => v !== 0)
         if (this.opts.smoothDrawing > 0 && !this.opts.is2DSliceShader && hasAnyVoxel) {
             const generation = ++this._smoothDrawingGeneration
             const dimsSnapshot = dims.slice()
@@ -6120,15 +6120,12 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
                     const bitmapCopy = bitmapDataSource.slice().buffer
                     const onMessage = (e: MessageEvent): void => {
                         // Discard result if a newer blur has been requested in the meantime
-                        if (e.data.generation !== generation) return
+                        if (e.data.generation !== generation) {
+                            return
+                        }
                         worker.removeEventListener('message', onMessage)
                         const smoothed = new Float32Array(e.data.smoothed)
-                        this.drawSmoothedTexture = this.r16fTex(
-                            this.drawSmoothedTexture,
-                            TEXTURE_CONSTANTS.TEXTURE10_DRAW_SMOOTH,
-                            dimsSnapshot,
-                            smoothed
-                        )
+                        this.drawSmoothedTexture = this.r16fTex(this.drawSmoothedTexture, TEXTURE_CONSTANTS.TEXTURE10_DRAW_SMOOTH, dimsSnapshot, smoothed)
                         this.drawScene()
                     }
                     worker.addEventListener('message', onMessage)
@@ -6136,18 +6133,13 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
                     workerDispatched = true
                 } catch {
                     // postMessage failed; fall through to sync path
-                    console.warn("`opts.smoothDrawing` enabled without Web Worker support. This will severely impact UI responsiveness.")
+                    console.warn('`opts.smoothDrawing` enabled without Web Worker support. This will severely impact UI responsiveness.')
                 }
             }
             if (!workerDispatched) {
                 // Sync fallback: blocks the main thread but always produces a result
                 const smoothed = blurDrawingBitmap(bitmapDataSource, dimsSnapshot, radius)
-                this.drawSmoothedTexture = this.r16fTex(
-                    this.drawSmoothedTexture,
-                    TEXTURE_CONSTANTS.TEXTURE10_DRAW_SMOOTH,
-                    dimsSnapshot,
-                    smoothed
-                )
+                this.drawSmoothedTexture = this.r16fTex(this.drawSmoothedTexture, TEXTURE_CONSTANTS.TEXTURE10_DRAW_SMOOTH, dimsSnapshot, smoothed)
             }
         }
 
