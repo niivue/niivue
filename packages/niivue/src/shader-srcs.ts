@@ -337,8 +337,13 @@ const kRenderTail = `
 					// Get pen color from original drawing texture
 					float drawVal = texture(drawing, samplePos.xyz).r;
 					if (drawVal == 0.0) {
-						// At smooth boundary, discrete voxel may be outside; step inward
-						drawVal = texture(drawing, samplePos.xyz - normal * vxSize).r;
+						// Between painted voxels: step inward along the gradient
+						// to find the nearest painted voxel's pen color.
+						// (normal points inward toward higher smooth values)
+						for (int k = 1; k <= 8; k++) {
+							drawVal = texture(drawing, samplePos.xyz + normal * vxSize * float(k)).r;
+							if (drawVal > 0.0) break;
+						}
 					}
 					vec4 draw = drawColor(max(drawVal, 1.0 / 255.0), drawOpacity);
 					// Phong shading with two-sided lighting
