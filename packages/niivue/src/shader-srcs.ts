@@ -285,11 +285,15 @@ const kRenderTail = `
 	if (backgroundMasksOverlays > 0)
 		samplePos = firstHit;
 	bool firstDraw = true;
+	// Hoist per-ray constants used by the smooth drawing path.
+	vec3 vxSize = 1.0 / vec3(textureSize(drawing, 0));
+	vec3 nRayDir = normalize(rayDir);
 	// For smooth drawing with a clip plane: if the ray enters the unclipped region
 	// already inside the drawn volume, start with prevSmoothOut=false so no
 	// outside→inside transition is detected, suppressing the clip-plane cap face.
 	bool prevSmoothOut = true;
 	bool enteredFromOutside = false;
+	vec4 cachedSmoothColor = vec4(0.0);
 	if (isClipAllVolumes && isClip && !isClipCutaway && smoothDrawing > 0.0) {
 		vec3 clipEntry = start.xyz + dir * sampleRange.x;
 		if (texture(drawSmoothed, clipEntry).r >= 0.5)
@@ -317,14 +321,10 @@ const kRenderTail = `
 					prevSmoothOut = true;
 					enteredFromOutside = false;
 				} else if (prevSmoothOut) {
+					// First inside sample: compute gradient, pen color, and Phong shading
+					// once and cache the result for all subsequent interior steps.
 					prevSmoothOut = false;
 					enteredFromOutside = true;
-				}
-				// Render at every inside sample only if we entered from outside,
-				// preserving full opacity accumulation while suppressing the clip cap.
-				if (nowSmoothInside && enteredFromOutside) {
-					vec3 vxSize = 1.0 / vec3(textureSize(drawing, 0));
-					// Compute gradient of smoothed field for surface normal
 					float gx = texture(drawSmoothed, samplePos.xyz + vec3(vxSize.x, 0.0, 0.0)).r
 					         - texture(drawSmoothed, samplePos.xyz - vec3(vxSize.x, 0.0, 0.0)).r;
 					float gy = texture(drawSmoothed, samplePos.xyz + vec3(0.0, vxSize.y, 0.0)).r
@@ -334,7 +334,7 @@ const kRenderTail = `
 					vec3 grad = vec3(gx, gy, gz);
 					float gradLen = length(grad);
 					vec3 normal = gradLen > 0.001 ? normalize(grad) : vec3(0.0, 0.0, 1.0);
-					// Get pen color from original drawing texture
+					// Get pen color from original drawing texture.
 					float drawVal = texture(drawing, samplePos.xyz).r;
 					if (drawVal == 0.0) {
 						// Between painted voxels: step inward along the gradient
@@ -346,17 +346,17 @@ const kRenderTail = `
 						}
 					}
 					vec4 draw = drawColor(max(drawVal, 1.0 / 255.0), drawOpacity);
-					// Phong shading with two-sided lighting
-					float ambient = 0.4;
-					float diffuseCoeff = 0.6;
-					float specularCoeff = 0.2;
-					float shininess = 20.0;
-					float NdotL = abs(dot(normal, normalize(rayDir)));
-					vec3 reflected = reflect(normalize(rayDir), normal);
-					float spec = pow(max(dot(reflected, normalize(-rayDir)), 0.0), shininess);
-					draw.rgb *= (ambient + diffuseCoeff * NdotL);
-					draw.rgb += vec3(specularCoeff * spec);
-					colorSample = draw;
+					// Phong shading with two-sided lighting.
+					float NdotL = abs(dot(normal, nRayDir));
+					vec3 reflected = reflect(nRayDir, normal);
+					float spec = pow(max(dot(reflected, -nRayDir), 0.0), 20.0);
+					draw.rgb *= (0.4 + 0.6 * NdotL);
+					draw.rgb += vec3(0.2 * spec);
+					cachedSmoothColor = draw;
+				}
+				// Use the cached shaded color for every interior step.
+				if (nowSmoothInside && enteredFromOutside) {
+					colorSample = cachedSmoothColor;
 				}
 			} else {
 				// Original discrete drawing path
