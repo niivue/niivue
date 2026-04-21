@@ -6005,8 +6005,6 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
     }
 
     /**
-     * GPU 3-pass separable Gaussian blur of the drawing bitmap.
-    /**
      * GPU single-pass 3D box blur of the drawing bitmap.
      * Reads from TEXTURE7_DRAW (R8) and writes the blurred result to
      * TEXTURE10_DRAW_SMOOTH (R8 with LINEAR filtering) for isosurface rendering.
