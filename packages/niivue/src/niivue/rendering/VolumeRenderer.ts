@@ -175,6 +175,15 @@ export function gradientGL(params: GradientGLParams): WebGLTexture {
     gl.uniform1f(blurShader.uniforms.dX, blurRadius / hdr.dims[1])
     gl.uniform1f(blurShader.uniforms.dY, blurRadius / hdr.dims[2])
     gl.uniform1f(blurShader.uniforms.dZ, blurRadius / hdr.dims[3])
+    // Reset drawing-blur uniforms to restore the legacy 8-corner path.
+    // These uniforms only exist on blurFragShader, so they are no-ops for
+    // gradientPrePassShader (null uniform locations are ignored by WebGL).
+    if (blurShader.uniforms.kernelRadius) {
+        gl.uniform1i(blurShader.uniforms.kernelRadius, 0)
+    }
+    if (blurShader.uniforms.binarize) {
+        gl.uniform1i(blurShader.uniforms.binarize, 0)
+    }
     for (let i = 0; i < hdr.dims[3]; i++) {
         const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
         gl.uniform1f(blurShader.uniforms.coordZ, coordZ)

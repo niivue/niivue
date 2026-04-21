@@ -2307,9 +2307,31 @@ uniform float coordZ;
 uniform float dX;
 uniform float dY;
 uniform float dZ;
+// Optional uniforms for parameterised (2r+1)^3 box blur. When kernelRadius
+// is 0 (default / gradient pipeline) the legacy 8-corner sample is used.
+uniform int kernelRadius;
+uniform bool binarize;
 uniform highp sampler3D intensityVol;
 void main(void) {
  vec3 vx = vec3(TexCoord.xy, coordZ);
+ if (kernelRadius > 0) {
+  vec4 sum = vec4(0.0);
+  float count = 0.0;
+  for (int k = -kernelRadius; k <= kernelRadius; k++) {
+   for (int j = -kernelRadius; j <= kernelRadius; j++) {
+    for (int i = -kernelRadius; i <= kernelRadius; i++) {
+     vec3 off = vec3(float(i) * dX, float(j) * dY, float(k) * dZ);
+     vec4 v = texture(intensityVol, vx + off);
+     if (binarize) v = vec4(v.r > 0.0 ? 1.0 : 0.0, 0.0, 0.0, 0.0);
+     sum += v;
+     count += 1.0;
+    }
+   }
+  }
+  FragColor = sum / count;
+  return;
+ }
+ // Legacy 8-corner box blur (gradient pipeline)
  vec4 samp = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
  samp += texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
  samp += texture(intensityVol,vx+vec3(+dX,-dY,+dZ));
