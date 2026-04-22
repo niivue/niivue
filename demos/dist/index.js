@@ -46369,7 +46369,7 @@ var Niivue = class extends EventTarget {
       this.createEmptyDrawing();
     }
     const result = applyOtsuToDrawing({
-      img: this.volumes[0].img,
+      img: this.volumes[0].img2RAS(),
       drawBitmap: this.drawBitmap,
       thresholds
     });
