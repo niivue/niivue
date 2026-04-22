@@ -3535,7 +3535,7 @@ export class Niivue extends EventTarget {
             this.createEmptyDrawing()
         }
         const result = ImageProcessing.applyOtsuToDrawing({
-            img: this.volumes[0].img!,
+            img: this.volumes[0].img2RAS(),
             drawBitmap: this.drawBitmap as Uint8Array,
             thresholds
         })
