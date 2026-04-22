@@ -1,3 +1,6 @@
+> [!IMPORTANT]
+> **NiiVue is moving to [niivue/mono](https://github.com/niivue/mono).** The new monorepo contains a rewritten `@niivue/niivue` package with WebGPU and WebGL2 support, smaller bundle sizes, and a more extensible architecture. The monorepo package will be our **v1.0.0** release candidate. All releases in this repository will remain below v1.0.0 so the two packages can co-exist. Most functionality has been ported and new development will focus on the monorepo. We will continue to maintain this repository for a transition period, but encourage users to migrate when ready.
+
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5786269.svg)](https://doi.org/10.5281/zenodo.5786269) [![App Store](https://img.shields.io/badge/App%20Store-NiiVue-blue)](https://apps.apple.com/gb/app/niivue/id6497066801) [![npm](https://img.shields.io/npm/v/@niivue/niivue)](https://www.npmjs.com/package/@niivue/niivue)
 
 # NiiVue
