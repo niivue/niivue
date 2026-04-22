@@ -219,7 +219,7 @@ export type NVConfigOptions = {
     zarrCacheSize: number
     /** Number of chunk rings to prefetch around the visible region for zarr viewing (0 disables, default 1) */
     zarrPrefetchRings: number
-    /** Smooth drawing surfaces in 3D rendering. 0 = off, > 0 = Gaussian blur radius in voxels (default 0) */
+    /** Smooth drawing surfaces in 3D rendering. 0 = off, > 0 = Box blur radius in voxels (default 0) */
     smoothDrawing: number
 }
 
