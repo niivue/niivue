@@ -1,4 +1,4 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15570926.svg)](https://doi.org/10.5281/zenodo.15570926) [![App Store](https://img.shields.io/badge/App%20Store-NiiVue-blue)](https://apps.apple.com/gb/app/niivue/id6497066801)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5786269.svg)](https://doi.org/10.5281/zenodo.5786269) [![App Store](https://img.shields.io/badge/App%20Store-NiiVue-blue)](https://apps.apple.com/gb/app/niivue/id6497066801) [![npm](https://img.shields.io/npm/v/@niivue/niivue)](https://www.npmjs.com/package/@niivue/niivue)
 
 # NiiVue
 
