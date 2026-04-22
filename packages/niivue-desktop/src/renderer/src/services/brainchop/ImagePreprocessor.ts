@@ -62,7 +62,7 @@ export class ImagePreprocessor {
     if (volumeData.length !== targetVoxelCount) {
       throw new Error(
         `Volume must be conformed to ${targetX}x${targetY}x${targetZ} before preprocessing ` +
-        `(got ${volumeData.length} voxels). Call nv.conform(volume, true) first.`
+          `(got ${volumeData.length} voxels). Call nv.conform(volume, true) first.`
       )
     }
 
@@ -104,7 +104,11 @@ export class ImagePreprocessor {
 
     if (img instanceof Float32Array) {
       return img
-    } else if (img instanceof Uint8Array || img instanceof Uint16Array || img instanceof Int16Array) {
+    } else if (
+      img instanceof Uint8Array ||
+      img instanceof Uint16Array ||
+      img instanceof Int16Array
+    ) {
       return new Float32Array(img)
     } else {
       // Handle other array types

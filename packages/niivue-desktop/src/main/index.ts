@@ -349,7 +349,6 @@ if (process.platform === 'darwin') {
 }
 
 function createWindow(): void {
-
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 900,
@@ -438,12 +437,18 @@ ipcMain.handle('headless:write-stdout', async (_event, base64Data: string) => {
   await writeBase64ToStdout(base64Data)
 })
 
-ipcMain.handle('headless:niimath', async (_event, inputBase64: string, inputName: string, operations: string) => {
-  const { startNiimathJob } = await import('./utils/runNiimath.js')
-  const args = operations.trim().split(/\s+/)
-  const result = await startNiimathJob(`headless-${Date.now()}`, args, { base64: inputBase64, name: inputName })
-  return { base64: result.base64, success: true }
-})
+ipcMain.handle(
+  'headless:niimath',
+  async (_event, inputBase64: string, inputName: string, operations: string) => {
+    const { startNiimathJob } = await import('./utils/runNiimath.js')
+    const args = operations.trim().split(/\s+/)
+    const result = await startNiimathJob(`headless-${Date.now()}`, args, {
+      base64: inputBase64,
+      name: inputName
+    })
+    return { base64: result.base64, success: true }
+  }
+)
 
 ipcMain.handle('headless:dcm2niix-list', async (_event, dicomDir: string) => {
   const { listDicomSeries } = await import('./utils/runDcm2niix.js')
@@ -463,7 +468,13 @@ ipcMain.handle(
     }
   ) => {
     const { convertSeriesByNumber } = await import('./utils/runDcm2niix.js')
-    const results: { code: number; stdout: string; stderr: string; outDir: string; files: string[] }[] = []
+    const results: {
+      code: number
+      stdout: string
+      stderr: string
+      outDir: string
+      files: string[]
+    }[] = []
     for (const seriesNum of options.seriesNumbers) {
       const result = await convertSeriesByNumber(options.dicomDir, seriesNum, {
         outDir: options.outputDir,

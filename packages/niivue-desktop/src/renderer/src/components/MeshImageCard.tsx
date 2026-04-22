@@ -26,71 +26,69 @@ export function MeshImageCard({ image, onRemoveMesh }: MeshImageCardProps): JSX.
   if (!nv || !setMeshes) return <></>
 
   // keep ref in sync whenever `image` changes
-useEffect(() => {
-  imageRef.current = image
-}, [image])
+  useEffect(() => {
+    imageRef.current = image
+  }, [image])
 
-useEffect(() => {
-  // handler that can run many times (for multiple layers)
-  const handler = async (_: any, path: string): Promise<void> => {
-  try {
-    console.log('openMeshFileDialogResult', path)
+  useEffect(() => {
+    // handler that can run many times (for multiple layers)
+    const handler = async (_: any, path: string): Promise<void> => {
+      try {
+        console.log('openMeshFileDialogResult', path)
 
-    const layerBase64 = await electron.ipcRenderer.invoke('loadFromFile', path)
+        const layerBase64 = await electron.ipcRenderer.invoke('loadFromFile', path)
 
-    const layerOptions = {
-      ...NVMeshLayerDefaults,
-      // help Niivue if it copies these, but don't rely on it
-      name: path,
-      url: path,
-      opacity: 1,
-      colormap: 'warm',
-      base64: layerBase64
+        const layerOptions = {
+          ...NVMeshLayerDefaults,
+          // help Niivue if it copies these, but don't rely on it
+          name: path,
+          url: path,
+          opacity: 1,
+          colormap: 'warm',
+          base64: layerBase64
+        }
+
+        // use the latest instance
+        const img = imageRef.current
+
+        // loadLayer mutates img in-place and returns void
+        await NVMesh.loadLayer(layerOptions, img)
+
+        // ensure the last layer exists and explicitly set its name/url
+        if (!img.layers || img.layers.length === 0) {
+          console.warn('No layers present after loadLayer', img)
+        } else {
+          const lastIdx = img.layers.length - 1
+          const lastLayer = img.layers[lastIdx]
+
+          // explicitly assign name/url onto the real layer object
+          lastLayer.name = path
+          lastLayer.url = path
+
+          // If you want to make a shallow copy of that single layer (so child components
+          // that depend on identity update) you can replace it with a new object:
+          // img.layers[lastIdx] = { ...lastLayer }
+          // But don't clone the whole `img` (that loses NVMesh prototype/methods)
+        }
+
+        // Put the exact mutated NVMesh instance into state (preserve prototype & methods)
+        setMeshes((prev: NVMesh[]) => prev.map((m) => (m.id === img.id ? img : m)))
+
+        // helpful debug
+        console.log('mesh layers after load:', img.layers)
+      } catch (err) {
+        console.error('Failed to load mesh layer:', err)
+      }
     }
 
-    // use the latest instance
-    const img = imageRef.current
+    // register the listener (many times allowed)
+    electron.ipcRenderer.on('openMeshFileDialogResult', handler)
 
-    // loadLayer mutates img in-place and returns void
-    await NVMesh.loadLayer(layerOptions, img)
-
-    // ensure the last layer exists and explicitly set its name/url
-    if (!img.layers || img.layers.length === 0) {
-      console.warn('No layers present after loadLayer', img)
-    } else {
-      const lastIdx = img.layers.length - 1
-      const lastLayer = img.layers[lastIdx]
-
-      // explicitly assign name/url onto the real layer object
-      lastLayer.name = path
-      lastLayer.url = path
-
-      // If you want to make a shallow copy of that single layer (so child components
-      // that depend on identity update) you can replace it with a new object:
-      // img.layers[lastIdx] = { ...lastLayer }
-      // But don't clone the whole `img` (that loses NVMesh prototype/methods)
+    // cleanup on unmount
+    return () => {
+      electron.ipcRenderer.removeListener('openMeshFileDialogResult', handler)
     }
-
-    // Put the exact mutated NVMesh instance into state (preserve prototype & methods)
-    setMeshes((prev: NVMesh[]) => prev.map((m) => (m.id === img.id ? img : m)))
-
-    // helpful debug
-    console.log('mesh layers after load:', img.layers)
-  } catch (err) {
-    console.error('Failed to load mesh layer:', err)
-  }
-}
-
-
-
-  // register the listener (many times allowed)
-  electron.ipcRenderer.on('openMeshFileDialogResult', handler)
-
-  // cleanup on unmount
-  return () => {
-    electron.ipcRenderer.removeListener('openMeshFileDialogResult', handler)
-  }
-}, []) // run once on mount
+  }, []) // run once on mount
 
   useEffect(() => {
     setShaders(nv.meshShaderNames())

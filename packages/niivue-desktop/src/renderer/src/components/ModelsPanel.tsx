@@ -16,7 +16,11 @@ const categories: Array<{ label: string; value: string }> = [
   { label: 'Regional Parcellation', value: 'Regional Parcellation' }
 ]
 
-export function ModelsPanel({ availableModels, onRunSegmentation, onModelsChanged }: ModelsPanelProps): JSX.Element {
+export function ModelsPanel({
+  availableModels,
+  onRunSegmentation,
+  onModelsChanged
+}: ModelsPanelProps): JSX.Element {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [wizardOpen, setWizardOpen] = useState(false)
 
@@ -126,7 +130,11 @@ function ModelCard({
               Loading...
             </div>
           ) : previewSrc ? (
-            <img src={previewSrc} alt={`${model.name} preview`} className="w-full h-full object-contain" />
+            <img
+              src={previewSrc}
+              alt={`${model.name} preview`}
+              className="w-full h-full object-contain"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-[var(--gray-8)] text-xs">
               No preview

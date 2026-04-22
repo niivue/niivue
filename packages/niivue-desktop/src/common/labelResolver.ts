@@ -118,7 +118,9 @@ export function parseLabelJson(json: unknown): LabelIndex {
     return index
   }
 
-  throw new Error('Invalid label.json: unrecognized format. Expected either array of {value, name} objects or array of strings.')
+  throw new Error(
+    'Invalid label.json: unrecognized format. Expected either array of {value, name} objects or array of strings.'
+  )
 }
 
 /**

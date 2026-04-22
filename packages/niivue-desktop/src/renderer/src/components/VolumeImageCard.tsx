@@ -327,69 +327,79 @@ export function VolumeImageCard({
                   value={intensity[1]}
                 />
               </div>
-            {image.global_min !== undefined && image.global_min < 0 && (
-              <>
-                <Text size="1">Negative values colormap</Text>
-                <div className="flex gap-1 items-center">
-                  <Select.Root
-                    size="1"
-                    value={colormapNeg}
-                    onValueChange={(value) => {
-                      setColormapNeg(value)
-                      if (value === 'none') {
-                        image.colormapNegative = ''
-                        image.cal_minNeg = NaN
-                        image.cal_maxNeg = NaN
-                      } else {
-                        image.colormapNegative = value
-                        image.cal_minNeg = image.global_min!
-                        image.cal_maxNeg = Math.min(0, image.global_max!)
-                      }
-                      nv.updateGLVolume()
-                    }}
-                    disabled={intensity[0] < 0 || image.global_min >= 0}
-                  >
-                    <Select.Trigger className="truncate w-3/4 min-w-3/4" />
-                    <Select.Content className="truncate">
-                      <Select.Item key="none" value="none">None</Select.Item>
-                      {colormaps.map((cmap) => (
-                        <Select.Item key={`neg-${cmap}`} value={cmap}>
-                          {cmap}
+              {image.global_min !== undefined && image.global_min < 0 && (
+                <>
+                  <Text size="1">Negative values colormap</Text>
+                  <div className="flex gap-1 items-center">
+                    <Select.Root
+                      size="1"
+                      value={colormapNeg}
+                      onValueChange={(value) => {
+                        setColormapNeg(value)
+                        if (value === 'none') {
+                          image.colormapNegative = ''
+                          image.cal_minNeg = NaN
+                          image.cal_maxNeg = NaN
+                        } else {
+                          image.colormapNegative = value
+                          image.cal_minNeg = image.global_min!
+                          image.cal_maxNeg = Math.min(0, image.global_max!)
+                        }
+                        nv.updateGLVolume()
+                      }}
+                      disabled={intensity[0] < 0 || image.global_min >= 0}
+                    >
+                      <Select.Trigger className="truncate w-3/4 min-w-3/4" />
+                      <Select.Content className="truncate">
+                        <Select.Item key="none" value="none">
+                          None
                         </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select.Root>
-                </div>
-                <Text size="1">Negative intensity range</Text>
-                <div className="flex gap-1 items-center">
-                  <TextField.Root
-                    onChange={handleMinNegChange}
-                    type="number"
-                    size="1"
-                    value={intensityNeg && intensityNeg[0] !== undefined ? intensityNeg[0].toFixed(2) : "0"}
-                    disabled={intensity[0] < 0 || image.global_min >= 0}
-                  />
-                  <Slider
-                    size="1"
-                    color="gray"
-                    min={image.global_min}
-                    max={Math.min(0, image.global_max!)}
-                    step={intensityNeg[1] > 10 ? 1 : 0.1}
-                    value={intensityNeg}
-                    onValueChange={handleIntensityNegChange}
-                    onValueCommit={handleIntensityNegCommit}
-                    disabled={intensity[0] < 0 || image.global_min >= 0}
-                  />
-                  <TextField.Root
-                    onChange={handleMaxNegChange}
-                    type="number"
-                    size="1"
-                    value={intensityNeg && intensityNeg[1] !== undefined ? intensityNeg[1].toFixed(2) : "0"}
-                    disabled={intensity[0] < 0 || image.global_min >= 0}
-                  />
-                </div>
-              </>
-            )}
+                        {colormaps.map((cmap) => (
+                          <Select.Item key={`neg-${cmap}`} value={cmap}>
+                            {cmap}
+                          </Select.Item>
+                        ))}
+                      </Select.Content>
+                    </Select.Root>
+                  </div>
+                  <Text size="1">Negative intensity range</Text>
+                  <div className="flex gap-1 items-center">
+                    <TextField.Root
+                      onChange={handleMinNegChange}
+                      type="number"
+                      size="1"
+                      value={
+                        intensityNeg && intensityNeg[0] !== undefined
+                          ? intensityNeg[0].toFixed(2)
+                          : '0'
+                      }
+                      disabled={intensity[0] < 0 || image.global_min >= 0}
+                    />
+                    <Slider
+                      size="1"
+                      color="gray"
+                      min={image.global_min}
+                      max={Math.min(0, image.global_max!)}
+                      step={intensityNeg[1] > 10 ? 1 : 0.1}
+                      value={intensityNeg}
+                      onValueChange={handleIntensityNegChange}
+                      onValueCommit={handleIntensityNegCommit}
+                      disabled={intensity[0] < 0 || image.global_min >= 0}
+                    />
+                    <TextField.Root
+                      onChange={handleMaxNegChange}
+                      type="number"
+                      size="1"
+                      value={
+                        intensityNeg && intensityNeg[1] !== undefined
+                          ? intensityNeg[1].toFixed(2)
+                          : '0'
+                      }
+                      disabled={intensity[0] < 0 || image.global_min >= 0}
+                    />
+                  </div>
+                </>
+              )}
               <>
                 <Text size="1">Volume opacity</Text>
                 <div className="flex gap-1 items-center">

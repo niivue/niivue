@@ -24,7 +24,10 @@
  * @param labels  Flat Uint8Array of label values (length = dx * dy * dz)
  * @param dims    Volume dimensions [dx, dy, dz]
  */
-export function keepLargestClusterPerClass(labels: Uint8Array, dims: [number, number, number]): void {
+export function keepLargestClusterPerClass(
+  labels: Uint8Array,
+  dims: [number, number, number]
+): void {
   const [dx, dy, dz] = dims
   const n = dx * dy * dz
 
@@ -128,5 +131,7 @@ export function keepLargestClusterPerClass(labels: Uint8Array, dims: [number, nu
     }
   }
 
-  console.log(`[postprocess] Removed ${removedCount} voxels from non-largest cluster (kept ${largestSize} voxels)`)
+  console.log(
+    `[postprocess] Removed ${removedCount} voxels from non-largest cluster (kept ${largestSize} voxels)`
+  )
 }

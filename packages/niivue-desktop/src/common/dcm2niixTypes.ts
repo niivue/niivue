@@ -1,11 +1,17 @@
 export interface DicomSeries {
   seriesNumber?: number
   seriesInstanceUID?: string
+  studyInstanceUID?: string
+  patientId?: string
+  manufacturer?: string
+  acquisitionTime?: string
   protocolName?: string
   seriesDescription?: string
   echoNumber?: number
   images?: number
   modality?: string
+  subjectId?: string
+  sessionId?: string
   text: string
 }
 

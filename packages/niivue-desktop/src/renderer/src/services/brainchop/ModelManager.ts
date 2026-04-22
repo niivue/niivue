@@ -196,21 +196,21 @@ export class ModelManager {
    * Get model information by ID
    */
   getModelInfo(modelId: string): ModelInfo | undefined {
-    return this.getAvailableModels().find(model => model.id === modelId)
+    return this.getAvailableModels().find((model) => model.id === modelId)
   }
 
   /**
    * Get models by category
    */
   getModelsByCategory(category: string): ModelInfo[] {
-    return modelsRegistry.models.filter(model => model.category === category) as ModelInfo[]
+    return modelsRegistry.models.filter((model) => model.category === category) as ModelInfo[]
   }
 
   /**
    * Get models by type
    */
   getModelsByType(type: string): ModelInfo[] {
-    return modelsRegistry.models.filter(model => model.type === type) as ModelInfo[]
+    return modelsRegistry.models.filter((model) => model.type === type) as ModelInfo[]
   }
 
   /**
@@ -268,14 +268,18 @@ export class ModelManager {
             shape: firstWeight.shape,
             min: Math.min(...sampleData),
             max: Math.max(...sampleData),
-            mean: sampleData.reduce((a: number, b: number) => a + b, 0) / Math.min(1000, weightData.length)
+            mean:
+              sampleData.reduce((a: number, b: number) => a + b, 0) /
+              Math.min(1000, weightData.length)
           }
           console.log(`[ModelManager] First weight tensor stats (sample):`, weightStats)
 
           // Check if weights are all zeros (would explain zero output)
           const allZeros = sampleData.every((v: number) => v === 0)
           if (allZeros) {
-            console.error(`[ModelManager] WARNING: Model weights appear to be all zeros! Model may not have loaded correctly.`)
+            console.error(
+              `[ModelManager] WARNING: Model weights appear to be all zeros! Model may not have loaded correctly.`
+            )
           }
         }
       } catch (error) {
@@ -283,8 +287,14 @@ export class ModelManager {
 
         // Fallback chain for loading failures
         // Try different backends in order: WebGPU → WASM → CPU
-        if (errorMessage.includes('texture size') || errorMessage.includes('memory') || errorMessage.includes('out of bounds')) {
-          console.warn(`[ModelManager] Model ${modelId} failed on ${currentBackend}: ${errorMessage}`)
+        if (
+          errorMessage.includes('texture size') ||
+          errorMessage.includes('memory') ||
+          errorMessage.includes('out of bounds')
+        ) {
+          console.warn(
+            `[ModelManager] Model ${modelId} failed on ${currentBackend}: ${errorMessage}`
+          )
 
           // Try fallback backends in order
           const fallbackBackends: string[] = []
@@ -304,10 +314,15 @@ export class ModelManager {
 
               model = await tf.loadLayersModel(ioHandler)
               modelBackend = fallbackBackend
-              console.log(`[ModelManager] Model ${modelId} loaded successfully on ${fallbackBackend} backend`)
+              console.log(
+                `[ModelManager] Model ${modelId} loaded successfully on ${fallbackBackend} backend`
+              )
               break
             } catch (fallbackError) {
-              console.warn(`[ModelManager] Fallback to ${fallbackBackend} also failed:`, fallbackError)
+              console.warn(
+                `[ModelManager] Fallback to ${fallbackBackend} also failed:`,
+                fallbackError
+              )
               continue
             }
           }
@@ -315,7 +330,9 @@ export class ModelManager {
           if (!model) {
             // All fallbacks failed, restore original backend and throw
             await tf.setBackend(currentBackend)
-            throw new Error(`Failed to load model ${modelId} on all backends. Original error: ${errorMessage}`)
+            throw new Error(
+              `Failed to load model ${modelId} on all backends. Original error: ${errorMessage}`
+            )
           }
         } else {
           // Restore original backend on other errors
@@ -335,7 +352,9 @@ export class ModelManager {
 
       // Calculate model memory size
       const memorySize = this.calculateModelMemorySize(model)
-      console.log(`[ModelManager] Model ${modelId} estimated memory: ${(memorySize / 1024 / 1024).toFixed(2)} MB`)
+      console.log(
+        `[ModelManager] Model ${modelId} estimated memory: ${(memorySize / 1024 / 1024).toFixed(2)} MB`
+      )
 
       // Check TensorFlow memory state
       const tfMemory = tf.memory()
@@ -372,7 +391,9 @@ export class ModelManager {
    * Used to transfer model data to a web worker where it can be reconstructed
    * via tf.loadLayersModel(tf.io.fromMemory(artifacts)).
    */
-  async loadModelArtifacts(modelId: string): Promise<{ artifacts: tf.io.ModelArtifacts; modelInfo: ModelInfo }> {
+  async loadModelArtifacts(
+    modelId: string
+  ): Promise<{ artifacts: tf.io.ModelArtifacts; modelInfo: ModelInfo }> {
     const modelInfo = this.getModelInfo(modelId)
     if (!modelInfo) {
       throw new Error(`Model not found: ${modelId}`)
@@ -532,13 +553,14 @@ export class ModelManager {
     for (const weight of model.weights) {
       const shape = weight.shape
       // Filter out null values and calculate size
-      const size = shape.filter((dim): dim is number => dim !== null).reduce((acc: number, dim: number) => acc * dim, 1)
+      const size = shape
+        .filter((dim): dim is number => dim !== null)
+        .reduce((acc: number, dim: number) => acc * dim, 1)
       totalParams += size
     }
     // Assume 4 bytes per parameter (float32)
     return totalParams * 4
   }
-
 }
 
 // Export singleton instance

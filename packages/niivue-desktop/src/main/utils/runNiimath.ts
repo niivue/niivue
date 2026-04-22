@@ -89,9 +89,7 @@ export function runNiimath(args: string[]): Promise<{
  */
 function getExtAndBase(filePath: string): { ext: string; name: string } {
   const lower = filePath.toLowerCase()
-  const ext = lower.endsWith('.nii.gz')
-    ? '.nii.gz'
-    : extname(filePath) || '.nii'     // fallback to .nii if no ext
+  const ext = lower.endsWith('.nii.gz') ? '.nii.gz' : extname(filePath) || '.nii' // fallback to .nii if no ext
 
   // strip off that extension, even if it's double-wide
   const name = basename(filePath, ext)
@@ -124,7 +122,7 @@ export async function startNiimathJob(
   const { ext: inExt, name: baseName } = getExtAndBase(input.name)
 
   const inputFilename = `${baseName}-${requestId}${inExt}`
-  const inputPath     = join(tempDir, inputFilename)
+  const inputPath = join(tempDir, inputFilename)
 
   fs.writeFileSync(inputPath, Buffer.from(input.base64, 'base64'))
 
@@ -138,7 +136,7 @@ export async function startNiimathJob(
     console.log(`[Niimath] input file written to ${inputPath} — ${stats.size} bytes`)
   } catch (err) {
     console.error(`[Niimath] FAILED to write input file at ${inputPath}:`, err)
-    throw err  // re-throw so upstream knows something went wrong
+    throw err // re-throw so upstream knows something went wrong
   }
 
   // 2) Prepare output path

@@ -22,22 +22,22 @@ const __dirname = dirname(__filename)
 export default defineConfig({
   main: {
     // use a Vite-compatible `build` block for the main process
-    build: ({
+    build: {
       outDir: 'out/main',
       // Keep native/Node modules external in the main process build
       rollupOptions: {
         external: ['electron', 'zlib', 'node:module', 'node:zlib', 'fflate', 'pako']
       }
-    } as any)
+    } as any
   },
 
   preload: {
-    build: (({
+    build: {
       outDir: 'out/preload',
       rollupOptions: {
         external: ['electron', 'zlib', 'node:zlib', 'fflate', 'pako']
       }
-    }) as any)
+    } as any
   },
 
   renderer: {
@@ -70,19 +70,14 @@ export default defineConfig({
       ]
     },
 
-    build: (({
+    build: {
       outDir: 'out/renderer',
       commonjsOptions: {
         exclude: ['@niivue/niivue']
       },
       rollupOptions: {
         // treat these as external for renderer builds so they are not bundled
-        external: [
-          'zlib',
-          'pako',
-          'node:zlib',
-          'module'
-        ]
+        external: ['zlib', 'pako', 'node:zlib', 'module']
       },
       // If you want to keep certain internal packages externalized, list them
       // here. Otherwise move them to `optimizeDeps.exclude` / `commonjsOptions`
@@ -90,7 +85,7 @@ export default defineConfig({
       externalizeDeps: {
         include: ['@niivue/niivue', '@niivue/niimath', '@niivue/dcm2niix']
       }
-    }) as any),
+    } as any,
 
     resolve: {
       alias: {

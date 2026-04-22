@@ -160,7 +160,9 @@ async function runInferencePipeline(
   const loopEnd = modelInfo.enableSeqConv ? layersLength - 2 : layersLength - 1
   const syncEvery = modelInfo.enableSeqConv ? 1 : 15
 
-  console.log(`[Worker] Running ${layersLength} layers (loopEnd=${loopEnd}, seqConv=${modelInfo.enableSeqConv})`)
+  console.log(
+    `[Worker] Running ${layersLength} layers (loopEnd=${loopEnd}, seqConv=${modelInfo.enableSeqConv})`
+  )
 
   for (let i = 1; i <= loopEnd; i++) {
     try {
@@ -195,7 +197,9 @@ async function runInferencePipeline(
       currentTensor = nextTensor
     } catch (err) {
       currentTensor.dispose()
-      throw new Error(`Inference failed at layer ${i}: ${err instanceof Error ? err.message : String(err)}`)
+      throw new Error(
+        `Inference failed at layer ${i}: ${err instanceof Error ? err.message : String(err)}`
+      )
     }
 
     // Sync GPU periodically
@@ -268,7 +272,11 @@ async function minMaxNormalize(tensor: tf.Tensor3D): Promise<tf.Tensor3D> {
   return result
 }
 
-async function quantileNormalize(tensor: tf.Tensor3D, lower = 0.05, upper = 0.95): Promise<tf.Tensor3D> {
+async function quantileNormalize(
+  tensor: tf.Tensor3D,
+  lower = 0.05,
+  upper = 0.95
+): Promise<tf.Tensor3D> {
   const flatArray = (await tensor.flatten().array()) as number[]
   flatArray.sort((a, b) => a - b)
   const lowIdx = Math.floor(flatArray.length * lower)
@@ -330,7 +338,8 @@ async function cropAndGetCorner(
   mask3d: tf.Tensor3D,
   userPadding: number
 ): Promise<{ cropped: tf.Tensor3D; corner: [number, number, number] }> {
-  const [row_min, row_max, col_min, col_max, depth_min, depth_max] = await firstLastNonZero3D(mask3d)
+  const [row_min, row_max, col_min, col_max, depth_min, depth_max] =
+    await firstLastNonZero3D(mask3d)
 
   const adjustCorner = (min: number, max: number, pad: number): [number, number] => {
     const startPad = Math.min(min, pad)
@@ -346,7 +355,11 @@ async function cropAndGetCorner(
 
   const cropped = tensor3d.slice(
     [safeRowStart, safeColStart, safeDepthStart],
-    [safeRowEnd - safeRowStart + 1, safeColEnd - safeColStart + 1, safeDepthEnd - safeDepthStart + 1]
+    [
+      safeRowEnd - safeRowStart + 1,
+      safeColEnd - safeColStart + 1,
+      safeDepthEnd - safeDepthStart + 1
+    ]
   ) as tf.Tensor3D
 
   return { cropped, corner: [safeRowStart, safeColStart, safeDepthStart] }
@@ -414,8 +427,14 @@ async function convByOutputChannelAndInputSlicing(
       const endChannel = Math.min((i + 1) * sliceSize, inChannels)
       if (startChannel < inChannels) {
         const resultSlice = tf.tidy(() => {
-          const inputSlice = input.slice([0, 0, 0, 0, startChannel], [-1, -1, -1, -1, endChannel - startChannel])
-          const filterSlice = filter.slice([0, 0, 0, startChannel, channel], [-1, -1, -1, endChannel - startChannel, 1])
+          const inputSlice = input.slice(
+            [0, 0, 0, 0, startChannel],
+            [-1, -1, -1, -1, endChannel - startChannel]
+          )
+          const filterSlice = filter.slice(
+            [0, 0, 0, startChannel, channel],
+            [-1, -1, -1, endChannel - startChannel, 1]
+          )
           return tf.conv3d(
             inputSlice as tf.Tensor5D,
             filterSlice as tf.Tensor5D,
@@ -481,8 +500,14 @@ async function gnConvByOutputChannelAndInputSlicing(
       const endChannel = Math.min((i + 1) * sliceSize, inChannels)
       if (startChannel < inChannels) {
         const resultSlice = tf.tidy(() => {
-          const inputSlice = input.slice([0, 0, 0, 0, startChannel], [-1, -1, -1, -1, endChannel - startChannel])
-          const filterSlice = filter.slice([0, 0, 0, startChannel, channel], [-1, -1, -1, endChannel - startChannel, 1])
+          const inputSlice = input.slice(
+            [0, 0, 0, 0, startChannel],
+            [-1, -1, -1, -1, endChannel - startChannel]
+          )
+          const filterSlice = filter.slice(
+            [0, 0, 0, startChannel, channel],
+            [-1, -1, -1, endChannel - startChannel, 1]
+          )
           return tf.conv3d(
             inputSlice as tf.Tensor5D,
             filterSlice as tf.Tensor5D,

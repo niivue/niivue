@@ -43,16 +43,10 @@ function parseLabelDisplayEntries(json: unknown): LabelDisplayEntry[] {
   const entries: LabelDisplayEntry[] = []
 
   const rawLabels =
-    typeof json === 'object' && json !== null
-      ? (json as Record<string, unknown>).labels
-      : undefined
+    typeof json === 'object' && json !== null ? (json as Record<string, unknown>).labels : undefined
 
   // Object format: { labels: [{value, name, color}, ...] }
-  if (
-    Array.isArray(rawLabels) &&
-    rawLabels.length > 0 &&
-    typeof rawLabels[0] === 'object'
-  ) {
+  if (Array.isArray(rawLabels) && rawLabels.length > 0 && typeof rawLabels[0] === 'object') {
     const objLabels = rawLabels as Array<{ value: number; name: string; color?: number[] }>
     for (const entry of objLabels) {
       entries.push({

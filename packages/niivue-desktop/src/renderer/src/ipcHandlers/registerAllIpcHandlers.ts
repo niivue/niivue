@@ -102,7 +102,6 @@ export const registerAllIpcHandlers = ({
   // register the colorbar toggle handler so menu toggles update Niivue + optional UI
   registerToggleColorBarsHandler(nv)
 
-
   // 💾 Save → HTML
   registerSaveHTMLHandler(nv, docId, getTitle)
 

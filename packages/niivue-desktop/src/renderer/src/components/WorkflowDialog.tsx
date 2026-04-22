@@ -20,6 +20,8 @@ import { StepSubjectSession } from './BidsWizard/StepSubjectSession.js'
 import { StepSkullStrip } from './BidsWizard/StepSkullStrip.js'
 import { StepBidsPreview } from './BidsWizard/StepBidsPreview.js'
 import { BidsSidecarFixForm } from './BidsWizard/BidsSidecarFixForm.js'
+import { BidsSeriesFilter } from './BidsSeriesFilter.js'
+import type { DicomSeries } from '../../../common/dcm2niixTypes.js'
 
 // ── Classification table adapter ─────────────────────────────────────
 
@@ -524,7 +526,76 @@ function BidsSidecarFixAdapter({
   )
 }
 
+function BidsSeriesFilterAdapter({
+  context,
+  onFieldChange
+}: CustomComponentProps): React.ReactElement {
+  const dicomSeries = useMemo(
+    () => (context.dicom_series as DicomSeries[]) || [],
+    [context.dicom_series]
+  )
+  const selectedSeries = useMemo(
+    () => (context.selected_series as DicomSeries[]) || [],
+    [context.selected_series]
+  )
+
+  const selectedNumbers = useMemo(() => {
+    const s = new Set<number>()
+    for (const row of selectedSeries) {
+      if (typeof row.seriesNumber === 'number') s.add(row.seriesNumber)
+    }
+    return s
+  }, [selectedSeries])
+
+  // Default: include every discovered series. Runs once per mount when the
+  // dicom_series heuristic has populated the list but the selection is empty
+  // (e.g. first visit, or the heuristic seed was lost on a context round-trip).
+  const seededRef = useRef(false)
+  useEffect(() => {
+    if (seededRef.current) return
+    if (dicomSeries.length === 0) return
+    if (selectedSeries.length > 0) {
+      seededRef.current = true
+      return
+    }
+    seededRef.current = true
+    onFieldChange('selected_series', dicomSeries)
+  }, [dicomSeries, selectedSeries, onFieldChange])
+
+  const handleSelectionChange = useCallback(
+    (next: Set<number>) => {
+      const filtered = dicomSeries.filter(
+        (s) => typeof s.seriesNumber === 'number' && next.has(s.seriesNumber)
+      )
+      onFieldChange('selected_series', filtered)
+    },
+    [dicomSeries, onFieldChange]
+  )
+
+  if (dicomSeries.length === 0) {
+    return (
+      <Callout.Root color="gray">
+        <Callout.Text>
+          Scanning the DICOM folder for series… if this takes more than a moment, check that
+          the selected folder contains DICOM files.
+        </Callout.Text>
+      </Callout.Root>
+    )
+  }
+
+  return (
+    <div className="h-[60vh]">
+      <BidsSeriesFilter
+        series={dicomSeries}
+        selectedSeriesNumbers={selectedNumbers}
+        onSelectionChange={handleSelectionChange}
+      />
+    </div>
+  )
+}
+
 const COMPONENT_REGISTRY: Record<string, React.FC<CustomComponentProps>> = {
+  'bids-series-filter': BidsSeriesFilterAdapter,
   'subject-select': SubjectSelectAdapter,
   'bids-classification-table': ClassificationAdapter,
   'subject-session-editor': SubjectSessionAdapter,

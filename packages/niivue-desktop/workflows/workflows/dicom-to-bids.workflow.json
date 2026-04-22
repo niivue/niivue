@@ -15,6 +15,16 @@
   "context": {
     "description": "BIDS dataset configuration accumulated during the workflow run",
     "fields": {
+      "dicom_series": {
+        "type": "dicom-series[]",
+        "description": "All DICOM series discovered in the source directory (dry-run listing)",
+        "heuristic": "list-dicom-series"
+      },
+      "selected_series": {
+        "type": "dicom-series[]",
+        "description": "Subset of dicom_series chosen by the user for conversion",
+        "default": []
+      },
       "series_list": {
         "type": "series-mapping[]",
         "description": "Classified series with BIDS datatype, suffix, and metadata",
@@ -70,6 +80,12 @@
   "form": {
     "sections": [
       {
+        "title": "Select Series",
+        "description": "Filter the detected DICOM series by modality, subject, and session, then choose which to convert",
+        "fields": ["dicom_series", "selected_series"],
+        "component": "bids-series-filter"
+      },
+      {
         "title": "Subject Selection",
         "description": "Select which subjects to include in the BIDS dataset",
         "fields": ["subjects"],
@@ -119,6 +135,7 @@
       "tool": "dcm2niix",
       "inputs": {
         "dicom_dir": { "ref": "inputs.dicom_dir" },
+        "series": { "ref": "context.selected_series" },
         "bids": { "constant": "y" },
         "compress": { "constant": "y" },
         "bids_anon": { "constant": "n" }

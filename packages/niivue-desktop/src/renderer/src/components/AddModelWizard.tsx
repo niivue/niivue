@@ -122,7 +122,9 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
             : result.hasLabels
               ? `${result.folderPath}/labels.json`
               : '',
-          previewPath: settings.files?.preview ? `${result.folderPath}/${settings.files.preview}` : ''
+          previewPath: settings.files?.preview
+            ? `${result.folderPath}/${settings.files.preview}`
+            : ''
         }))
       } else {
         // No settings.json, just set basic folder info
@@ -169,13 +171,19 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
   }
 
   const canProceed = (): boolean => {
-    if (step === 0) return state.sourceType !== null && (state.folderPath !== '' || state.remoteUrl !== '')
+    if (step === 0)
+      return state.sourceType !== null && (state.folderPath !== '' || state.remoteUrl !== '')
     if (step === 1) return state.name.trim() !== ''
     return true
   }
 
   return (
-    <Dialog.Root open={open} onOpenChange={(o) => { if (!o) handleClose() }}>
+    <Dialog.Root
+      open={open}
+      onOpenChange={(o) => {
+        if (!o) handleClose()
+      }}
+    >
       <Dialog.Portal>
         <Dialog.Overlay className="bg-black/40 fixed inset-0 z-40" />
         <Dialog.Content className="fixed left-[50%] top-[50%] translate-x-[-50%] translate-y-[-50%] bg-[var(--color-background)] rounded-lg shadow-lg w-[600px] max-h-[90vh] overflow-visible z-50">
@@ -184,7 +192,9 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
               {/* Header */}
               <div className="flex items-center justify-between mb-4">
                 <Dialog.Title asChild>
-                  <Text size="4" weight="bold">Add Model</Text>
+                  <Text size="4" weight="bold">
+                    Add Model
+                  </Text>
                 </Dialog.Title>
                 <Dialog.Close asChild>
                   <button className="p-1 rounded hover:bg-[var(--gray-4)]">
@@ -224,7 +234,9 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
               )}
 
               {/* Step content */}
-              {step === 0 && <StepSource state={state} onLoadFolder={handleLoadFolder} onUpdate={update} />}
+              {step === 0 && (
+                <StepSource state={state} onLoadFolder={handleLoadFolder} onUpdate={update} />
+              )}
               {step === 1 && <StepBasicInfo state={state} onUpdate={update} />}
               {step === 2 && <StepInference state={state} onUpdate={update} />}
               {step === 3 && <StepReview state={state} />}
@@ -267,7 +279,9 @@ function StepSource({
 }): JSX.Element {
   return (
     <div className="flex flex-col gap-4">
-      <Text size="2" weight="bold">Where is your model?</Text>
+      <Text size="2" weight="bold">
+        Where is your model?
+      </Text>
 
       {/* Folder option */}
       <button
@@ -279,12 +293,16 @@ function StepSource({
             : 'border-[var(--gray-5)] hover:border-[var(--gray-8)]')
         }
       >
-        <Text size="2" weight="bold" className="block">Local Folder</Text>
+        <Text size="2" weight="bold" className="block">
+          Local Folder
+        </Text>
         <Text size="1" color="gray">
           Select a folder containing model.json and weight files
         </Text>
         {state.folderPath && (
-          <Text size="1" className="block mt-1 text-[var(--accent-11)] truncate">{state.folderPath}</Text>
+          <Text size="1" className="block mt-1 text-[var(--accent-11)] truncate">
+            {state.folderPath}
+          </Text>
         )}
       </button>
 
@@ -297,7 +315,9 @@ function StepSource({
             : 'border-[var(--gray-5)]')
         }
       >
-        <Text size="2" weight="bold" className="block mb-2">Remote URL</Text>
+        <Text size="2" weight="bold" className="block mb-2">
+          Remote URL
+        </Text>
         <Text size="1" color="gray" className="block mb-2">
           Enter a URL pointing to model.json
         </Text>
@@ -313,7 +333,13 @@ function StepSource({
             if (!state.name && e.target.value) {
               const parts = e.target.value.split('/').filter(Boolean)
               const name = parts[parts.length - 2] || parts[parts.length - 1] || ''
-              onUpdate('name', name.replace(/model\.json$/i, '').replace(/[-_]/g, ' ').trim())
+              onUpdate(
+                'name',
+                name
+                  .replace(/model\.json$/i, '')
+                  .replace(/[-_]/g, ' ')
+                  .trim()
+              )
             }
           }}
         />
@@ -331,10 +357,14 @@ function StepBasicInfo({
 }): JSX.Element {
   return (
     <div className="flex flex-col gap-3">
-      <Text size="2" weight="bold">Model Information</Text>
+      <Text size="2" weight="bold">
+        Model Information
+      </Text>
 
       <label className="flex flex-col gap-1">
-        <Text size="1" weight="medium">Name *</Text>
+        <Text size="1" weight="medium">
+          Name *
+        </Text>
         <input
           type="text"
           value={state.name}
@@ -344,7 +374,9 @@ function StepBasicInfo({
       </label>
 
       <label className="flex flex-col gap-1">
-        <Text size="1" weight="medium">Description</Text>
+        <Text size="1" weight="medium">
+          Description
+        </Text>
         <textarea
           value={state.description}
           onChange={(e) => onUpdate('description', e.target.value)}
@@ -354,7 +386,9 @@ function StepBasicInfo({
       </label>
 
       <label className="flex flex-col gap-1">
-        <Text size="1" weight="medium">Type</Text>
+        <Text size="1" weight="medium">
+          Type
+        </Text>
         <Select.Root
           value={state.type}
           onValueChange={(v: string) => {
@@ -389,7 +423,9 @@ function StepBasicInfo({
       </label>
 
       <label className="flex flex-col gap-1">
-        <Text size="1" weight="medium">Output Classes</Text>
+        <Text size="1" weight="medium">
+          Output Classes
+        </Text>
         <input
           type="number"
           min={1}
@@ -400,7 +436,9 @@ function StepBasicInfo({
       </label>
 
       <div className="flex flex-col gap-1">
-        <Text size="1" weight="medium">Labels File (optional)</Text>
+        <Text size="1" weight="medium">
+          Labels File (optional)
+        </Text>
         <div className="flex gap-2">
           <Button
             variant="soft"
@@ -421,7 +459,9 @@ function StepBasicInfo({
           />
         </div>
         {state.hasLabelsFile && !state.labelsPath && (
-          <Text size="1" color="green">labels.json detected in model folder</Text>
+          <Text size="1" color="green">
+            labels.json detected in model folder
+          </Text>
         )}
       </div>
     </div>
@@ -443,10 +483,14 @@ function StepInference({
 
   return (
     <div className="flex flex-col gap-3">
-      <Text size="2" weight="bold">Inference Settings</Text>
+      <Text size="2" weight="bold">
+        Inference Settings
+      </Text>
 
       <div className="flex flex-col gap-1">
-        <Text size="1" weight="medium">Expected Input Shape</Text>
+        <Text size="1" weight="medium">
+          Expected Input Shape
+        </Text>
         <div className="flex gap-2">
           {state.inputShape.map((v, i) => (
             <input
@@ -489,7 +533,9 @@ function StepInference({
 
       <div className="flex gap-4">
         <label className="flex flex-col gap-1">
-          <Text size="1" weight="medium">Crop Padding</Text>
+          <Text size="1" weight="medium">
+            Crop Padding
+          </Text>
           <input
             type="number"
             min={0}
@@ -500,7 +546,9 @@ function StepInference({
         </label>
 
         <label className="flex flex-col gap-1">
-          <Text size="1" weight="medium">Auto Threshold</Text>
+          <Text size="1" weight="medium">
+            Auto Threshold
+          </Text>
           <input
             type="number"
             min={0}
@@ -519,16 +567,26 @@ function StepInference({
 function StepReview({ state }: { state: WizardState }): JSX.Element {
   return (
     <div className="flex flex-col gap-3">
-      <Text size="2" weight="bold">Review & Confirm</Text>
+      <Text size="2" weight="bold">
+        Review & Confirm
+      </Text>
 
       <div className="flex gap-4 mb-2">
         <label className="flex flex-col gap-1 flex-1">
-          <Text size="1" weight="medium">Est. Time (seconds)</Text>
-          <Text size="1" color="gray">{state.estimatedTimeSeconds}</Text>
+          <Text size="1" weight="medium">
+            Est. Time (seconds)
+          </Text>
+          <Text size="1" color="gray">
+            {state.estimatedTimeSeconds}
+          </Text>
         </label>
         <label className="flex flex-col gap-1 flex-1">
-          <Text size="1" weight="medium">Memory (MB)</Text>
-          <Text size="1" color="gray">{state.memoryRequirementMB}</Text>
+          <Text size="1" weight="medium">
+            Memory (MB)
+          </Text>
+          <Text size="1" color="gray">
+            {state.memoryRequirementMB}
+          </Text>
         </label>
       </div>
 
@@ -537,7 +595,10 @@ function StepReview({ state }: { state: WizardState }): JSX.Element {
           <Row label="Name" value={state.name} />
           <Row label="Type" value={state.type} />
           <Row label="Category" value={state.category} />
-          <Row label="Source" value={state.sourceType === 'folder' ? state.folderPath : state.remoteUrl} />
+          <Row
+            label="Source"
+            value={state.sourceType === 'folder' ? state.folderPath : state.remoteUrl}
+          />
           <Row label="Output Classes" value={String(state.outputClasses)} />
           <Row label="Input Shape" value={state.inputShape.join(' x ')} />
           <Row label="Seq. Conv" value={state.enableSeqConv ? 'Yes' : 'No'} />
@@ -556,8 +617,12 @@ function StepReview({ state }: { state: WizardState }): JSX.Element {
 function Row({ label, value }: { label: string; value: string }): JSX.Element {
   return (
     <>
-      <Text size="1" weight="medium" color="gray">{label}</Text>
-      <Text size="1" className="truncate">{value}</Text>
+      <Text size="1" weight="medium" color="gray">
+        {label}
+      </Text>
+      <Text size="1" className="truncate">
+        {value}
+      </Text>
     </>
   )
 }

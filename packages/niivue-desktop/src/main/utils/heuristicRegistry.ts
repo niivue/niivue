@@ -3,9 +3,16 @@ import { listDicomSeries } from './runDcm2niix.js'
 import { classifyAll, detectSubjectsAndSessions, applySubjectsToMappings } from './bidsEngine.js'
 import type { BidsSeriesMapping, DetectedSubject } from '../../common/bidsTypes.js'
 
-const listDicomSeriesHeuristic: HeuristicFn = async (inputs) => {
+const listDicomSeriesHeuristic: HeuristicFn = async (inputs, context) => {
   const dicomDir = inputs.dicom_dir as string
-  return listDicomSeries(dicomDir)
+  const all = await listDicomSeries(dicomDir)
+  // Seed selected_series with all series on first run so the workflow's
+  // default behavior is "convert everything"; preserve any existing user
+  // selection on subsequent invocations.
+  const existing = context.selected_series
+  const alreadyChosen = Array.isArray(existing) && existing.length > 0
+  if (!alreadyChosen) context.selected_series = [...all]
+  return all
 }
 
 /**

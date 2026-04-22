@@ -15,7 +15,12 @@ interface ViewerProps {
 }
 
 // src/components/Viewer.tsx
-export function Viewer({ doc, sidebarCollapsed, rightPanelOpen, onToggleRightPanel }: ViewerProps): JSX.Element {
+export function Viewer({
+  doc,
+  sidebarCollapsed,
+  rightPanelOpen,
+  onToggleRightPanel
+}: ViewerProps): JSX.Element {
   const nv = doc.nvRef.current
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const hasInit = useRef(false)
@@ -95,7 +100,10 @@ export function Viewer({ doc, sidebarCollapsed, rightPanelOpen, onToggleRightPan
   }, [doc.id, sidebarCollapsed, nv])
 
   return (
-    <div data-testid="viewer" className={`flex flex-col bg-black h-full ${sidebarCollapsed ? 'basis-5/6' : 'basis-2/3'}`}>
+    <div
+      data-testid="viewer"
+      className={`flex flex-col bg-black h-full ${sidebarCollapsed ? 'basis-5/6' : 'basis-2/3'}`}
+    >
       <div className="h-12 bg-black flex items-center justify-end px-3 gap-2">
         {onToggleRightPanel && (
           <button
@@ -104,7 +112,16 @@ export function Viewer({ doc, sidebarCollapsed, rightPanelOpen, onToggleRightPan
             className="text-[var(--gray-8)] hover:text-white transition-colors p-1.5 rounded hover:bg-[var(--gray-11)]"
             title={rightPanelOpen ? 'Close panel' : 'Open panel'}
           >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg
+              width="18"
+              height="18"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
               <rect x="3" y="3" width="18" height="18" rx="2" />
               <line x1="15" y1="3" x2="15" y2="21" />
             </svg>

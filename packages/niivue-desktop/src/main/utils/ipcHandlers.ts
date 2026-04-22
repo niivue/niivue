@@ -419,7 +419,9 @@ export const registerIpcHandlers = (): void => {
   // Load brainchop labels file
   ipcMain.handle('load-brainchop-labels', async (_event, labelsPath: string) => {
     try {
-      const fullPath = path.isAbsolute(labelsPath) ? labelsPath : path.join(RESOURCES_DIR, labelsPath)
+      const fullPath = path.isAbsolute(labelsPath)
+        ? labelsPath
+        : path.join(RESOURCES_DIR, labelsPath)
       console.log('[Main] Loading brainchop labels from:', fullPath)
       const json = await fs.promises.readFile(fullPath, 'utf-8')
       return JSON.parse(json)
@@ -432,7 +434,9 @@ export const registerIpcHandlers = (): void => {
   // Load brainchop preview image
   ipcMain.handle('load-brainchop-preview', async (_event, previewPath: string) => {
     try {
-      const fullPath = path.isAbsolute(previewPath) ? previewPath : path.join(RESOURCES_DIR, previewPath)
+      const fullPath = path.isAbsolute(previewPath)
+        ? previewPath
+        : path.join(RESOURCES_DIR, previewPath)
       console.log('[Main] Loading brainchop preview from:', fullPath)
 
       // Check if file exists

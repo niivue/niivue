@@ -13,6 +13,7 @@ import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
 import { StatusBar } from './components/StatusBar.js'
 import { DicomImportDialog } from './components/DicomImportDialog.js'
 import { BidsWizard } from './components/BidsWizard/BidsWizard.js'
+import { BidsFilterDialog } from './components/BidsFilterDialog.js'
 import { RightPanel } from './components/RightPanel.js'
 import { SegmentationDialog } from './components/SegmentationDialog.js'
 import { brainchopService } from './services/brainchop/index.js'
@@ -389,15 +390,27 @@ function MainApp(): JSX.Element {
       if (extractSubvolumeEnabled && selectedExtractLabels.size > 0) {
         // Extract subvolume: create masked intensity volume
         // Always use rawFloat32 conform so extraction gets original-range intensities (not Uint8)
-        const sourceVolume = await nv.conform(baseVolume, false, true, false, false, [256, 256, 256], 1.0, true)
-        const extractedVolume = extractSubvolumeUtil(sourceVolume, labelVolume, selectedExtractLabels)
+        const sourceVolume = await nv.conform(
+          baseVolume,
+          false,
+          true,
+          false,
+          false,
+          [256, 256, 256],
+          1.0,
+          true
+        )
+        const extractedVolume = extractSubvolumeUtil(
+          sourceVolume,
+          labelVolume,
+          selectedExtractLabels
+        )
 
         // Build descriptive name
         const baseName = baseVolume.name?.replace(/\.(nii|nii\.gz)$/i, '') || 'volume'
         const labelCount = selectedExtractLabels.size
-        const labelSummary = labelCount <= 3
-          ? [...selectedExtractLabels].join('-')
-          : `${labelCount}labels`
+        const labelSummary =
+          labelCount <= 3 ? [...selectedExtractLabels].join('-') : `${labelCount}labels`
         extractedVolume.name = `${baseName}_extract_${labelSummary}.nii.gz`
 
         nv.addVolume(extractedVolume)
@@ -411,7 +424,9 @@ function MainApp(): JSX.Element {
         // Apply colormap labels from model-specific colormap.json (matches brainchop.org)
         if (resultModelInfo.colormapPath) {
           try {
-            const colormapJson = await window.electron.loadBrainchopLabels(resultModelInfo.colormapPath)
+            const colormapJson = await window.electron.loadBrainchopLabels(
+              resultModelInfo.colormapPath
+            )
             overlayVolume.setColormapLabel(colormapJson)
             if (overlayVolume.colormapLabel?.lut) {
               overlayVolume.colormapLabel.lut = overlayVolume.colormapLabel.lut.map((v, i) =>
@@ -482,7 +497,10 @@ function MainApp(): JSX.Element {
       input: string
     ): Promise<NVImage> => {
       const resolved = await window.electron.headlessResolveInput(input)
-      const volume = await NVImage.loadFromBase64({ base64: resolved.base64, name: resolved.filename })
+      const volume = await NVImage.loadFromBase64({
+        base64: resolved.base64,
+        name: resolved.filename
+      })
       nv.addVolume(volume)
       doc.setVolumes([...nv.volumes])
       nv.updateGLVolume()
@@ -748,9 +766,14 @@ function MainApp(): JSX.Element {
         let seriesNumbers: number[] = []
         if (options.series === 'all') {
           const series = await window.electron.headlessDcm2niixList(options.input)
-          seriesNumbers = series.map((s: { seriesNumber: number }) => s.seriesNumber).filter((n: number) => n != null)
+          seriesNumbers = series
+            .map((s: { seriesNumber: number }) => s.seriesNumber)
+            .filter((n: number) => n != null)
         } else {
-          seriesNumbers = options.series.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+          seriesNumbers = options.series
+            .split(',')
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => !isNaN(n))
         }
 
         console.error(`[niivue] Converting DICOM series: ${seriesNumbers.join(', ')}`)
@@ -794,7 +817,11 @@ function MainApp(): JSX.Element {
       console.error(`[niivue] Running niimath: ${options.ops}`)
 
       // Run niimath
-      const result = await window.electron.headlessNiimath(resolved.base64, resolved.filename, options.ops)
+      const result = await window.electron.headlessNiimath(
+        resolved.base64,
+        resolved.filename,
+        options.ops
+      )
 
       // Output result
       const isStdout = options.output === '-' || options.output.toLowerCase() === 'stdout'
@@ -1534,6 +1561,7 @@ function MainApp(): JSX.Element {
           }
         }}
       />
+      <BidsFilterDialog />
       <SegmentationDialog
         open={segmentationRunning}
         progress={segmentationProgress}

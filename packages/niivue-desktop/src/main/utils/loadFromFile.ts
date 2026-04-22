@@ -35,5 +35,3 @@ export const loadFromFileHandler = async (_: unknown, path: string): Promise<str
     return ''
   }
 }
-
-

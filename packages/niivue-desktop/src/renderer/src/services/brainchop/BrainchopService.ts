@@ -104,7 +104,7 @@ export class BrainchopService {
       if (volumeData.length !== 256 * 256 * 256) {
         throw new Error(
           `Volume must be conformed to 256³ before segmentation (got ${volumeData.length} voxels). ` +
-          'Call nv.conform(volume, true) first.'
+            'Call nv.conform(volume, true) first.'
         )
       }
       const slices3d = tf.tensor3d(volumeData, [256, 256, 256])
@@ -192,8 +192,12 @@ export class BrainchopService {
     return result
   }
 
-  private async quantileNormalize(tensor: tf.Tensor3D, lower = 0.05, upper = 0.95): Promise<tf.Tensor3D> {
-    const flatArray = await tensor.flatten().array() as number[]
+  private async quantileNormalize(
+    tensor: tf.Tensor3D,
+    lower = 0.05,
+    upper = 0.95
+  ): Promise<tf.Tensor3D> {
+    const flatArray = (await tensor.flatten().array()) as number[]
     flatArray.sort((a, b) => a - b)
     const lowIdx = Math.floor(flatArray.length * lower)
     const highIdx = Math.ceil(flatArray.length * upper) - 1
@@ -242,7 +246,11 @@ export class BrainchopService {
       if (uint8Data[i] > labelMax) labelMax = uint8Data[i]
       if (uint8Data[i] !== 0) nonZeroCount++
     }
-    console.log('[BrainchopService] Labels:', { min: labelMin, max: labelMax, nonZero: nonZeroCount })
+    console.log('[BrainchopService] Labels:', {
+      min: labelMin,
+      max: labelMax,
+      nonZero: nonZeroCount
+    })
 
     // Remove small disconnected clusters (skull fragments, meninges)
     keepLargestClusterPerClass(uint8Data, [256, 256, 256])

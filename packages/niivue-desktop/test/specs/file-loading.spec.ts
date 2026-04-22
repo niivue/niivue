@@ -1,13 +1,10 @@
 describe('File Loading', () => {
   it('should load standard MNI152 volume via IPC', async () => {
     // Send loadStandard event to renderer
-    await browser.electron.execute(
-      (electron, filename) => {
-        const win = electron.BrowserWindow.getAllWindows()[0]
-        win.webContents.send('loadStandard', filename)
-      },
-      'mni152.nii.gz'
-    )
+    await browser.electron.execute((electron, filename) => {
+      const win = electron.BrowserWindow.getAllWindows()[0]
+      win.webContents.send('loadStandard', filename)
+    }, 'mni152.nii.gz')
 
     // Wait for volume to load
     await browser.pause(3000)
@@ -24,13 +21,10 @@ describe('File Loading', () => {
   })
 
   it('should load standard mesh (AAL atlas) via IPC', async () => {
-    await browser.electron.execute(
-      (electron, filename) => {
-        const win = electron.BrowserWindow.getAllWindows()[0]
-        win.webContents.send('loadStandard', filename)
-      },
-      'aal.mz3'
-    )
+    await browser.electron.execute((electron, filename) => {
+      const win = electron.BrowserWindow.getAllWindows()[0]
+      win.webContents.send('loadStandard', filename)
+    }, 'aal.mz3')
 
     // Wait for mesh to load
     await browser.pause(3000)
