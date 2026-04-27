@@ -1145,6 +1145,7 @@ type NVConfigOptions = {
     selectionBoxColor: number[];
     clipPlaneColor: number[];
     isClipPlanesCutaway: boolean;
+    isClipAllVolumes: boolean;
     paqdUniforms: number[];
     rulerColor: number[];
     colorbarMargin: number;
@@ -1240,6 +1241,8 @@ type NVConfigOptions = {
     zarrCacheSize: number;
     /** Number of chunk rings to prefetch around the visible region for zarr viewing (0 disables, default 1) */
     zarrPrefetchRings: number;
+    /** Smooth drawing surfaces in 3D rendering. 0 = off, > 0 = Box blur radius in voxels (default 0) */
+    smoothDrawing: number;
 };
 declare const DEFAULT_OPTIONS: NVConfigOptions;
 type EncodeNumbersIn<T> = T extends number ? number | string : T extends Array<infer U> ? Array<EncodeNumbersIn<U>> : T extends object ? {
@@ -2463,6 +2466,7 @@ declare class Niivue extends EventTarget {
     useCustomGradientTexture: boolean;
     renderGradientValues: boolean;
     drawTexture: WebGLTexture | null;
+    drawSmoothedTexture: WebGLTexture | null;
     paqdTexture: WebGLTexture | null;
     drawUndoBitmaps: Uint8Array[];
     drawLut: LUT;
@@ -4213,6 +4217,14 @@ declare class Niivue extends EventTarget {
      */
     drawPenFilled(): void;
     /**
+     * GPU single-pass 3D box blur of the drawing bitmap.
+     * Reads from TEXTURE7_DRAW (R8) and writes the blurred result to
+     * TEXTURE10_DRAW_SMOOTH (R8 with LINEAR filtering) for isosurface rendering.
+     * Reuses `blurShader` with its parameterised `(2r+1)^3` box-blur path.
+     * @internal
+     */
+    blurDrawingGL(dims: number[]): void;
+    /**
      * close drawing: make sure you have saved any changes before calling this!
      * @example niivue.closeDrawing();
      * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
@@ -5353,6 +5365,11 @@ declare class Niivue extends EventTarget {
      * @internal
      */
     r16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], img16: Int16Array): WebGLTexture;
+    /**
+     * Creates a 3D 1-component float16 texture with LINEAR filtering for smooth drawing.
+     * @internal
+     */
+    r16fTex(texID: WebGLTexture | null, activeID: number, dims: number[], data: Float32Array): WebGLTexture | null;
     /**
      * Creates a 2D 4-component (RGBA) uint8 texture on the GPU with optional vertical flip.
      * @internal

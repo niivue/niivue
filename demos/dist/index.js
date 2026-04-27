@@ -5372,6 +5372,7 @@ var TEXTURE_CONSTANTS = {
   TEXTURE6_GRADIENT: 33990,
   TEXTURE7_DRAW: 33991,
   TEXTURE8_PAQD: 33992,
+  TEXTURE10_DRAW_SMOOTH: 33994,
   // subsequent textures only used transiently
   _TEXTURE8_GRADIENT_TEMP: 33992,
   TEXTURE9_ORIENT: 33993,
@@ -22939,6 +22940,22 @@ function r8Tex(gl, texID, activeID, dims, isInit = false) {
   }
   return texID;
 }
+function r8TexLinear(gl, texID, activeID, dims) {
+  if (texID) {
+    gl.deleteTexture(texID);
+  }
+  texID = gl.createTexture();
+  gl.activeTexture(activeID);
+  gl.bindTexture(gl.TEXTURE_3D, texID);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8, dims[1], dims[2], dims[3]);
+  return texID;
+}
 function r16Tex(gl, texID, activeID, dims, img16) {
   if (texID) {
     gl.deleteTexture(texID);
@@ -22958,6 +22975,23 @@ function r16Tex(gl, texID, activeID, dims, img16) {
     img16 = new Int16Array(nv);
   }
   gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], gl.RED_INTEGER, gl.SHORT, img16);
+  return texID;
+}
+function r16fTex(gl, texID, activeID, dims, data) {
+  if (texID) {
+    gl.deleteTexture(texID);
+  }
+  texID = gl.createTexture();
+  gl.activeTexture(activeID);
+  gl.bindTexture(gl.TEXTURE_3D, texID);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+  gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+  gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+  gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R16F, dims[1], dims[2], dims[3]);
+  gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], gl.RED, gl.FLOAT, data);
   return texID;
 }
 function rgbaTex2D(gl, texID, activeID, dims, data = null, isFlipVertical = true) {
@@ -34220,6 +34254,7 @@ var DEFAULT_OPTIONS = {
   selectionBoxColor: [1, 1, 1, 0.5],
   clipPlaneColor: [0.7, 0, 0.7, 0.5],
   isClipPlanesCutaway: false,
+  isClipAllVolumes: false,
   paqdUniforms: [0.3, 0.5, 0.5, 1],
   rulerColor: [1, 0, 0, 0.8],
   colorbarMargin: 0.05,
@@ -34314,7 +34349,8 @@ var DEFAULT_OPTIONS = {
   // white border by default
   // Zarr options
   zarrCacheSize: 1e3,
-  zarrPrefetchRings: 10
+  zarrPrefetchRings: 10,
+  smoothDrawing: 0
 };
 var DEFAULT_SCENE_DATA = {};
 var INITIAL_SCENE_DATA = {
@@ -35466,6 +35502,8 @@ var kRenderInit = `void main() {
 		samplePos += deltaDir * ran * 1.41; //jitter ray
 	else
 		samplePos += deltaDir * ran; //jitter ray
+	vec2 overlaySampleRange = isClipAllVolumes ? sampleRange : vec2(0.0, len);
+	bool overlayIsClipCutaway = isClipAllVolumes && isClipCutaway;
 `;
 var kRenderTail = `
 	if (firstHit.a < len) {
@@ -35536,9 +35574,18 @@ var kRenderTail = `
 	stepSizeFast = sliceSize * 1.0;
 	deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
+		if (skipSample(samplePos.a, overlaySampleRange) ^^ overlayIsClipCutaway) {
+			samplePos += deltaDirFast;
+			continue;
+		}
 		float val = texture(overlay, samplePos.xyz).a;
-		if (drawOpacity > 0.0)
-			val = max(val, texture(drawing, samplePos.xyz).r);
+		if (drawOpacity > 0.0) {
+			if (smoothDrawing > 0.0) {
+				if (!isClipAllVolumes || !(skipSample(samplePos.a, sampleRange) ^^ isClipCutaway))
+					val = max(val, texture(drawSmoothed, samplePos.xyz).r * 2.0);
+			} else
+				val = max(val, texture(drawing, samplePos.xyz).r);
+		}
 		if (val > 0.001)
 			break;
 		samplePos += deltaDirFast; //advance ray position
@@ -35560,12 +35607,84 @@ var kRenderTail = `
 	if (backgroundMasksOverlays > 0)
 		samplePos = firstHit;
 	bool firstDraw = true;
+	// Hoist per-ray constants used by the smooth drawing path.
+	vec3 vxSize = 1.0 / vec3(textureSize(drawing, 0));
+	vec3 nRayDir = normalize(rayDir);
+	// For smooth drawing with a clip plane: if the ray enters the unclipped region
+	// already inside the drawn volume, start with prevSmoothOut=false so no
+	// outside\u2192inside transition is detected, suppressing the clip-plane cap face.
+	bool prevSmoothOut = true;
+	bool enteredFromOutside = false;
+	vec4 cachedSmoothColor = vec4(0.0);
+	if (isClipAllVolumes && isClip && !isClipCutaway && smoothDrawing > 0.0) {
+		vec3 clipEntry = start.xyz + dir * sampleRange.x;
+		if (texture(drawSmoothed, clipEntry).r >= 0.5)
+			prevSmoothOut = false;
+	}
 	while (samplePos.a <= len) {
+		if (skipSample(samplePos.a, overlaySampleRange) ^^ overlayIsClipCutaway) {
+			samplePos += deltaDirFast;
+			continue;
+		}
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		if ((colorSample.a < 0.01) && (drawOpacity > 0.0)) {
-			float val = texture(drawing, samplePos.xyz).r;
-			vec4 draw = drawColor(val, drawOpacity);
-			if ((draw.a > 0.0) && (firstDraw)) {
+			if (smoothDrawing > 0.0) {
+				// Smooth drawing: isosurface rendering with gradient-based shading
+				// Clip the smooth surface only when isClipAllVolumes is set
+				if (isClipAllVolumes && (skipSample(samplePos.a, sampleRange) ^^ isClipCutaway)) {
+					samplePos += deltaDir;
+					continue;
+				}
+				float smoothVal = texture(drawSmoothed, samplePos.xyz).r;
+				bool nowSmoothInside = (smoothVal > 0.5);
+				// Track entry transitions: only mark enteredFromOutside on a genuine
+				// outside\u2192inside crossing; clear it when we exit.
+				if (!nowSmoothInside) {
+					prevSmoothOut = true;
+					enteredFromOutside = false;
+				} else if (prevSmoothOut) {
+					// First inside sample: compute gradient, pen color, and Phong shading
+					// once and cache the result for all subsequent interior steps.
+					prevSmoothOut = false;
+					enteredFromOutside = true;
+					float gx = texture(drawSmoothed, samplePos.xyz + vec3(vxSize.x, 0.0, 0.0)).r
+					         - texture(drawSmoothed, samplePos.xyz - vec3(vxSize.x, 0.0, 0.0)).r;
+					float gy = texture(drawSmoothed, samplePos.xyz + vec3(0.0, vxSize.y, 0.0)).r
+					         - texture(drawSmoothed, samplePos.xyz - vec3(0.0, vxSize.y, 0.0)).r;
+					float gz = texture(drawSmoothed, samplePos.xyz + vec3(0.0, 0.0, vxSize.z)).r
+					         - texture(drawSmoothed, samplePos.xyz - vec3(0.0, 0.0, vxSize.z)).r;
+					vec3 grad = vec3(gx, gy, gz);
+					float gradLen = length(grad);
+					vec3 normal = gradLen > 0.001 ? normalize(grad) : vec3(0.0, 0.0, 1.0);
+					// Get pen color from original drawing texture.
+					float drawVal = texture(drawing, samplePos.xyz).r;
+					if (drawVal == 0.0) {
+						// Between painted voxels: step inward along the gradient
+						// to find the nearest painted voxel's pen color.
+						// (normal points inward toward higher smooth values)
+						for (int k = 1; k <= 8; k++) {
+							drawVal = texture(drawing, samplePos.xyz + normal * vxSize * float(k)).r;
+							if (drawVal > 0.0) break;
+						}
+					}
+					vec4 draw = drawColor(max(drawVal, 1.0 / 255.0), drawOpacity);
+					// Phong shading with two-sided lighting.
+					float NdotL = abs(dot(normal, nRayDir));
+					vec3 reflected = reflect(nRayDir, normal);
+					float spec = pow(max(dot(reflected, -nRayDir), 0.0), 20.0);
+					draw.rgb *= (0.4 + 0.6 * NdotL);
+					draw.rgb += vec3(0.2 * spec);
+					cachedSmoothColor = draw;
+				}
+				// Use the cached shaded color for every interior step.
+				if (nowSmoothInside && enteredFromOutside) {
+					colorSample = cachedSmoothColor;
+				}
+			} else {
+				// Original discrete drawing path
+				float val = texture(drawing, samplePos.xyz).r;
+				vec4 draw = drawColor(val, drawOpacity);
+				if ((draw.a > 0.0) && (firstDraw)) {
 				firstDraw = false;
 				float sum = 0.0;
 				const float mn = 1.0 / 256.0;
@@ -35608,6 +35727,7 @@ var kRenderTail = `
 				draw.rgb = mix (draw.rgb, ao , renderDrawAmbientOcclusionX);
 			}
 			colorSample = draw;
+			} // end else (discrete drawing path)
 		}
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a >= 0.01) {
@@ -35663,8 +35783,11 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
+uniform highp sampler3D drawSmoothed;
+uniform float smoothDrawing;
 uniform highp sampler2D colormap;
 uniform vec2 renderDrawAmbientOcclusionXY;
+uniform bool isClipAllVolumes;
 in vec3 vColor;
 out vec4 fColor;
 ` + kRenderFunc + `
@@ -35717,10 +35840,12 @@ out vec4 fColor;
 	bool isColorPlaneInVolume = false;
 	bool isClip = false;
 	bool isClipCutaway = false;
-	vec2 sampleRange;
+	vec2 sampleRange = vec2(0.0, len);
 	// vec4 clipPos = applyClip(dir, samplePos, len, isClip);
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
+	vec2 overlaySampleRange = vec2(0.0, len);
+	bool overlayIsClipCutaway = false;
 	if (samplePos.a < 0.0)
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
@@ -35748,8 +35873,11 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
+uniform highp sampler3D drawSmoothed;
+uniform float smoothDrawing;
 uniform highp sampler2D colormap;
 uniform vec2 renderDrawAmbientOcclusionXY;
+uniform bool isClipAllVolumes;
 in vec3 vColor;
 out vec4 fColor;
 ` + kRenderFunc + kRenderInit + `while (samplePos.a <= len) {
@@ -35797,12 +35925,15 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float renderOverlayBlend;
 uniform highp sampler3D drawing, gradient;
+uniform highp sampler3D drawSmoothed;
+uniform float smoothDrawing;
 uniform highp sampler2D colormap;
 uniform highp sampler2D matCap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
 uniform float silhouettePower;
 uniform float gradientOpacity[${gradientOpacityLutCount}];
+uniform bool isClipAllVolumes;
 in vec3 vColor;
 out vec4 fColor;
 `;
@@ -37394,9 +37525,31 @@ uniform float coordZ;
 uniform float dX;
 uniform float dY;
 uniform float dZ;
+// Optional uniforms for parameterised (2r+1)^3 box blur. When kernelRadius
+// is 0 (default / gradient pipeline) the legacy 8-corner sample is used.
+uniform int kernelRadius;
+uniform bool binarize;
 uniform highp sampler3D intensityVol;
 void main(void) {
  vec3 vx = vec3(TexCoord.xy, coordZ);
+ if (kernelRadius > 0) {
+  vec4 sum = vec4(0.0);
+  float count = 0.0;
+  for (int k = -kernelRadius; k <= kernelRadius; k++) {
+   for (int j = -kernelRadius; j <= kernelRadius; j++) {
+    for (int i = -kernelRadius; i <= kernelRadius; i++) {
+     vec3 off = vec3(float(i) * dX, float(j) * dY, float(k) * dZ);
+     vec4 v = texture(intensityVol, vx + off);
+     if (binarize) v = vec4(v.r > 0.0 ? 1.0 : 0.0, 0.0, 0.0, 0.0);
+     sum += v;
+     count += 1.0;
+    }
+   }
+  }
+  FragColor = sum / count;
+  return;
+ }
+ // Legacy 8-corner box blur (gradient pipeline)
  vec4 samp = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
  samp += texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
  samp += texture(intensityVol,vx+vec3(+dX,-dY,+dZ));
@@ -37614,6 +37767,8 @@ function initRenderShader(params) {
   gl.uniform1i(shader.uniforms.colormap, 1);
   gl.uniform1i(shader.uniforms.overlay, 2);
   gl.uniform1i(shader.uniforms.drawing, 7);
+  gl.uniform1i(shader.uniforms.drawSmoothed, 10);
+  gl.uniform1f(shader.uniforms.smoothDrawing, 0);
   gl.uniform1i(shader.uniforms.paqd, 8);
   gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [renderDrawAmbientOcclusion, 1]);
   gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount);
@@ -39371,6 +39526,12 @@ function gradientGL(params) {
   gl.uniform1f(blurShader.uniforms.dX, blurRadius / hdr.dims[1]);
   gl.uniform1f(blurShader.uniforms.dY, blurRadius / hdr.dims[2]);
   gl.uniform1f(blurShader.uniforms.dZ, blurRadius / hdr.dims[3]);
+  if (blurShader.uniforms.kernelRadius) {
+    gl.uniform1i(blurShader.uniforms.kernelRadius, 0);
+  }
+  if (blurShader.uniforms.binarize) {
+    gl.uniform1i(blurShader.uniforms.binarize, 0);
+  }
   for (let i = 0; i < hdr.dims[3]; i++) {
     const coordZ = 1 / hdr.dims[3] * (i + 0.5);
     gl.uniform1f(blurShader.uniforms.coordZ, coordZ);
@@ -39543,11 +39704,14 @@ function drawImage3D(params) {
     drawBitmap,
     renderDrawAmbientOcclusion,
     drawOpacity,
+    smoothDrawing,
+    drawSmoothedTexture,
     paqdUniforms,
     matRAS,
     crosshairPos,
     clipPlaneDepthAziElevs,
     isClipPlanesCutaway,
+    isClipAllVolumes,
     obliqueRAS
   } = params;
   if (volumesLength === 0) {
@@ -39578,8 +39742,16 @@ function drawImage3D(params) {
     }
     if (drawBitmap && drawBitmap.length > 8) {
       gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, renderDrawAmbientOcclusion, drawOpacity);
+      if (smoothDrawing > 0 && drawSmoothedTexture) {
+        gl.uniform1f(shader.uniforms.smoothDrawing, smoothDrawing);
+        gl.activeTexture(gl.TEXTURE10);
+        gl.bindTexture(gl.TEXTURE_3D, drawSmoothedTexture);
+      } else {
+        gl.uniform1f(shader.uniforms.smoothDrawing, 0);
+      }
     } else {
       gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, renderDrawAmbientOcclusion, 0);
+      gl.uniform1f(shader.uniforms.smoothDrawing, 0);
     }
     gl.uniform4fv(shader.uniforms.paqdUniforms, paqdUniforms);
     gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMatrix);
@@ -39600,6 +39772,7 @@ function drawImage3D(params) {
     }
     gl.uniform1f(shader.uniforms.drawOpacity, 1);
     gl.uniform1i(shader.uniforms.isClipCutaway, isClipPlanesCutaway ? 1 : 0);
+    gl.uniform1i(shader.uniforms.isClipAllVolumes, isClipAllVolumes ? 1 : 0);
     gl.bindVertexArray(object3D.vao);
     gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0);
     gl.bindVertexArray(unusedVAO);
@@ -43492,6 +43665,8 @@ var Niivue = class extends EventTarget {
     __publicField(this, "renderGradientValues", false);
     __publicField(this, "drawTexture", null);
     // the GPU memory storage of the drawing
+    __publicField(this, "drawSmoothedTexture", null);
+    // the GPU memory storage of the smoothed drawing
     __publicField(this, "paqdTexture", null);
     // the GPU memory storage of the probabilistic atlas
     __publicField(this, "drawUndoBitmaps", []);
@@ -48437,6 +48612,46 @@ var Niivue = class extends EventTarget {
     this.onDrawingChanged("draw");
   }
   /**
+   * GPU single-pass 3D box blur of the drawing bitmap.
+   * Reads from TEXTURE7_DRAW (R8) and writes the blurred result to
+   * TEXTURE10_DRAW_SMOOTH (R8 with LINEAR filtering) for isosurface rendering.
+   * Reuses `blurShader` with its parameterised `(2r+1)^3` box-blur path.
+   * @internal
+   */
+  blurDrawingGL(dims) {
+    const gl = this.gl;
+    const shader = this.blurShader;
+    if (!shader || !this.drawTexture) {
+      return;
+    }
+    const radius = Math.max(1, Math.round(this.opts.smoothDrawing));
+    this.drawSmoothedTexture = r8TexLinear(gl, this.drawSmoothedTexture, TEXTURE_CONSTANTS.TEXTURE10_DRAW_SMOOTH, dims);
+    const BLUR_SRC_UNIT = TEXTURE_CONSTANTS.TEXTURE11_GC_BACK;
+    const BLUR_SRC_UNIT_NUM = 11;
+    gl.bindVertexArray(this.genericVAO);
+    const fb = gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+    gl.viewport(0, 0, dims[1], dims[2]);
+    gl.disable(gl.BLEND);
+    shader.use(gl);
+    gl.activeTexture(BLUR_SRC_UNIT);
+    gl.bindTexture(gl.TEXTURE_3D, this.drawTexture);
+    gl.uniform1i(shader.uniforms.intensityVol, BLUR_SRC_UNIT_NUM);
+    gl.uniform1f(shader.uniforms.dX, 1 / dims[1]);
+    gl.uniform1f(shader.uniforms.dY, 1 / dims[2]);
+    gl.uniform1f(shader.uniforms.dZ, 1 / dims[3]);
+    gl.uniform1i(shader.uniforms.kernelRadius, radius);
+    gl.uniform1i(shader.uniforms.binarize, 1);
+    for (let i = 0; i < dims[3]; i++) {
+      gl.uniform1f(shader.uniforms.coordZ, (i + 0.5) / dims[3]);
+      gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.drawSmoothedTexture, 0, i);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+    }
+    gl.deleteFramebuffer(fb);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+    gl.bindVertexArray(this.unusedVAO);
+  }
+  /**
    * close drawing: make sure you have saved any changes before calling this!
    * @example niivue.closeDrawing();
    * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
@@ -48444,6 +48659,10 @@ var Niivue = class extends EventTarget {
   closeDrawing() {
     this.drawClearAllUndoBitmaps();
     this.drawTexture = this.rgbaTex(this.drawTexture, TEXTURE_CONSTANTS.TEXTURE7_DRAW, [2, 2, 2, 2], true);
+    if (this.drawSmoothedTexture) {
+      this.gl.deleteTexture(this.drawSmoothedTexture);
+      this.drawSmoothedTexture = null;
+    }
     this.drawBitmap = null;
     this.clickToSegmentGrowingBitmap = null;
     this._emitEvent("drawingChanged", { action: "close" });
@@ -48514,6 +48733,10 @@ var Niivue = class extends EventTarget {
     if (!this.drawTexture) {
       log.error("refreshDrawing: drawTexture (GPU texture) is null.");
       return;
+    }
+    const hasAnyVoxel = bitmapDataSource.some((v) => v !== 0);
+    if (this.opts.smoothDrawing > 0 && !this.opts.is2DSliceShader && hasAnyVoxel) {
+      this.blurDrawingGL(dims);
     }
     if (isForceRedraw) {
       this.drawScene();
@@ -52115,11 +52338,14 @@ var Niivue = class extends EventTarget {
       drawBitmap: this.drawBitmap,
       renderDrawAmbientOcclusion: this.renderDrawAmbientOcclusion,
       drawOpacity: this.drawOpacity,
+      smoothDrawing: this.opts.smoothDrawing,
+      drawSmoothedTexture: this.drawSmoothedTexture,
       paqdUniforms: this.opts.paqdUniforms,
       matRAS: this.back.matRAS,
       crosshairPos: this.scene.crosshairPos,
       clipPlaneDepthAziElevs: this.scene.clipPlaneDepthAziElevs,
       isClipPlanesCutaway: this.opts.isClipPlanesCutaway,
+      isClipAllVolumes: this.opts.isClipAllVolumes,
       obliqueRAS: this.back?.obliqueRAS
     });
   }
@@ -53783,6 +54009,13 @@ var Niivue = class extends EventTarget {
    */
   r16Tex(texID, activeID, dims, img16) {
     return r16Tex(this.gl, texID, activeID, dims, img16);
+  }
+  /**
+   * Creates a 3D 1-component float16 texture with LINEAR filtering for smooth drawing.
+   * @internal
+   */
+  r16fTex(texID, activeID, dims, data) {
+    return r16fTex(this.gl, texID, activeID, dims, data);
   }
   /**
    * Creates a 2D 4-component (RGBA) uint8 texture on the GPU with optional vertical flip.

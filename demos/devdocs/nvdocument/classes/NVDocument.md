@@ -1,6 +1,6 @@
 # Class: NVDocument
 
-Defined in: [nvdocument.ts:449](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L449)
+Defined in: [nvdocument.ts:454](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L454)
 
 NVDocument class (main)
 
@@ -12,7 +12,7 @@ NVDocument class (main)
 new NVDocument(): NVDocument;
 ```
 
-Defined in: [nvdocument.ts:475](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L475)
+Defined in: [nvdocument.ts:480](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L480)
 
 #### Returns
 
@@ -22,16 +22,16 @@ Defined in: [nvdocument.ts:475](https://github.com/niivue/niivue/blob/main/packa
 
 | Property                                                   | Type                                                                                                               | Default value | Defined in                                                                                             |
 | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------- | ------------------------------------------------------------------------------------------------------ |
-| <a id="completedangles"></a> `completedAngles`             | [`CompletedAngle`](../interfaces/CompletedAngle.md)[]                                                              | `[]`          | [nvdocument.ts:470](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L470) |
-| <a id="completedmeasurements"></a> `completedMeasurements` | [`CompletedMeasurement`](../interfaces/CompletedMeasurement.md)[]                                                  | `[]`          | [nvdocument.ts:469](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L469) |
-| <a id="data"></a> `data`                                   | [`DocumentData`](../type-aliases/DocumentData.md)                                                                  | `undefined`   | [nvdocument.ts:450](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L450) |
-| <a id="drawbitmap"></a> `drawBitmap`                       | `Uint8Array`                                                                                                       | `null`        | [nvdocument.ts:466](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L466) |
-| <a id="imageoptionsmap"></a> `imageOptionsMap`             | `Map`\<`any`, `any`\>                                                                                              | `undefined`   | [nvdocument.ts:467](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L467) |
-| <a id="meshdataobjects"></a> `meshDataObjects?`            | ( \| [`NVMesh`](../../nvmesh/classes/NVMesh.md) \| [`NVConnectome`](../../nvconnectome/classes/NVConnectome.md))[] | `undefined`   | [nvdocument.ts:464](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L464) |
-| <a id="meshes"></a> `meshes`                               | ( \| [`NVMesh`](../../nvmesh/classes/NVMesh.md) \| [`NVConnectome`](../../nvconnectome/classes/NVConnectome.md))[] | `[]`          | [nvdocument.ts:465](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L465) |
-| <a id="meshoptionsmap"></a> `meshOptionsMap`               | `Map`\<`any`, `any`\>                                                                                              | `undefined`   | [nvdocument.ts:468](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L468) |
-| <a id="scene"></a> `scene`                                 | [`Scene`](../type-aliases/Scene.md)                                                                                | `undefined`   | [nvdocument.ts:461](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L461) |
-| <a id="volumes"></a> `volumes`                             | [`NVImage`](../../nvimage/classes/NVImage.md)[]                                                                    | `[]`          | [nvdocument.ts:463](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L463) |
+| <a id="completedangles"></a> `completedAngles`             | [`CompletedAngle`](../interfaces/CompletedAngle.md)[]                                                              | `[]`          | [nvdocument.ts:475](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L475) |
+| <a id="completedmeasurements"></a> `completedMeasurements` | [`CompletedMeasurement`](../interfaces/CompletedMeasurement.md)[]                                                  | `[]`          | [nvdocument.ts:474](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L474) |
+| <a id="data"></a> `data`                                   | [`DocumentData`](../type-aliases/DocumentData.md)                                                                  | `undefined`   | [nvdocument.ts:455](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L455) |
+| <a id="drawbitmap"></a> `drawBitmap`                       | `Uint8Array`                                                                                                       | `null`        | [nvdocument.ts:471](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L471) |
+| <a id="imageoptionsmap"></a> `imageOptionsMap`             | `Map`\<`any`, `any`\>                                                                                              | `undefined`   | [nvdocument.ts:472](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L472) |
+| <a id="meshdataobjects"></a> `meshDataObjects?`            | ( \| [`NVMesh`](../../nvmesh/classes/NVMesh.md) \| [`NVConnectome`](../../nvconnectome/classes/NVConnectome.md))[] | `undefined`   | [nvdocument.ts:469](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L469) |
+| <a id="meshes"></a> `meshes`                               | ( \| [`NVMesh`](../../nvmesh/classes/NVMesh.md) \| [`NVConnectome`](../../nvconnectome/classes/NVConnectome.md))[] | `[]`          | [nvdocument.ts:470](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L470) |
+| <a id="meshoptionsmap"></a> `meshOptionsMap`               | `Map`\<`any`, `any`\>                                                                                              | `undefined`   | [nvdocument.ts:473](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L473) |
+| <a id="scene"></a> `scene`                                 | [`Scene`](../type-aliases/Scene.md)                                                                                | `undefined`   | [nvdocument.ts:466](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L466) |
+| <a id="volumes"></a> `volumes`                             | [`NVImage`](../../nvimage/classes/NVImage.md)[]                                                                    | `[]`          | [nvdocument.ts:468](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L468) |
 
 ## Accessors
 
@@ -43,7 +43,7 @@ Defined in: [nvdocument.ts:475](https://github.com/niivue/niivue/blob/main/packa
 get customData(): string;
 ```
 
-Defined in: [nvdocument.ts:639](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L639)
+Defined in: [nvdocument.ts:644](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L644)
 
 ##### Returns
 
@@ -55,7 +55,7 @@ Defined in: [nvdocument.ts:639](https://github.com/niivue/niivue/blob/main/packa
 set customData(data: string): void;
 ```
 
-Defined in: [nvdocument.ts:643](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L643)
+Defined in: [nvdocument.ts:648](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L648)
 
 ##### Parameters
 
@@ -77,7 +77,7 @@ Defined in: [nvdocument.ts:643](https://github.com/niivue/niivue/blob/main/packa
 get encodedDrawingBlob(): string;
 ```
 
-Defined in: [nvdocument.ts:603](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L603)
+Defined in: [nvdocument.ts:608](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L608)
 
 Gets the base 64 encoded blob of the associated drawing
 
@@ -95,7 +95,7 @@ Gets the base 64 encoded blob of the associated drawing
 get encodedImageBlobs(): string[];
 ```
 
-Defined in: [nvdocument.ts:596](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L596)
+Defined in: [nvdocument.ts:601](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L601)
 
 Gets the base 64 encoded blobs of associated images
 
@@ -113,7 +113,7 @@ Gets the base 64 encoded blobs of associated images
 get imageOptionsArray(): ImageFromUrlOptions[];
 ```
 
-Defined in: [nvdocument.ts:589](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L589)
+Defined in: [nvdocument.ts:594](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L594)
 
 ##### Returns
 
@@ -129,7 +129,7 @@ Defined in: [nvdocument.ts:589](https://github.com/niivue/niivue/blob/main/packa
 get labels(): NVLabel3D[];
 ```
 
-Defined in: [nvdocument.ts:628](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L628)
+Defined in: [nvdocument.ts:633](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L633)
 
 Gets the 3D labels of the Niivue instance
 
@@ -143,7 +143,7 @@ Gets the 3D labels of the Niivue instance
 set labels(labels: NVLabel3D[]): void;
 ```
 
-Defined in: [nvdocument.ts:635](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L635)
+Defined in: [nvdocument.ts:640](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L640)
 
 Sets the 3D labels of the Niivue instance
 
@@ -167,7 +167,7 @@ Sets the 3D labels of the Niivue instance
 get opts(): NVConfigOptions;
 ```
 
-Defined in: [nvdocument.ts:610](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L610)
+Defined in: [nvdocument.ts:615](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L615)
 
 Gets the options of the Niivue instance
 
@@ -181,7 +181,7 @@ Gets the options of the Niivue instance
 set opts(opts: NVConfigOptions): void;
 ```
 
-Defined in: [nvdocument.ts:620](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L620)
+Defined in: [nvdocument.ts:625](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L625)
 
 Sets the options of the Niivue instance
 
@@ -205,7 +205,7 @@ Sets the options of the Niivue instance
 get previewImageDataURL(): string;
 ```
 
-Defined in: [nvdocument.ts:570](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L570)
+Defined in: [nvdocument.ts:575](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L575)
 
 Gets preview image blob
 
@@ -221,7 +221,7 @@ dataURL of preview image
 set previewImageDataURL(dataURL: string): void;
 ```
 
-Defined in: [nvdocument.ts:578](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L578)
+Defined in: [nvdocument.ts:583](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L583)
 
 Sets preview image blob
 
@@ -245,7 +245,7 @@ Sets preview image blob
 get title(): string;
 ```
 
-Defined in: [nvdocument.ts:562](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L562)
+Defined in: [nvdocument.ts:567](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L567)
 
 Title of the document
 
@@ -259,7 +259,7 @@ Title of the document
 set title(title: string): void;
 ```
 
-Defined in: [nvdocument.ts:585](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L585)
+Defined in: [nvdocument.ts:590](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L590)
 
 ##### Parameters
 
@@ -279,7 +279,7 @@ Defined in: [nvdocument.ts:585](https://github.com/niivue/niivue/blob/main/packa
 addImageOptions(image: NVImage, imageOptions: ImageFromUrlOptions): void;
 ```
 
-Defined in: [nvdocument.ts:664](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L664)
+Defined in: [nvdocument.ts:669](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L669)
 
 Adds an image and the options an image was created with
 
@@ -305,7 +305,7 @@ download(
 opts: object): Promise<void>;
 ```
 
-Defined in: [nvdocument.ts:754](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L754)
+Defined in: [nvdocument.ts:759](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L759)
 
 #### Parameters
 
@@ -328,7 +328,7 @@ Defined in: [nvdocument.ts:754](https://github.com/niivue/niivue/blob/main/packa
 fetchLinkedData(): Promise<void>;
 ```
 
-Defined in: [nvdocument.ts:708](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L708)
+Defined in: [nvdocument.ts:713](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L713)
 
 Fetch any image data that is missing from this document.
 
@@ -344,7 +344,7 @@ Fetch any image data that is missing from this document.
 getImageOptions(image: NVImage): ImageFromUrlOptions;
 ```
 
-Defined in: [nvdocument.ts:741](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L741)
+Defined in: [nvdocument.ts:746](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L746)
 
 Returns the options for the image if it was added by url
 
@@ -366,7 +366,7 @@ Returns the options for the image if it was added by url
 hasImage(image: NVImage): boolean;
 ```
 
-Defined in: [nvdocument.ts:650](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L650)
+Defined in: [nvdocument.ts:655](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L655)
 
 Checks if document has an image by id
 
@@ -388,7 +388,7 @@ Checks if document has an image by id
 hasImageFromUrl(url: string): boolean;
 ```
 
-Defined in: [nvdocument.ts:657](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L657)
+Defined in: [nvdocument.ts:662](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L662)
 
 Checks if document has an image by url
 
@@ -410,7 +410,7 @@ Checks if document has an image by url
 json(embedImages: boolean, embedDrawing: boolean): ExportDocumentData;
 ```
 
-Defined in: [nvdocument.ts:748](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L748)
+Defined in: [nvdocument.ts:753](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L753)
 
 Serialise the document by delegating to NVSerializer.
 
@@ -433,7 +433,7 @@ Serialise the document by delegating to NVSerializer.
 removeImage(image: NVImage): void;
 ```
 
-Defined in: [nvdocument.ts:694](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L694)
+Defined in: [nvdocument.ts:699](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L699)
 
 Removes image from the document as well as its options
 
@@ -455,7 +455,7 @@ Removes image from the document as well as its options
 removeOptsChangeCallback(): void;
 ```
 
-Defined in: [nvdocument.ts:817](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L817)
+Defined in: [nvdocument.ts:822](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L822)
 
 Removes the opts change callback
 
@@ -489,7 +489,7 @@ setOptsChangeCallback(callback: (propertyName: keyof NVConfigOptions, newValue:
   | [[number, number], [number, number]]) => void): void;
 ```
 
-Defined in: [nvdocument.ts:809](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L809)
+Defined in: [nvdocument.ts:814](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L814)
 
 Sets the callback function to be called when opts properties change
 
@@ -511,7 +511,7 @@ Sets the callback function to be called when opts properties change
 static loadFromFile(file: Blob): Promise<NVDocument>;
 ```
 
-Defined in: [nvdocument.ts:782](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L782)
+Defined in: [nvdocument.ts:787](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L787)
 
 #### Parameters
 
@@ -531,7 +531,7 @@ Defined in: [nvdocument.ts:782](https://github.com/niivue/niivue/blob/main/packa
 static loadFromJSON(data: DocumentData): Promise<NVDocument>;
 ```
 
-Defined in: [nvdocument.ts:802](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L802)
+Defined in: [nvdocument.ts:807](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L807)
 
 Factory method to return an instance of NVDocument from JSON.
 Delegates the main parsing to NVSerializer, then applies NVDocument-specific
@@ -555,7 +555,7 @@ post-processing (opts decode, scene defaults, clone measurements/angles).
 static loadFromUrl(url: string): Promise<NVDocument>;
 ```
 
-Defined in: [nvdocument.ts:766](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L766)
+Defined in: [nvdocument.ts:771](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L771)
 
 Factory method to return an instance of NVDocument from a URL
 
