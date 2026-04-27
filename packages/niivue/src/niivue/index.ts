@@ -170,6 +170,7 @@ export class Niivue extends EventTarget {
     useCustomGradientTexture = false // flag to indicate if a custom gradient texture is used
     renderGradientValues = false
     drawTexture: WebGLTexture | null = null // the GPU memory storage of the drawing
+    drawSmoothedTexture: WebGLTexture | null = null // the GPU memory storage of the smoothed drawing
     paqdTexture: WebGLTexture | null = null // the GPU memory storage of the probabilistic atlas
     drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
     drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
@@ -6004,6 +6005,56 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
     }
 
     /**
+     * GPU single-pass 3D box blur of the drawing bitmap.
+     * Reads from TEXTURE7_DRAW (R8) and writes the blurred result to
+     * TEXTURE10_DRAW_SMOOTH (R8 with LINEAR filtering) for isosurface rendering.
+     * Reuses `blurShader` with its parameterised `(2r+1)^3` box-blur path.
+     * @internal
+     */
+    blurDrawingGL(dims: number[]): void {
+        const gl = this.gl
+        const shader = this.blurShader
+        if (!shader || !this.drawTexture) {
+            return
+        }
+        const radius = Math.max(1, Math.round(this.opts.smoothDrawing))
+
+        // Create / recreate output texture (R8 + LINEAR for smooth isosurface sampling)
+        this.drawSmoothedTexture = glUtils.r8TexLinear(gl, this.drawSmoothedTexture, TEXTURE_CONSTANTS.TEXTURE10_DRAW_SMOOTH, dims)
+
+        // Use a transient texture unit for blur source reads to avoid
+        // disturbing persistent texture bindings.
+        const BLUR_SRC_UNIT = TEXTURE_CONSTANTS.TEXTURE11_GC_BACK
+        const BLUR_SRC_UNIT_NUM = 11
+
+        gl.bindVertexArray(this.genericVAO)
+        const fb = gl.createFramebuffer()
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fb)
+        gl.viewport(0, 0, dims[1], dims[2])
+        gl.disable(gl.BLEND)
+
+        shader.use(gl)
+        gl.activeTexture(BLUR_SRC_UNIT)
+        gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
+        gl.uniform1i(shader.uniforms.intensityVol, BLUR_SRC_UNIT_NUM)
+        gl.uniform1f(shader.uniforms.dX, 1.0 / dims[1])
+        gl.uniform1f(shader.uniforms.dY, 1.0 / dims[2])
+        gl.uniform1f(shader.uniforms.dZ, 1.0 / dims[3])
+        gl.uniform1i(shader.uniforms.kernelRadius, radius)
+        gl.uniform1i(shader.uniforms.binarize, 1) // convert pen colours to 0/1
+
+        for (let i = 0; i < dims[3]; i++) {
+            gl.uniform1f(shader.uniforms.coordZ, (i + 0.5) / dims[3])
+            gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.drawSmoothedTexture, 0, i)
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        }
+
+        gl.deleteFramebuffer(fb)
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+        gl.bindVertexArray(this.unusedVAO)
+    }
+
+    /**
      * close drawing: make sure you have saved any changes before calling this!
      * @example niivue.closeDrawing();
      * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
@@ -6011,6 +6062,10 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
     closeDrawing(): void {
         this.drawClearAllUndoBitmaps()
         this.drawTexture = this.rgbaTex(this.drawTexture, TEXTURE_CONSTANTS.TEXTURE7_DRAW, [2, 2, 2, 2], true)
+        if (this.drawSmoothedTexture) {
+            this.gl.deleteTexture(this.drawSmoothedTexture)
+            this.drawSmoothedTexture = null
+        }
         this.drawBitmap = null
         this.clickToSegmentGrowingBitmap = null
         this._emitEvent('drawingChanged', { action: 'close' })
@@ -6093,6 +6148,13 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         if (!this.drawTexture) {
             log.error('refreshDrawing: drawTexture (GPU texture) is null.')
             return
+        }
+
+        // Update smoothed drawing texture if smooth drawing is enabled.
+        // Uses a GPU shader to perform a 3-pass separable box blur.
+        const hasAnyVoxel = bitmapDataSource.some((v) => v !== 0)
+        if (this.opts.smoothDrawing > 0 && !this.opts.is2DSliceShader && hasAnyVoxel) {
+            this.blurDrawingGL(dims)
         }
 
         if (isForceRedraw) {
@@ -10220,11 +10282,14 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             drawBitmap: this.drawBitmap,
             renderDrawAmbientOcclusion: this.renderDrawAmbientOcclusion,
             drawOpacity: this.drawOpacity,
+            smoothDrawing: this.opts.smoothDrawing,
+            drawSmoothedTexture: this.drawSmoothedTexture,
             paqdUniforms: this.opts.paqdUniforms,
             matRAS: this.back!.matRAS!,
             crosshairPos: this.scene.crosshairPos,
             clipPlaneDepthAziElevs: this.scene.clipPlaneDepthAziElevs,
             isClipPlanesCutaway: this.opts.isClipPlanesCutaway,
+            isClipAllVolumes: this.opts.isClipAllVolumes,
             obliqueRAS: this.back?.obliqueRAS
         })
     }
@@ -12244,6 +12309,14 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
      */
     r16Tex(texID: WebGLTexture | null, activeID: number, dims: number[], img16: Int16Array): WebGLTexture {
         return glUtils.r16Tex(this.gl, texID, activeID, dims, img16)
+    }
+
+    /**
+     * Creates a 3D 1-component float16 texture with LINEAR filtering for smooth drawing.
+     * @internal
+     */
+    r16fTex(texID: WebGLTexture | null, activeID: number, dims: number[], data: Float32Array): WebGLTexture | null {
+        return glUtils.r16fTex(this.gl, texID, activeID, dims, data)
     }
 
     /**

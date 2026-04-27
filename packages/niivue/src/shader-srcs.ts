@@ -179,6 +179,8 @@ const kRenderInit = `void main() {
 		samplePos += deltaDir * ran * 1.41; //jitter ray
 	else
 		samplePos += deltaDir * ran; //jitter ray
+	vec2 overlaySampleRange = isClipAllVolumes ? sampleRange : vec2(0.0, len);
+	bool overlayIsClipCutaway = isClipAllVolumes && isClipCutaway;
 `
 
 const kRenderTail = `
@@ -250,9 +252,18 @@ const kRenderTail = `
 	stepSizeFast = sliceSize * 1.0;
 	deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
+		if (skipSample(samplePos.a, overlaySampleRange) ^^ overlayIsClipCutaway) {
+			samplePos += deltaDirFast;
+			continue;
+		}
 		float val = texture(overlay, samplePos.xyz).a;
-		if (drawOpacity > 0.0)
-			val = max(val, texture(drawing, samplePos.xyz).r);
+		if (drawOpacity > 0.0) {
+			if (smoothDrawing > 0.0) {
+				if (!isClipAllVolumes || !(skipSample(samplePos.a, sampleRange) ^^ isClipCutaway))
+					val = max(val, texture(drawSmoothed, samplePos.xyz).r * 2.0);
+			} else
+				val = max(val, texture(drawing, samplePos.xyz).r);
+		}
 		if (val > 0.001)
 			break;
 		samplePos += deltaDirFast; //advance ray position
@@ -274,12 +285,84 @@ const kRenderTail = `
 	if (backgroundMasksOverlays > 0)
 		samplePos = firstHit;
 	bool firstDraw = true;
+	// Hoist per-ray constants used by the smooth drawing path.
+	vec3 vxSize = 1.0 / vec3(textureSize(drawing, 0));
+	vec3 nRayDir = normalize(rayDir);
+	// For smooth drawing with a clip plane: if the ray enters the unclipped region
+	// already inside the drawn volume, start with prevSmoothOut=false so no
+	// outside→inside transition is detected, suppressing the clip-plane cap face.
+	bool prevSmoothOut = true;
+	bool enteredFromOutside = false;
+	vec4 cachedSmoothColor = vec4(0.0);
+	if (isClipAllVolumes && isClip && !isClipCutaway && smoothDrawing > 0.0) {
+		vec3 clipEntry = start.xyz + dir * sampleRange.x;
+		if (texture(drawSmoothed, clipEntry).r >= 0.5)
+			prevSmoothOut = false;
+	}
 	while (samplePos.a <= len) {
+		if (skipSample(samplePos.a, overlaySampleRange) ^^ overlayIsClipCutaway) {
+			samplePos += deltaDirFast;
+			continue;
+		}
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		if ((colorSample.a < 0.01) && (drawOpacity > 0.0)) {
-			float val = texture(drawing, samplePos.xyz).r;
-			vec4 draw = drawColor(val, drawOpacity);
-			if ((draw.a > 0.0) && (firstDraw)) {
+			if (smoothDrawing > 0.0) {
+				// Smooth drawing: isosurface rendering with gradient-based shading
+				// Clip the smooth surface only when isClipAllVolumes is set
+				if (isClipAllVolumes && (skipSample(samplePos.a, sampleRange) ^^ isClipCutaway)) {
+					samplePos += deltaDir;
+					continue;
+				}
+				float smoothVal = texture(drawSmoothed, samplePos.xyz).r;
+				bool nowSmoothInside = (smoothVal > 0.5);
+				// Track entry transitions: only mark enteredFromOutside on a genuine
+				// outside→inside crossing; clear it when we exit.
+				if (!nowSmoothInside) {
+					prevSmoothOut = true;
+					enteredFromOutside = false;
+				} else if (prevSmoothOut) {
+					// First inside sample: compute gradient, pen color, and Phong shading
+					// once and cache the result for all subsequent interior steps.
+					prevSmoothOut = false;
+					enteredFromOutside = true;
+					float gx = texture(drawSmoothed, samplePos.xyz + vec3(vxSize.x, 0.0, 0.0)).r
+					         - texture(drawSmoothed, samplePos.xyz - vec3(vxSize.x, 0.0, 0.0)).r;
+					float gy = texture(drawSmoothed, samplePos.xyz + vec3(0.0, vxSize.y, 0.0)).r
+					         - texture(drawSmoothed, samplePos.xyz - vec3(0.0, vxSize.y, 0.0)).r;
+					float gz = texture(drawSmoothed, samplePos.xyz + vec3(0.0, 0.0, vxSize.z)).r
+					         - texture(drawSmoothed, samplePos.xyz - vec3(0.0, 0.0, vxSize.z)).r;
+					vec3 grad = vec3(gx, gy, gz);
+					float gradLen = length(grad);
+					vec3 normal = gradLen > 0.001 ? normalize(grad) : vec3(0.0, 0.0, 1.0);
+					// Get pen color from original drawing texture.
+					float drawVal = texture(drawing, samplePos.xyz).r;
+					if (drawVal == 0.0) {
+						// Between painted voxels: step inward along the gradient
+						// to find the nearest painted voxel's pen color.
+						// (normal points inward toward higher smooth values)
+						for (int k = 1; k <= 8; k++) {
+							drawVal = texture(drawing, samplePos.xyz + normal * vxSize * float(k)).r;
+							if (drawVal > 0.0) break;
+						}
+					}
+					vec4 draw = drawColor(max(drawVal, 1.0 / 255.0), drawOpacity);
+					// Phong shading with two-sided lighting.
+					float NdotL = abs(dot(normal, nRayDir));
+					vec3 reflected = reflect(nRayDir, normal);
+					float spec = pow(max(dot(reflected, -nRayDir), 0.0), 20.0);
+					draw.rgb *= (0.4 + 0.6 * NdotL);
+					draw.rgb += vec3(0.2 * spec);
+					cachedSmoothColor = draw;
+				}
+				// Use the cached shaded color for every interior step.
+				if (nowSmoothInside && enteredFromOutside) {
+					colorSample = cachedSmoothColor;
+				}
+			} else {
+				// Original discrete drawing path
+				float val = texture(drawing, samplePos.xyz).r;
+				vec4 draw = drawColor(val, drawOpacity);
+				if ((draw.a > 0.0) && (firstDraw)) {
 				firstDraw = false;
 				float sum = 0.0;
 				const float mn = 1.0 / 256.0;
@@ -322,6 +405,7 @@ const kRenderTail = `
 				draw.rgb = mix (draw.rgb, ao , renderDrawAmbientOcclusionX);
 			}
 			colorSample = draw;
+			} // end else (discrete drawing path)
 		}
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a >= 0.01) {
@@ -380,8 +464,11 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
+uniform highp sampler3D drawSmoothed;
+uniform float smoothDrawing;
 uniform highp sampler2D colormap;
 uniform vec2 renderDrawAmbientOcclusionXY;
+uniform bool isClipAllVolumes;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -436,10 +523,12 @@ out vec4 fColor;
 	bool isColorPlaneInVolume = false;
 	bool isClip = false;
 	bool isClipCutaway = false;
-	vec2 sampleRange;
+	vec2 sampleRange = vec2(0.0, len);
 	// vec4 clipPos = applyClip(dir, samplePos, len, isClip);
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
+	vec2 overlaySampleRange = vec2(0.0, len);
+	bool overlayIsClipCutaway = false;
 	if (samplePos.a < 0.0)
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
@@ -470,8 +559,11 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
+uniform highp sampler3D drawSmoothed;
+uniform float smoothDrawing;
 uniform highp sampler2D colormap;
 uniform vec2 renderDrawAmbientOcclusionXY;
+uniform bool isClipAllVolumes;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -525,12 +617,15 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float renderOverlayBlend;
 uniform highp sampler3D drawing, gradient;
+uniform highp sampler3D drawSmoothed;
+uniform float smoothDrawing;
 uniform highp sampler2D colormap;
 uniform highp sampler2D matCap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
 uniform float silhouettePower;
 uniform float gradientOpacity[${gradientOpacityLutCount}];
+uniform bool isClipAllVolumes;
 in vec3 vColor;
 out vec4 fColor;
 `
@@ -2217,9 +2312,31 @@ uniform float coordZ;
 uniform float dX;
 uniform float dY;
 uniform float dZ;
+// Optional uniforms for parameterised (2r+1)^3 box blur. When kernelRadius
+// is 0 (default / gradient pipeline) the legacy 8-corner sample is used.
+uniform int kernelRadius;
+uniform bool binarize;
 uniform highp sampler3D intensityVol;
 void main(void) {
  vec3 vx = vec3(TexCoord.xy, coordZ);
+ if (kernelRadius > 0) {
+  vec4 sum = vec4(0.0);
+  float count = 0.0;
+  for (int k = -kernelRadius; k <= kernelRadius; k++) {
+   for (int j = -kernelRadius; j <= kernelRadius; j++) {
+    for (int i = -kernelRadius; i <= kernelRadius; i++) {
+     vec3 off = vec3(float(i) * dX, float(j) * dY, float(k) * dZ);
+     vec4 v = texture(intensityVol, vx + off);
+     if (binarize) v = vec4(v.r > 0.0 ? 1.0 : 0.0, 0.0, 0.0, 0.0);
+     sum += v;
+     count += 1.0;
+    }
+   }
+  }
+  FragColor = sum / count;
+  return;
+ }
+ // Legacy 8-corner box blur (gradient pipeline)
  vec4 samp = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
  samp += texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
  samp += texture(intensityVol,vx+vec3(+dX,-dY,+dZ));

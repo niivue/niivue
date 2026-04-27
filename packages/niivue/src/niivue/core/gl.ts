@@ -63,6 +63,32 @@ export function r8Tex(gl: WebGL2RenderingContext, texID: WebGLTexture | null, ac
 }
 
 /**
+ * Creates a 3D 1-component uint8 texture with LINEAR filtering.
+ * Used for smooth drawing blur textures that need interpolation.
+ * @param gl - WebGL2 rendering context
+ * @param texID - Existing texture to delete (null for new texture)
+ * @param activeID - Texture unit to activate
+ * @param dims - Dimensions array [0, width, height, depth]
+ * @returns The created WebGL texture
+ */
+export function r8TexLinear(gl: WebGL2RenderingContext, texID: WebGLTexture | null, activeID: number, dims: number[]): WebGLTexture | null {
+    if (texID) {
+        gl.deleteTexture(texID)
+    }
+    texID = gl.createTexture()
+    gl.activeTexture(activeID)
+    gl.bindTexture(gl.TEXTURE_3D, texID)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
+    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8, dims[1], dims[2], dims[3])
+    return texID
+}
+
+/**
  * Creates or updates a 1-component 16-bit signed integer 3D texture on the GPU.
  * @param gl - WebGL2 rendering context
  * @param texID - Existing texture to delete (null for new texture)
@@ -91,6 +117,34 @@ export function r16Tex(gl: WebGL2RenderingContext, texID: WebGLTexture | null, a
     }
     gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], gl.RED_INTEGER, gl.SHORT, img16)
 
+    return texID
+}
+
+/**
+ * Creates a 3D 1-component float16 texture on the GPU with LINEAR filtering.
+ * Used for smoothed drawing surfaces.
+ * @param gl - WebGL2 rendering context
+ * @param texID - Existing texture to delete (null for new texture)
+ * @param activeID - Texture unit to activate
+ * @param dims - Dimensions array [0, width, height, depth]
+ * @param data - Float32Array data to upload (will be stored as R16F)
+ * @returns The created WebGL texture
+ */
+export function r16fTex(gl: WebGL2RenderingContext, texID: WebGLTexture | null, activeID: number, dims: number[], data: Float32Array): WebGLTexture | null {
+    if (texID) {
+        gl.deleteTexture(texID)
+    }
+    texID = gl.createTexture()
+    gl.activeTexture(activeID)
+    gl.bindTexture(gl.TEXTURE_3D, texID)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MIN_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_MAG_FILTER, gl.LINEAR)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_R, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
+    gl.texParameteri(gl.TEXTURE_3D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
+    gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
+    gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R16F, dims[1], dims[2], dims[3])
+    gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, dims[1], dims[2], dims[3], gl.RED, gl.FLOAT, data)
     return texID
 }
 
