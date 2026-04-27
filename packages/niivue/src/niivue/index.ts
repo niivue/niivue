@@ -9329,6 +9329,15 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
     }
 
     /**
+     * Query whether nearest neighbor interpolation is active
+     * @returns true if nearest neighbor interpolation is used, false if linear
+     * @example let isNearest = niivue.getNearestInterpolation()
+     */
+    getNearestInterpolation(): boolean {
+        return this.opts.isNearestInterpolation
+    }
+
+    /**
      * Computes 2D model-view-projection and related matrices for rendering a slice of a 3D volume.
      * Configures viewport and accounts for radiological orientation, depth clipping, and camera rotation.
      * @internal
