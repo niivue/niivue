@@ -5013,6 +5013,12 @@ declare class Niivue extends EventTarget {
      */
     setInterpolation(isNearest: boolean): void;
     /**
+     * Query whether nearest neighbor interpolation is active
+     * @returns true if nearest neighbor interpolation is used, false if linear
+     * @example let isNearest = niivue.getNearestInterpolation()
+     */
+    getNearestInterpolation(): boolean;
+    /**
      * Computes 2D model-view-projection and related matrices for rendering a slice of a 3D volume.
      * Configures viewport and accounts for radiological orientation, depth clipping, and camera rotation.
      * @internal
