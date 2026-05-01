@@ -29,7 +29,7 @@ import {
     fragColorbarShader,
     blurVertShader,
     blurFragShader,
-    sobelBlurFragShader,
+    gradientPrePassFragShader,
     sobelFirstOrderFragShader,
     sobelSecondOrderFragShader,
     vertGrowCutShader,
@@ -86,7 +86,7 @@ export interface ShaderSet {
     renderGradientValuesShader: Shader
     colorbarShader: Shader
     blurShader: Shader
-    sobelBlurShader: Shader
+    gradientPrePassShader: Shader
     sobelFirstOrderShader: Shader
     sobelSecondOrderShader: Shader
     growCutShader: Shader
@@ -227,6 +227,8 @@ export function initRenderShader(params: InitRenderShaderParams): void {
     gl.uniform1i(shader.uniforms.colormap, 1)
     gl.uniform1i(shader.uniforms.overlay, 2)
     gl.uniform1i(shader.uniforms.drawing, 7)
+    gl.uniform1i(shader.uniforms.drawSmoothed, 10) // TEXTURE10_DRAW_SMOOTH
+    gl.uniform1f(shader.uniforms.smoothDrawing, 0.0)
     gl.uniform1i(shader.uniforms.paqd, 8) // TEXTURE8_PAQD
     gl.uniform1fv(shader.uniforms.renderDrawAmbientOcclusion, [renderDrawAmbientOcclusion, 1.0])
     gl.uniform1f(shader.uniforms.gradientAmount, gradientAmount)
@@ -509,14 +511,14 @@ export function initColorbarShader(gl: WebGL2RenderingContext): Shader {
  */
 export function initImageProcessingShaders(gl: WebGL2RenderingContext): {
     blurShader: Shader
-    sobelBlurShader: Shader
+    gradientPrePassShader: Shader
     sobelFirstOrderShader: Shader
     sobelSecondOrderShader: Shader
     growCutShader: Shader
     passThroughShader: Shader
 } {
     const blurShader = new Shader(gl, blurVertShader, blurFragShader)
-    const sobelBlurShader = new Shader(gl, blurVertShader, sobelBlurFragShader)
+    const gradientPrePassShader = new Shader(gl, blurVertShader, gradientPrePassFragShader)
     const sobelFirstOrderShader = new Shader(gl, blurVertShader, sobelFirstOrderFragShader)
     const sobelSecondOrderShader = new Shader(gl, blurVertShader, sobelSecondOrderFragShader)
     const growCutShader = new Shader(gl, vertGrowCutShader, fragGrowCutShader)
@@ -524,7 +526,7 @@ export function initImageProcessingShaders(gl: WebGL2RenderingContext): {
 
     return {
         blurShader,
-        sobelBlurShader,
+        gradientPrePassShader,
         sobelFirstOrderShader,
         sobelSecondOrderShader,
         growCutShader,

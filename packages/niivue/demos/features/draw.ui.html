@@ -155,6 +155,7 @@
           <a class="viewBtn" id="Radiological">Radiological</a>
           <a class="viewBtn dropdown-item-checked" id="Crosshair">Render Crosshair</a>
           <a class="viewBtn" id="ClipPlane">Render Clip Plane</a>
+          <a class="viewBtn" id="ClipAllVolumes">Clip All Volumes</a>
           <a class="viewBtn dropdown-item-checked" id="WorldSpace">World Space</a>
           <a class="viewBtn dropdown-item-checked" id="Interpolate">Smooth Interpolation</a>
           <a class="viewBtn" id="RemoveHaze">Remove Haze</a>
@@ -204,6 +205,7 @@
           <a class="viewBtn dropdown-item-checked" id="ThinPen">Thin Pen</a>
           <a class="viewBtn" id="Growcut">Grow Cut</a>
           <a class="viewBtn" id="DrawOtsu">Otsu</a>
+          <a class="viewBtn" id="SmoothDrawing">Smooth Drawing 3D</a>
           <a class="viewBtn divider" id="InterpolateMaskGeometricAxial">Interpolate Mask (Simple) Axial</a>
           <a class="viewBtn" id="InterpolateMaskGeometricCoronal">Interpolate Mask (Simple) Coronal</a>
           <a class="viewBtn" id="InterpolateMaskGeometricSagittal">Interpolate Mask (Simple) Sagittal</a>
@@ -294,6 +296,7 @@
     updateCheckmark('Colorbar', nv1.opts.isColorbar)
     updateCheckmark('Radiological', nv1.opts.isRadiologicalConvention)
     updateCheckmark('Crosshair', nv1.opts.show3Dcrosshair)
+    updateCheckmark('ClipAllVolumes', nv1.opts.isClipAllVolumes)
     updateCheckmark('WorldSpace', nv1.opts.isSliceMM)
     updateCheckmark('Interpolate', !nv1.opts.isNearestInterpolation) // Interpolation is !Nearest
     updateCheckmark('BackColor', nv1.opts.backColor[0] > 0.5)
@@ -527,6 +530,12 @@
         else nv1.setClipPlane([2, 270, 0])
         handled = true
         break
+      case 'ClipAllVolumes':
+        nv1.opts.isClipAllVolumes = !nv1.opts.isClipAllVolumes
+        buttonElement.classList.toggle('dropdown-item-checked')
+        nv1.drawScene()
+        handled = true
+        break
       case 'WorldSpace':
         nv1.setSliceMM(!nv1.opts.isSliceMM)
         buttonElement.classList.toggle('dropdown-item-checked')
@@ -608,6 +617,16 @@
 
       case 'Growcut':
         nv1.drawGrowCut()
+        handled = true
+        break
+      case 'SmoothDrawing':
+        if (nv1.opts.smoothDrawing > 0) {
+          nv1.opts.smoothDrawing = 0
+        } else {
+          nv1.opts.smoothDrawing = 2.0
+        }
+        buttonElement.classList.toggle('dropdown-item-checked')
+        nv1.refreshDrawing()
         handled = true
         break
       case 'DrawOtsu':

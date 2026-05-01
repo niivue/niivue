@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>Non-Latin Fonts</title>
+    <link rel="stylesheet" href="niivue.css" />
+  </head>
+  <body>
+    <header>
+      <label for="fontSizeScalingSlider">&nbsp;&nbsp;Font Scale</label>
+      <input
+        type="range"
+        min="0"
+        max="200"
+        value="50"
+        class="slider"
+        id="fontSizeScalingSlider"
+      />
+    </header>
+    <main>
+      <canvas id="gl1"></canvas>
+    </main>
+    <script type="module" async>
+      import * as niivue from "../dist/index.js"
+      fontSizeScalingSlider.oninput = function () {
+        nv1.opts.fontSizeScaling = (this.value * 0.01)
+        nv1.resizeListener()
+        nv1.drawScene()
+      }
+      var nv1 = new niivue.Niivue()
+      await nv1.attachTo("gl1")
+      const fontUrl = "https://raw.githubusercontent.com/niivue/fonts/main/fonts/Poem"
+      await nv1.loadFont(fontUrl + ".png", fontUrl + ".json")
+      nv1.opts.loadingText = "麻雀虽小"
+      nv1.drawScene()
+    </script>
+  </body>
+</html>

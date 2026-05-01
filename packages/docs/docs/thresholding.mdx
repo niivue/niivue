@@ -126,13 +126,13 @@ nv.updateGLVolume();
 Interpolation can affect how thresholded values are displayed:
 
 ```javascript
-// Enable or disable interpolation
-// false = nearest neighbor (recommended for binary/thresholded data)
-// true = linear interpolation (smoother appearance)
+// Enable or disable nearest neighbor interpolation
+// true = nearest neighbor (recommended for binary/thresholded data)
+// false = linear interpolation (smoother appearance, default)
 nv.setInterpolation(true);
 ```
 
-When interpolation is enabled (default), voxels at the boundary of your threshold are smoothed, which can create a more aesthetically pleasing image but may slightly alter which voxels appear to survive thresholding.
+When nearest neighbor interpolation is disabled (default), voxels at the boundary of your threshold are smoothed, which can create a more aesthetically pleasing image but may slightly alter which voxels appear to survive thresholding.
 
 ## Working with Multiple Statistical Overlays
 

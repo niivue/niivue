@@ -1,4 +1,7 @@
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.15570926.svg)](https://doi.org/10.5281/zenodo.15570926) [![App Store](https://img.shields.io/badge/App%20Store-NiiVue-blue)](https://apps.apple.com/gb/app/niivue/id6497066801)
+> [!IMPORTANT]
+> **NiiVue is moving to [niivue/mono](https://github.com/niivue/mono).** The new monorepo contains a rewritten `@niivue/niivue` package with WebGPU and WebGL2 support, smaller bundle sizes, and a more extensible architecture. The monorepo package will be our **v1.0.0** release candidate. All releases in this repository will remain below v1.0.0 so the two packages can co-exist. Most functionality has been ported and new development will focus on the monorepo. We will continue to maintain this repository for a transition period, but encourage users to migrate when ready.
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.5786269.svg)](https://doi.org/10.5281/zenodo.5786269) [![App Store](https://img.shields.io/badge/App%20Store-NiiVue-blue)](https://apps.apple.com/gb/app/niivue/id6497066801) [![npm](https://img.shields.io/npm/v/@niivue/niivue)](https://www.npmjs.com/package/@niivue/niivue)
 
 # NiiVue
 
@@ -36,6 +39,7 @@ npm run dev
 - [The Insight Journal](https://insight-journal.org/) uses NiiVue to embed interactive illustrations
 - [ipyniivue](https://github.com/niivue/ipyniivue) allows NiiVue to be used in Jupyter Notebooks including [py.cafe](https://py.cafe/kolibril13/niivue-neuroimaging-with-python)
 - [LAMBADA (OpenBrainAtlas)](https://lambada.icm-institute.org/) – A reference [atlas](https://lambada.icm-institute.org/atlases/5) of the developing postnatal mouse brain, created using tissue clearing and light-sheet microscopy at the Paris Brain Institute (Institut du Cerveau). It uses NiiVue for 2D/3D visualization of brain structures, volume overlays, and mesh rendering.
+- [LINC Gallery](https://gallery.lincbrain.org) uses NiiVue to showcase data from [LINC](https://connects.mgh.harvard.edu), an [NIH BRAIN CONNECTS](https://www.brain-connects.org) center focused on mapping brain connections.
 - [neurodesk](https://www.neurodesk.org/) uses NiiVue for their [QSMxT Quantitative Susceptibility Mapping toolbox](https://github.com/QSMxT/QSMxT-UI)
 - [NeuroFLAME](https://github.com/NeuroFlame/NeuroFLAME) uses federated learning to train models across locations while keeping data securely on-site.
 - [Neuroinformatics Research and Development Group](http://neuroinformatics.uw.edu/) embeds NiiVue in [tractoscope](https://github.com/nrdg/tractoscope)
