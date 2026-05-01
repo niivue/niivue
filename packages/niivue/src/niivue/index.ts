@@ -1374,8 +1374,8 @@ export class Niivue extends EventTarget {
             this.mouseDown(pos.x, pos.y)
             this.mouseClick(pos.x, pos.y)
         } else if (dragMode === DRAG_MODE.windowing) {
-            this.uiData.windowX = e.x
-            this.uiData.windowY = e.y
+            this.uiData.windowX = pos.x
+            this.uiData.windowY = pos.y
         } else {
             // Handle all other drag modes (contrast, measurement, pan, etc.)
             this.mousePos = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
@@ -1855,19 +1855,30 @@ export class Niivue extends EventTarget {
 
     /**
      * Adjusts window/level (cal_min and cal_max) based on mouse or touch drag direction.
+     * Expects x and y to be in the same coordinate space as uiData.windowX/Y
+     * (typically canvas-relative) so that deltas are consistent.
      * @internal
      */
     windowingHandler(x: number, y: number, volIdx: number = 0): void {
+        // Prevent huge delta values on the first drag when reference points
+        // are far from the current position
+        const deltaDistance = Math.sqrt((x - this.uiData.windowX) ** 2 + (y - this.uiData.windowY) ** 2)
+        if (deltaDistance > 100) {
+            this.uiData.windowX = x
+            this.uiData.windowY = y
+        }
+
         // Calculate windowing adjustments using helper
         const result = DragModeManager.calculateWindowingAdjustment({
             x,
             y,
             windowX: this.uiData.windowX,
             windowY: this.uiData.windowY,
-            currentCalMin: this.volumes[0].cal_min!,
-            currentCalMax: this.volumes[0].cal_max!,
-            globalMin: this.volumes[0].global_min!,
-            globalMax: this.volumes[0].global_max!
+            currentCalMin: this.volumes[volIdx].cal_min!,
+            currentCalMax: this.volumes[volIdx].cal_max!,
+            globalMin: this.volumes[volIdx].global_min!,
+            globalMax: this.volumes[volIdx].global_max!,
+            gainFactor: this.opts.windowingGainFactor ?? 2
         })
 
         this.volumes[volIdx].cal_min = result.calMin
@@ -2156,7 +2167,7 @@ export class Niivue extends EventTarget {
                 this.mouseClick(touchMovePos.x, touchMovePos.y)
                 this.mouseMove(touchMovePos.x, touchMovePos.y)
             } else if (dragMode === DRAG_MODE.windowing) {
-                this.windowingHandler(touchMovePos.pageX, touchMovePos.pageY)
+                this.windowingHandler(touchMovePos.x, touchMovePos.y)
                 this.drawScene()
             }
         } else {

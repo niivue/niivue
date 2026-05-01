@@ -214,6 +214,7 @@ export type NVConfigOptions = {
     bounds: [[number, number], [number, number]] | null
     showBoundsBorder?: boolean
     boundsBorderColor?: number[] // [r,g,b,a]
+    windowingGainFactor: number
     // Zarr options
     /** Chunk cache size for zarr viewing (default 500) */
     zarrCacheSize: number
@@ -334,6 +335,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     bounds: null,
     showBoundsBorder: false,
     boundsBorderColor: [1, 1, 1, 1], // white border by default
+    windowingGainFactor: 2,
     // Zarr options
     zarrCacheSize: 1000,
     zarrPrefetchRings: 10,

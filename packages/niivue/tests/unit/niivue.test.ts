@@ -1,5 +1,6 @@
 import { expect, test, vi, beforeAll } from 'vitest'
 import { Niivue, PEN_TYPE, SLICE_TYPE } from '../../src/niivue/index.js' // note the js extension
+import { calculateWindowingAdjustment } from '../../src/niivue/interaction/DragModeManager.js'
 import { vec4 } from 'gl-matrix'
 
 // Mock WebGL-dependent methods
@@ -11,6 +12,50 @@ beforeAll(() => {
 test('backColor defaults to black', () => {
   const nv = new Niivue()
   expect(nv.opts.backColor).toStrictEqual([0, 0, 0, 1])
+})
+
+test('windowingGainFactor defaults to 2', () => {
+  const nv = new Niivue()
+  expect(nv.opts.windowingGainFactor).toBe(2)
+})
+
+test('windowing adjustment scales with gainFactor', () => {
+  const result = calculateWindowingAdjustment({
+    x: 10,
+    y: -5,
+    windowX: 0,
+    windowY: 0,
+    currentCalMin: 0,
+    currentCalMax: 100,
+    globalMin: -1000,
+    globalMax: 1000,
+    gainFactor: 2
+  })
+
+  expect(result.calMin).toBe(-10)
+  expect(result.calMax).toBe(130)
+})
+
+test('windowingHandler guard prevents large first-step jumps', () => {
+  const nv = new Niivue()
+  vi.spyOn(nv, 'refreshLayers').mockImplementation(() => {})
+  nv.volumes = [
+    {
+      cal_min: 0,
+      cal_max: 100,
+      global_min: -1000,
+      global_max: 1000
+    }
+  ] as never
+  nv.uiData.windowX = 0
+  nv.uiData.windowY = 0
+
+  nv.windowingHandler(200, 200)
+
+  expect(nv.volumes[0].cal_min).toBe(0)
+  expect(nv.volumes[0].cal_max).toBe(100)
+  expect(nv.uiData.windowX).toBe(200)
+  expect(nv.uiData.windowY).toBe(200)
 })
 
 test('crosshairColor can be set', async () => {
