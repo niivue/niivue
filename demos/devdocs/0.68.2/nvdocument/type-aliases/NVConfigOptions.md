@@ -1039,7 +1039,7 @@ Defined in: [nvdocument.ts:175](https://github.com/niivue/niivue/blob/main/packa
 smoothDrawing: number;
 ```
 
-Defined in: [nvdocument.ts:223](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L223)
+Defined in: [nvdocument.ts:224](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L224)
 
 Smooth drawing surfaces in 3D rendering. 0 = off, > 0 = Box blur radius in voxels (default 0)
 
@@ -1105,6 +1105,16 @@ Defined in: [nvdocument.ts:132](https://github.com/niivue/niivue/blob/main/packa
 
 ---
 
+### windowingGainFactor
+
+```ts
+windowingGainFactor: number;
+```
+
+Defined in: [nvdocument.ts:217](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L217)
+
+---
+
 ### yoke3Dto2DZoom
 
 ```ts
@@ -1121,7 +1131,7 @@ Defined in: [nvdocument.ts:153](https://github.com/niivue/niivue/blob/main/packa
 zarrCacheSize: number;
 ```
 
-Defined in: [nvdocument.ts:219](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L219)
+Defined in: [nvdocument.ts:220](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L220)
 
 Chunk cache size for zarr viewing (default 500)
 
@@ -1133,6 +1143,6 @@ Chunk cache size for zarr viewing (default 500)
 zarrPrefetchRings: number;
 ```
 
-Defined in: [nvdocument.ts:221](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L221)
+Defined in: [nvdocument.ts:222](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L222)
 
 Number of chunk rings to prefetch around the visible region for zarr viewing (0 disables, default 1)

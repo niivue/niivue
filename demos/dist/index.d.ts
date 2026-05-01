@@ -1237,6 +1237,7 @@ type NVConfigOptions = {
     bounds: [[number, number], [number, number]] | null;
     showBoundsBorder?: boolean;
     boundsBorderColor?: number[];
+    windowingGainFactor: number;
     /** Chunk cache size for zarr viewing (default 500) */
     zarrCacheSize: number;
     /** Number of chunk rings to prefetch around the visible region for zarr viewing (0 disables, default 1) */
@@ -3114,6 +3115,8 @@ declare class Niivue extends EventTarget {
     touchEndListener(e: TouchEvent): void;
     /**
      * Adjusts window/level (cal_min and cal_max) based on mouse or touch drag direction.
+     * Expects x and y to be in the same coordinate space as uiData.windowX/Y
+     * (typically canvas-relative) so that deltas are consistent.
      * @internal
      */
     windowingHandler(x: number, y: number, volIdx?: number): void;

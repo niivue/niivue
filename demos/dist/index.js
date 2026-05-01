@@ -34347,6 +34347,7 @@ var DEFAULT_OPTIONS = {
   showBoundsBorder: false,
   boundsBorderColor: [1, 1, 1, 1],
   // white border by default
+  windowingGainFactor: 2,
   // Zarr options
   zarrCacheSize: 1e3,
   zarrPrefetchRings: 10,
@@ -40923,22 +40924,28 @@ function calculateSlicer3DZoomFromDrag(params) {
   return result;
 }
 function calculateWindowingAdjustment(params) {
-  const { x, y, windowX, windowY, currentCalMin, currentCalMax, globalMin, globalMax } = params;
+  const { x, y, windowX, windowY, currentCalMin, currentCalMax, globalMin, globalMax, gainFactor } = params;
+  let effectiveGainFactor = Number.isFinite(gainFactor) ? gainFactor : 0.5;
+  if (effectiveGainFactor < 0) {
+    effectiveGainFactor = 0;
+  }
   let mn = currentCalMin;
   let mx = currentCalMax;
-  if (y < windowY) {
-    mn += 1;
-    mx += 1;
-  } else if (y > windowY) {
-    mn -= 1;
-    mx -= 1;
+  const deltaY = (y - windowY) * effectiveGainFactor;
+  const deltaX = (x - windowX) * effectiveGainFactor;
+  if (deltaY < 0) {
+    mn += Math.abs(deltaY);
+    mx += Math.abs(deltaY);
+  } else if (deltaY > 0) {
+    mn -= deltaY;
+    mx -= deltaY;
   }
-  if (x > windowX) {
-    mn -= 1;
-    mx += 1;
-  } else if (x < windowX) {
-    mn += 1;
-    mx -= 1;
+  if (deltaX > 0) {
+    mn -= deltaX;
+    mx += deltaX;
+  } else if (deltaX < 0) {
+    mn += Math.abs(deltaX);
+    mx -= Math.abs(deltaX);
   }
   if (mx - mn < 1) {
     mx = mn + 1;
@@ -44721,8 +44728,8 @@ var Niivue = class extends EventTarget {
       this.mouseDown(pos.x, pos.y);
       this.mouseClick(pos.x, pos.y);
     } else if (dragMode === 9 /* windowing */) {
-      this.uiData.windowX = e.x;
-      this.uiData.windowY = e.y;
+      this.uiData.windowX = pos.x;
+      this.uiData.windowY = pos.y;
     } else {
       this.mousePos = [pos.x * this.uiData.dpr, pos.y * this.uiData.dpr];
       if (dragMode === 0 /* none */) {
@@ -45114,18 +45121,26 @@ var Niivue = class extends EventTarget {
   }
   /**
    * Adjusts window/level (cal_min and cal_max) based on mouse or touch drag direction.
+   * Expects x and y to be in the same coordinate space as uiData.windowX/Y
+   * (typically canvas-relative) so that deltas are consistent.
    * @internal
    */
   windowingHandler(x, y, volIdx = 0) {
+    const deltaDistance = Math.sqrt((x - this.uiData.windowX) ** 2 + (y - this.uiData.windowY) ** 2);
+    if (deltaDistance > 100) {
+      this.uiData.windowX = x;
+      this.uiData.windowY = y;
+    }
     const result = calculateWindowingAdjustment({
       x,
       y,
       windowX: this.uiData.windowX,
       windowY: this.uiData.windowY,
-      currentCalMin: this.volumes[0].cal_min,
-      currentCalMax: this.volumes[0].cal_max,
-      globalMin: this.volumes[0].global_min,
-      globalMax: this.volumes[0].global_max
+      currentCalMin: this.volumes[volIdx].cal_min,
+      currentCalMax: this.volumes[volIdx].cal_max,
+      globalMin: this.volumes[volIdx].global_min,
+      globalMax: this.volumes[volIdx].global_max,
+      gainFactor: this.opts.windowingGainFactor ?? 2
     });
     this.volumes[volIdx].cal_min = result.calMin;
     this.volumes[volIdx].cal_max = result.calMax;
@@ -45360,7 +45375,7 @@ var Niivue = class extends EventTarget {
         this.mouseClick(touchMovePos.x, touchMovePos.y);
         this.mouseMove(touchMovePos.x, touchMovePos.y);
       } else if (dragMode === 9 /* windowing */) {
-        this.windowingHandler(touchMovePos.pageX, touchMovePos.pageY);
+        this.windowingHandler(touchMovePos.x, touchMovePos.y);
         this.drawScene();
       }
     } else {

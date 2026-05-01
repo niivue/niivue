@@ -4,4 +4,4 @@
 const DEFAULT_SCENE_DATA: object = {};
 ```
 
-Defined in: [nvdocument.ts:354](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L354)
+Defined in: [nvdocument.ts:356](https://github.com/niivue/niivue/blob/main/packages/niivue/src/nvdocument.ts#L356)
