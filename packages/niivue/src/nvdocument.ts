@@ -48,7 +48,8 @@ export enum SLICE_TYPE {
 export enum PEN_TYPE {
     PEN = 0,
     RECTANGLE = 1,
-    ELLIPSE = 2
+    ELLIPSE = 2,
+    PEN_BALL_3D = 3
 }
 
 export enum SHOW_RENDER {
