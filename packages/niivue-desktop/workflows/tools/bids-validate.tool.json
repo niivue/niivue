@@ -46,15 +46,48 @@
     {
       "id": "validate-bids",
       "label": "Validate BIDS",
-      "description": "Check that the dataset meets BIDS specification requirements",
+      "description": "Configure required dataset metadata, then check that it meets BIDS specification requirements",
       "category": "Quality",
       "icon": "CheckCircledIcon",
       "defaults": {
         "mappings": { "ref": "context.series_list" },
         "config": { "ref": "context" }
       },
-      "exposedFields": [],
-      "hiddenFields": ["mappings", "config"]
+      "exposedFields": ["dataset_name", "dataset_version", "license", "authors", "readme"],
+      "hiddenFields": ["mappings", "config"],
+      "contextFields": {
+        "dataset_name": {
+          "type": "string",
+          "label": "Dataset Name",
+          "description": "BIDS dataset name (used for the dataset_description.json and the output folder)",
+          "default": "My Dataset"
+        },
+        "dataset_version": {
+          "type": "string",
+          "label": "BIDS Version",
+          "description": "BIDS version recorded in dataset_description.json",
+          "default": "1.9.0"
+        },
+        "license": {
+          "type": "string",
+          "label": "License",
+          "description": "Dataset license",
+          "default": "CC0",
+          "enum": ["CC0", "CC-BY-4.0", "PDDL", "custom"]
+        },
+        "authors": {
+          "type": "string",
+          "label": "Authors",
+          "description": "Dataset authors (comma-separated)",
+          "default": ""
+        },
+        "readme": {
+          "type": "string",
+          "label": "README",
+          "description": "Dataset README content (Markdown)",
+          "default": ""
+        }
+      }
     }
   ]
 }

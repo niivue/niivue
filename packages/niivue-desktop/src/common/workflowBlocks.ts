@@ -35,6 +35,11 @@ export interface ContextFieldDraft {
   description: string
   heuristic: string
   default: string
+  /** Optional enum values, preserved when an inline block contextField declares them. */
+  enum?: unknown[]
+  optional?: boolean
+  min?: number
+  max?: number
 }
 
 export interface StepDraft {
@@ -157,8 +162,18 @@ export function blockToStepDraft(
 
   // For remaining tool inputs, try auto-wiring from previous steps
   if (tool) {
+    const exposed = new Set(block.exposedFields)
     for (const [inputName, paramDef] of Object.entries(tool.inputs)) {
       if (inputs[inputName]) continue // already set by defaults
+
+      // Exposed fields are user-edited form fields; bind to context.<name>
+      // rather than picking up a same-typed step output (which would silently
+      // ignore the user's input — e.g. wiring bids-write.output_dir to
+      // dcm2niix's temp outDir).
+      if (exposed.has(inputName)) {
+        inputs[inputName] = { mode: 'ref', value: `context.${inputName}` }
+        continue
+      }
 
       const source = findCompatibleSource(
         inputName,
@@ -218,11 +233,31 @@ function findCompatibleSource(
 }
 
 /**
+ * Decide whether a saved binding for a hidden-field input should be replaced
+ * by the block's default. We force-replace only when the block default is
+ * `{ ref: "context" }` (the whole-context wiring) — that ref is unique to
+ * config-style inputs, and any other value in its place is almost certainly
+ * a stale auto-wire from before defaults existed (e.g. wiring a tool's
+ * `config: object` input to a `directory` step output).
+ */
+function shouldForceHiddenDefault(
+  block: WorkflowBlock,
+  inputName: string,
+  defaultBinding: Binding
+): boolean {
+  if (!block.hiddenFields?.includes(inputName)) return false
+  return 'ref' in defaultBinding && defaultBinding.ref === 'context'
+}
+
+/**
  * Apply block-default bindings to any *missing or empty* inputs on existing
  * steps. This repairs drafts that were built or saved before a block declared
  * new defaults (most often `{ ref: "context" }` for whole-context inputs).
  *
- * Non-destructive: existing non-empty bindings are preserved.
+ * Non-destructive in the general case: existing non-empty bindings are preserved.
+ * Exception: when a block's default is `{ ref: "context" }` for a hidden-field
+ * input, the default is forced even over an existing binding (see
+ * `shouldForceHiddenDefault`).
  */
 export function repairBlockDefaults(
   draft: WorkflowDraft,
@@ -239,9 +274,10 @@ export function repairBlockDefaults(
     for (const block of matchingBlocks) {
       if (!block.defaults) continue
       for (const [key, value] of Object.entries(block.defaults)) {
-        const existing = updatedInputs[key]
-        if (existing && existing.value && existing.value.trim() !== '') continue
         const binding = defaultToBinding(value)
+        const existing = updatedInputs[key]
+        const force = shouldForceHiddenDefault(block, key, binding)
+        if (!force && existing && existing.value && existing.value.trim() !== '') continue
         if ('ref' in binding) {
           updatedInputs[key] = { mode: 'ref', value: binding.ref }
         } else {
@@ -356,6 +392,26 @@ export function blockToContextFields(
   const namesToProcess = [...block.exposedFields, ...(block.requiredContextFields || [])]
 
   for (const fieldName of namesToProcess) {
+    // Inline definition wins: blocks can declare workflow-level fields
+    // (e.g. dataset_name) that don't correspond to a tool input/output.
+    const inline = block.contextFields?.[fieldName]
+    if (inline) {
+      const inlineDefault =
+        inline.default !== undefined ? JSON.stringify(inline.default) : ''
+      fields[fieldName] = {
+        type: inline.type,
+        label: inline.label || fieldName,
+        description: inline.description || '',
+        heuristic: inline.heuristic || block.heuristics?.[fieldName] || '',
+        default: inlineDefault,
+        ...(inline.enum ? { enum: inline.enum } : {}),
+        ...(inline.optional !== undefined ? { optional: inline.optional } : {}),
+        ...(inline.min !== undefined ? { min: inline.min } : {}),
+        ...(inline.max !== undefined ? { max: inline.max } : {})
+      }
+      continue
+    }
+
     let param = toolDef.inputs[fieldName] || toolDef.outputs[fieldName]
 
     // Fallback 1: find a default like `<input>: { ref: "context.<fieldName>" }`

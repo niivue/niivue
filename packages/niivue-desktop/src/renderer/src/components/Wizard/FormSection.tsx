@@ -9,6 +9,13 @@ interface CustomComponentProps {
   onLoadFile?: (niftiPath: string) => Promise<void>
 }
 
+/** Field types that AutoField renders as a meaningful editable input. Array
+ *  and opaque object types are handled by the section's custom component. */
+function isSimpleInputType(type: string): boolean {
+  if (type.endsWith('[]')) return false
+  return type !== 'volume' && type !== 'mask' && type !== 'object'
+}
+
 interface FormSectionProps {
   section: FormSectionDef
   definition: WorkflowDefinition
@@ -43,6 +50,11 @@ export function FormSection({
           </div>
         )
       }
+      // Render simple-input fields above the component; complex array/object
+      // fields (subject[], series-mapping[], etc.) are handled inside it.
+      const inputFields = section.fields
+        .map((name) => ({ name, def: fields[name] }))
+        .filter((f) => f.def && isSimpleInputType(f.def.type))
       return (
         <div className="flex flex-col gap-4">
           <div>
@@ -56,6 +68,21 @@ export function FormSection({
             )}
           </div>
           <Separator size="4" />
+          {inputFields.length > 0 && (
+            <div className="flex flex-col gap-3">
+              {inputFields.map(({ name, def }) => (
+                <AutoField
+                  key={name}
+                  fieldName={name}
+                  fieldDef={def!}
+                  value={context[name]}
+                  onChange={(v) => onFieldChange(name, v)}
+                  loading={heuristicLoading.has(name)}
+                  datasetName={context.dataset_name as string | undefined}
+                />
+              ))}
+            </div>
+          )}
           <CustomComponent context={context} onFieldChange={onFieldChange} onLoadFile={onLoadFile} />
         </div>
       )

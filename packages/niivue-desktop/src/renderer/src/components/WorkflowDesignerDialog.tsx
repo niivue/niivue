@@ -91,7 +91,11 @@ function definitionToDraft(parsed: Record<string, unknown>): WorkflowDraft {
         label: (field.label as string) || '',
         description: (field.description as string) || '',
         heuristic: (field.heuristic as string) || '',
-        default: field.default !== undefined ? JSON.stringify(field.default) : ''
+        default: field.default !== undefined ? JSON.stringify(field.default) : '',
+        ...(Array.isArray(field.enum) ? { enum: field.enum as unknown[] } : {}),
+        ...(typeof field.optional === 'boolean' ? { optional: field.optional } : {}),
+        ...(typeof field.min === 'number' ? { min: field.min } : {}),
+        ...(typeof field.max === 'number' ? { max: field.max } : {})
       }
     }
   }
@@ -167,6 +171,10 @@ function draftToSchema(draft: WorkflowDraft): Record<string, unknown> {
           f.default = field.default
         }
       }
+      if (field.enum) f.enum = field.enum
+      if (field.optional !== undefined) f.optional = field.optional
+      if (field.min !== undefined) f.min = field.min
+      if (field.max !== undefined) f.max = field.max
       fields[name] = f
     }
     schema.context = { fields }

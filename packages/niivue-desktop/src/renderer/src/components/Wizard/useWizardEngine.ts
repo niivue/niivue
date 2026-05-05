@@ -136,7 +136,23 @@ export function useWizardEngine(
     section: FormSectionDef
   ): Promise<void> => {
     const fields = def.context?.fields ?? {}
-    for (const fieldName of section.fields) {
+
+    // Fields to consider: section.fields plus any extra context fields the
+    // section's formComponent requires (e.g. bids-preview reads series_list
+    // even when the section only exposes output_dir).
+    const fieldNames = new Set<string>(section.fields)
+    if (section.component) {
+      for (const tool of tools) {
+        const blocks = Array.isArray(tool.block) ? tool.block : tool.block ? [tool.block] : []
+        for (const block of blocks) {
+          if (block.formComponent !== section.component) continue
+          for (const f of block.exposedFields ?? []) fieldNames.add(f)
+          for (const f of block.requiredContextFields ?? []) fieldNames.add(f)
+        }
+      }
+    }
+
+    for (const fieldName of fieldNames) {
       const fieldDef = fields[fieldName]
       if (!fieldDef?.heuristic) continue
 

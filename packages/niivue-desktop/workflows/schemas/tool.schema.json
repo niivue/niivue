@@ -93,6 +93,30 @@
           "description": "Tool input names that are hidden (typically covered by defaults)",
           "items": { "type": "string" }
         },
+        "requiredContextFields": {
+          "type": "array",
+          "description": "Extra context fields the block's form component reads at runtime but doesn't surface as editable form fields",
+          "items": { "type": "string" }
+        },
+        "contextFields": {
+          "type": "object",
+          "description": "Inline context-field definitions for fields exposed by this block that don't correspond to a tool input/output (e.g. workflow-level metadata)",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["type", "description"],
+            "properties": {
+              "type": { "type": "string" },
+              "label": { "type": "string" },
+              "description": { "type": "string" },
+              "optional": { "type": "boolean" },
+              "heuristic": { "type": "string" },
+              "default": {},
+              "enum": { "type": "array" },
+              "min": { "type": "number" },
+              "max": { "type": "number" }
+            }
+          }
+        },
         "formComponent": {
           "type": "string",
           "description": "Custom form component name (e.g. 'subject-select', 'bids-classification-table')"

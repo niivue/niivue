@@ -35,6 +35,12 @@ export interface BlockDef {
    *  doesn't surface to the user as editable form fields. Names matching tool
    *  outputs pick up that output's type/heuristic. */
   requiredContextFields?: string[]
+  /** Inline context-field definitions for fields exposed by this block that
+   *  don't correspond to a tool input/output (e.g. workflow-level metadata
+   *  that the tool consumes via a `config` proxy). Lets a block surface
+   *  fields like dataset_name/license/readme with proper types, enums, and
+   *  defaults rather than falling through to a generic `object` type. */
+  contextFields?: Record<string, ContextFieldDef>
   /** Custom form component name. */
   formComponent?: string
   /** Dot-path condition expression for conditional execution. */
