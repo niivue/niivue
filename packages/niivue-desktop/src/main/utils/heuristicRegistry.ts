@@ -4,7 +4,10 @@ import { classifyAll, detectSubjectsAndSessions, applySubjectsToMappings } from 
 import type { BidsSeriesMapping, DetectedSubject } from '../../common/bidsTypes.js'
 
 const listDicomSeriesHeuristic: HeuristicFn = async (inputs, context) => {
-  const dicomDir = inputs.dicom_dir as string
+  // Workflows started with a top-level dicom_dir input pass it via inputs;
+  // designer-built workflows expose dicom_dir as a context field.
+  const dicomDir = (inputs.dicom_dir as string) || (context.dicom_dir as string)
+  if (!dicomDir) return []
   const all = await listDicomSeries(dicomDir)
   // Seed selected_series with all series on first run so the workflow's
   // default behavior is "convert everything"; preserve any existing user
@@ -16,17 +19,22 @@ const listDicomSeriesHeuristic: HeuristicFn = async (inputs, context) => {
 }
 
 /**
- * Find the first step output matching the given key. Lets the BIDS
- * heuristics work regardless of what the upstream dcm2niix step is named
- * (e.g. `convert`, `import_dicoms_0`, etc.).
+ * Find a step output matching the given key. Walks step outputs in reverse
+ * insertion order and skips empty arrays so workflows with multiple dcm2niix
+ * steps (e.g. an unused initial Import DICOMs step followed by a Filter &
+ * Import DICOMs step that actually produces sidecars) pick up the populated
+ * later step's output rather than the earlier no-op step's empty array.
  */
 function findStepOutput<T>(
   stepOutputs: Record<string, Record<string, unknown>>,
   key: string
 ): T | undefined {
-  for (const outputs of Object.values(stepOutputs)) {
-    const value = outputs?.[key]
-    if (value !== undefined) return value as T
+  const entries = Object.values(stepOutputs)
+  for (let i = entries.length - 1; i >= 0; i--) {
+    const value = entries[i]?.[key]
+    if (value === undefined) continue
+    if (Array.isArray(value) && value.length === 0) continue
+    return value as T
   }
   return undefined
 }

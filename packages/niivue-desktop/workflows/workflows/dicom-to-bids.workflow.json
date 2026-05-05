@@ -18,7 +18,8 @@
       "dicom_series": {
         "type": "dicom-series[]",
         "description": "All DICOM series discovered in the source directory (dry-run listing)",
-        "heuristic": "list-dicom-series"
+        "heuristic": "list-dicom-series",
+        "dependsOn": ["dicom_dir"]
       },
       "selected_series": {
         "type": "dicom-series[]",

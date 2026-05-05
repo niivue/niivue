@@ -77,20 +77,56 @@
       "description": "Detected subjects extracted from DICOM headers"
     }
   },
-  "block": {
-    "id": "import-dicoms",
-    "label": "Import DICOMs",
-    "description": "Convert DICOM images to NIfTI format with BIDS sidecars",
-    "category": "Import",
-    "icon": "UploadIcon",
-    "defaults": {
-      "bids": "y",
-      "compress": "y",
-      "bids_anon": "n"
+  "block": [
+    {
+      "id": "import-dicoms",
+      "label": "Import DICOMs",
+      "description": "Convert DICOM images to NIfTI format with BIDS sidecars",
+      "category": "Import",
+      "icon": "UploadIcon",
+      "defaults": {
+        "bids": "y",
+        "compress": "y",
+        "bids_anon": "n"
+      },
+      "exposedFields": ["dicom_dir"],
+      "hiddenFields": ["bids", "compress", "bids_anon", "pattern", "merge", "verbose", "series"]
     },
-    "exposedFields": ["dicom_dir"],
-    "hiddenFields": ["bids", "compress", "bids_anon", "pattern", "merge", "verbose", "series"]
-  },
+    {
+      "id": "filter-import-dicoms",
+      "label": "Filter & Import DICOMs",
+      "description": "Browse all DICOM series, filter by modality/subject/session, then convert the selection",
+      "category": "Import",
+      "icon": "MagnifyingGlassIcon",
+      "defaults": {
+        "bids": "y",
+        "compress": "y",
+        "bids_anon": "n",
+        "series": { "ref": "context.selected_series" }
+      },
+      "exposedFields": ["dicom_dir", "dicom_series", "selected_series"],
+      "hiddenFields": ["bids", "compress", "bids_anon", "pattern", "merge", "verbose", "series"],
+      "formComponent": "bids-series-filter",
+      "contextFields": {
+        "dicom_series": {
+          "type": "dicom-series[]",
+          "label": "DICOM Series",
+          "description": "All DICOM series discovered in the source directory",
+          "heuristic": "list-dicom-series",
+          "dependsOn": ["dicom_dir"]
+        },
+        "selected_series": {
+          "type": "dicom-series[]",
+          "label": "Selected Series",
+          "description": "Subset of DICOM series chosen for conversion",
+          "default": []
+        }
+      },
+      "heuristics": {
+        "dicom_series": "list-dicom-series"
+      }
+    }
+  ],
   "exec": {
     "binary": {
       "name": "dcm2niix",

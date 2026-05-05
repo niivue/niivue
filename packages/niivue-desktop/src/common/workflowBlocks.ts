@@ -40,6 +40,8 @@ export interface ContextFieldDraft {
   optional?: boolean
   min?: number
   max?: number
+  /** Other context field names whose changes should refire this field's heuristic. */
+  dependsOn?: string[]
 }
 
 export interface StepDraft {
@@ -234,11 +236,13 @@ function findCompatibleSource(
 
 /**
  * Decide whether a saved binding for a hidden-field input should be replaced
- * by the block's default. We force-replace only when the block default is
- * `{ ref: "context" }` (the whole-context wiring) — that ref is unique to
- * config-style inputs, and any other value in its place is almost certainly
- * a stale auto-wire from before defaults existed (e.g. wiring a tool's
- * `config: object` input to a `directory` step output).
+ * by the block's default. We force-replace whenever the block declares a
+ * ref-typed default for a hidden field — hidden fields are not user-editable,
+ * so the block's declared wiring is authoritative. Any saved binding pointing
+ * elsewhere is almost certainly a stale type-based auto-wire from the designer
+ * (e.g. wiring a tool's `mappings: series-mapping[]` input to an upstream
+ * step's `sidecars: json[]` output, or `config: object` to a `directory`
+ * output) and would otherwise silently pass the wrong data downstream.
  */
 function shouldForceHiddenDefault(
   block: WorkflowBlock,
@@ -246,7 +250,7 @@ function shouldForceHiddenDefault(
   defaultBinding: Binding
 ): boolean {
   if (!block.hiddenFields?.includes(inputName)) return false
-  return 'ref' in defaultBinding && defaultBinding.ref === 'context'
+  return 'ref' in defaultBinding && typeof defaultBinding.ref === 'string'
 }
 
 /**
@@ -407,7 +411,8 @@ export function blockToContextFields(
         ...(inline.enum ? { enum: inline.enum } : {}),
         ...(inline.optional !== undefined ? { optional: inline.optional } : {}),
         ...(inline.min !== undefined ? { min: inline.min } : {}),
-        ...(inline.max !== undefined ? { max: inline.max } : {})
+        ...(inline.max !== undefined ? { max: inline.max } : {}),
+        ...(inline.dependsOn ? { dependsOn: inline.dependsOn } : {})
       }
       continue
     }

@@ -18,7 +18,8 @@
       "selected_series": {
         "type": "number[]",
         "description": "CRC numbers of DICOM series to convert",
-        "heuristic": "list-dicom-series"
+        "heuristic": "list-dicom-series",
+        "dependsOn": ["dicom_dir"]
       },
       "output_dir": {
         "type": "directory",

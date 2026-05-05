@@ -126,13 +126,15 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
     datatypeCounts[m.datatype] = (datatypeCounts[m.datatype] || 0) + 1
   }
 
-  // Run validation on mount
+  // Re-validate whenever the mappings, subjects, or dataset metadata change.
+  // Mappings/subjects are populated asynchronously by heuristics (bids-classify
+  // and detect-subjects fire after the section mounts), so a mount-only effect
+  // sees empty data and reports "No series selected for conversion" forever.
   useEffect(() => {
     let cancelled = false
     const validate = async (): Promise<void> => {
       setValidating(true)
       try {
-        // Build demographics map from detected subjects
         const allDemographics: Record<string, import('../../../../common/bidsTypes.js').ParticipantDemographics> = {}
         for (const sub of subjects) {
           if (!sub.excluded) {
@@ -162,7 +164,8 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
     }
     validate()
     return () => { cancelled = true }
-  }, [])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mappings, subjects, context.dataset_name, context.dataset_version, context.license, context.authors, context.readme, context.output_dir])
 
   return (
     <div className="flex flex-col gap-4">

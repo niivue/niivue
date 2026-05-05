@@ -80,10 +80,20 @@ function findBlockForStep(
 }
 
 /**
- * Repair stale `hiddenFields` bindings whose block default is `{ ref: "context" }`.
- * Heals workflows saved before whole-context defaults existed (they often
- * auto-wired a tool's `config: object` input to a string-typed step output,
- * which then errors at runtime as "expected object, got string").
+ * Repair stale `hiddenFields` bindings on a saved step. Hidden fields are not
+ * user-editable, so the block's declared default is authoritative:
+ *   - If the block declares a ref-typed default, force that ref (overwriting
+ *     any stale type-based auto-wire from the designer).
+ *   - If the block declares no default but the tool input itself has a
+ *     default, strip any ref binding so the tool's input default applies.
+ *     (Designer auto-wires can produce nonsensical results like binding
+ *     dcm2niix's `pattern` filename-format string to an upstream `outDir`
+ *     path.) When the tool input has no default, the ref is necessary
+ *     plumbing (e.g. bids-write's `volumes` from the conversion step), so
+ *     leave it alone.
+ * Constant bindings are left alone — they're explicit intent.
+ * Without this, the saved workflow silently passes the wrong data to
+ * validate/write steps and the BIDS preview/validation appears empty.
  */
 function repairHiddenContextRefs(
   definition: WorkflowDefinition,
@@ -95,26 +105,29 @@ function repairHiddenContextRefs(
 
   for (const [stepName, step] of Object.entries(definition.steps)) {
     const block = findBlockForStep(stepName, step.tool, tools)
-    if (!block || !block.defaults || !block.hiddenFields) {
+    if (!block || !block.hiddenFields) {
       repairedSteps[stepName] = step
       continue
     }
+    const tool = tools.get(step.tool)
     const newInputs: Record<string, Binding> = { ...step.inputs }
     let stepChanged = false
     for (const inputName of block.hiddenFields) {
-      const def = block.defaults[inputName]
-      if (
-        !def ||
-        typeof def !== 'object' ||
-        !('ref' in def) ||
-        (def as { ref: unknown }).ref !== 'context'
-      ) {
-        continue
-      }
+      const def = block.defaults?.[inputName]
       const existing = newInputs[inputName]
-      if (existing && 'ref' in existing && existing.ref === 'context') continue
-      newInputs[inputName] = { ref: 'context' }
-      stepChanged = true
+      if (def && typeof def === 'object' && 'ref' in def && typeof (def as { ref: unknown }).ref === 'string') {
+        const expected = (def as { ref: string }).ref
+        if (existing && 'ref' in existing && existing.ref === expected) continue
+        newInputs[inputName] = { ref: expected }
+        stepChanged = true
+      } else if (!def && existing && 'ref' in existing) {
+        const toolInput = tool?.inputs?.[inputName]
+        const toolHasDefault = toolInput && 'default' in toolInput && toolInput.default !== undefined
+        if (toolHasDefault) {
+          delete newInputs[inputName]
+          stepChanged = true
+        }
+      }
     }
     if (stepChanged) {
       changed = true
@@ -126,7 +139,7 @@ function repairHiddenContextRefs(
 
   if (!changed) return definition
   console.log(
-    `[workflow] Repaired hidden-context bindings in '${definition.name}'`
+    `[workflow] Repaired hidden-field bindings in '${definition.name}'`
   )
   return { ...definition, steps: repairedSteps }
 }
@@ -226,6 +239,47 @@ function repairMissingFormSections(
 }
 
 /**
+ * Propagate `dependsOn` from inline block contextField metadata onto matching
+ * workflow context fields. Heals workflows saved before dependsOn existed so
+ * heuristic refires (e.g. list-dicom-series) only run when their inputs change
+ * — without it, every keystroke or selection click in a sibling field re-runs
+ * the heuristic, producing visible spinner-flicker that unmounts custom form
+ * components mid-interaction.
+ */
+function repairContextFieldDependsOn(
+  definition: WorkflowDefinition,
+  tools: Map<string, ToolDefinition>
+): WorkflowDefinition {
+  if (!definition.context?.fields || !definition.steps) return definition
+
+  const inlineDeps = new Map<string, string[]>()
+  for (const [stepName, step] of Object.entries(definition.steps)) {
+    const block = findBlockForStep(stepName, step.tool, tools)
+    if (!block?.contextFields) continue
+    for (const [fieldName, inline] of Object.entries(block.contextFields)) {
+      if (inline.dependsOn && !inlineDeps.has(fieldName)) {
+        inlineDeps.set(fieldName, inline.dependsOn)
+      }
+    }
+  }
+  if (inlineDeps.size === 0) return definition
+
+  let changed = false
+  const newFields = { ...definition.context.fields }
+  for (const [name, deps] of inlineDeps) {
+    const existing = newFields[name]
+    if (!existing || existing.dependsOn) continue
+    newFields[name] = { ...existing, dependsOn: deps }
+    changed = true
+  }
+  if (!changed) return definition
+  return {
+    ...definition,
+    context: { ...definition.context, fields: newFields }
+  }
+}
+
+/**
  * Apply form inference (if the workflow has no explicit form), repair any
  * stale block-default bindings, and freeze the definition so it can't be
  * mutated at runtime. Run once per workflow when loaded or saved — not on
@@ -237,7 +291,8 @@ function finalizeWorkflow(
 ): WorkflowDefinition {
   const hiddenRepaired = repairHiddenContextRefs(definition, tools)
   const exposedRepaired = repairExposedFieldRefs(hiddenRepaired, tools)
-  const repaired = repairMissingFormSections(exposedRepaired, tools)
+  const sectionsRepaired = repairMissingFormSections(exposedRepaired, tools)
+  const repaired = repairContextFieldDependsOn(sectionsRepaired, tools)
 
   if (repaired.form) {
     return Object.freeze(repaired)

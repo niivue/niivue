@@ -128,6 +128,10 @@ export interface ContextFieldDef {
   description: string
   optional?: boolean
   heuristic?: string
+  /** Other context field names whose changes should refire this field's heuristic.
+   *  When omitted, the wizard falls back to refiring whenever any sibling field in
+   *  the section changes (legacy behavior — broad and over-eager). */
+  dependsOn?: string[]
   default?: unknown
   enum?: unknown[]
   min?: number

@@ -41,8 +41,17 @@ export function FormSection({
   if (section.component) {
     const CustomComponent = componentRegistry[section.component]
     if (CustomComponent) {
-      const isLoading = section.fields.some((f) => heuristicLoading.has(f))
-      if (isLoading) {
+      // Only show the section-level spinner on initial load (when the loading
+      // field has no value yet). Re-firing heuristics with values already
+      // populated must not unmount the custom component — that would reset
+      // its internal state (scroll, focus, in-progress lasso/click) and lose
+      // user interactions mid-edit.
+      const hasValue = (v: unknown): boolean =>
+        v != null && !(Array.isArray(v) && v.length === 0)
+      const isInitialLoading = section.fields.some(
+        (f) => heuristicLoading.has(f) && !hasValue(context[f])
+      )
+      if (isInitialLoading) {
         return (
           <div className="py-12 text-center">
             <div className="animate-spin w-6 h-6 border-2 border-accent-9 border-t-transparent rounded-full mx-auto mb-3" />

@@ -130,16 +130,10 @@ export function useWizardEngine(
     }
   }, [open, workflowName])
 
-  const runSectionHeuristics = async (
-    rid: string,
-    def: WorkflowDefinition,
-    section: FormSectionDef
-  ): Promise<void> => {
-    const fields = def.context?.fields ?? {}
-
-    // Fields to consider: section.fields plus any extra context fields the
-    // section's formComponent requires (e.g. bids-preview reads series_list
-    // even when the section only exposes output_dir).
+  // Fields a section is responsible for, including any extra context fields
+  // the section's formComponent reads at runtime (e.g. bids-preview reads
+  // series_list even when the section only exposes output_dir).
+  const sectionFieldNames = (section: FormSectionDef): Set<string> => {
     const fieldNames = new Set<string>(section.fields)
     if (section.component) {
       for (const tool of tools) {
@@ -151,29 +145,37 @@ export function useWizardEngine(
         }
       }
     }
+    return fieldNames
+  }
 
-    for (const fieldName of fieldNames) {
-      const fieldDef = fields[fieldName]
-      if (!fieldDef?.heuristic) continue
+  const fireHeuristic = async (rid: string, fieldName: string): Promise<void> => {
+    setHeuristicLoading((prev) => new Set(prev).add(fieldName))
+    try {
+      const result = await electron.ipcRenderer.invoke('workflow:run-heuristic', {
+        runId: rid,
+        fieldName
+      })
+      if (result.context) setContext(result.context)
+    } catch (err) {
+      console.error(`Heuristic for ${fieldName} failed:`, err)
+    } finally {
+      setHeuristicLoading((prev) => {
+        const next = new Set(prev)
+        next.delete(fieldName)
+        return next
+      })
+    }
+  }
 
-      setHeuristicLoading((prev) => new Set(prev).add(fieldName))
-      try {
-        const result = await electron.ipcRenderer.invoke('workflow:run-heuristic', {
-          runId: rid,
-          fieldName
-        })
-        if (result.context) {
-          setContext(result.context)
-        }
-      } catch (err) {
-        console.error(`Heuristic ${fieldDef.heuristic} failed:`, err)
-      } finally {
-        setHeuristicLoading((prev) => {
-          const next = new Set(prev)
-          next.delete(fieldName)
-          return next
-        })
-      }
+  const runSectionHeuristics = async (
+    rid: string,
+    def: WorkflowDefinition,
+    section: FormSectionDef
+  ): Promise<void> => {
+    const fields = def.context?.fields ?? {}
+    for (const fieldName of sectionFieldNames(section)) {
+      if (!fields[fieldName]?.heuristic) continue
+      await fireHeuristic(rid, fieldName)
     }
   }
 
@@ -186,14 +188,33 @@ export function useWizardEngine(
           fieldName,
           value
         })
-        if (result.context) {
-          setContext(result.context)
+        if (result.context) setContext(result.context)
+
+        // Refire heuristics for OTHER fields in this section. Lets a heuristic
+        // depending on the changed field (e.g. list-dicom-series on dicom_dir)
+        // populate without forcing the user to leave and return. Heuristics
+        // preserve user edits, so re-running is idempotent.
+        //
+        // Honor `dependsOn` when present so we don't pay for slow heuristics
+        // (e.g. list-dicom-series scans the whole DICOM directory) on every
+        // unrelated keystroke or selection click. Without dependsOn we fall
+        // back to the legacy broad refire.
+        if (!definition) return
+        const section = definition.form?.sections?.[currentSection]
+        if (!section) return
+        const fields = definition.context?.fields ?? {}
+        for (const fname of sectionFieldNames(section)) {
+          if (fname === fieldName) continue
+          const def = fields[fname]
+          if (!def?.heuristic) continue
+          if (def.dependsOn && !def.dependsOn.includes(fieldName)) continue
+          await fireHeuristic(runId, fname)
         }
       } catch (err) {
         console.error('Failed to update context:', err)
       }
     },
-    [runId]
+    [runId, definition, currentSection, tools]
   )
 
   const sections = definition?.form?.sections ?? []
