@@ -25,6 +25,7 @@ import { WorkflowDesignerDialog } from './components/WorkflowDesignerDialog.js'
 import { WorkflowTemplateGallery, type TemplateChoice } from './components/WorkflowTemplateGallery.js'
 import { HeuristicDesigner } from './components/HeuristicDesigner.js'
 import { OpenTargetDialog } from './components/OpenTargetDialog.js'
+import { UnsavedChangesDialog } from './components/UnsavedChangesDialog.js'
 
 const electron = window.electron
 
@@ -179,7 +180,53 @@ function MainApp(): JSX.Element {
   const [openTargetDialogOpen, setOpenTargetDialogOpen] = useState(false)
   const openTargetResolverRef = useRef<((choice: 'new' | 'current' | 'cancel') => void) | null>(null)
 
-  const getTarget = async (): Promise<NiivueInstanceContext> => {
+  // Unsaved-changes dialog (Save / Don't Save / Cancel) for close-tab and
+  // any operation about to clobber dirty work.
+  const [unsavedChangesTitle, setUnsavedChangesTitle] = useState<string | null>(null)
+  const unsavedChangesResolverRef = useRef<
+    ((choice: 'save' | 'discard' | 'cancel') => void) | null
+  >(null)
+
+  const promptUnsavedChanges = (
+    title: string
+  ): Promise<'save' | 'discard' | 'cancel'> =>
+    new Promise((resolve) => {
+      unsavedChangesResolverRef.current = resolve
+      setUnsavedChangesTitle(title)
+    })
+
+  const resolveUnsavedChanges = (choice: 'save' | 'discard' | 'cancel'): void => {
+    setUnsavedChangesTitle(null)
+    unsavedChangesResolverRef.current?.(choice)
+    unsavedChangesResolverRef.current = null
+  }
+
+  // Save a document via the native save dialog. Returns true if persisted,
+  // false if the user cancelled the save dialog.
+  const saveDocument = async (doc: NiivueInstanceContext): Promise<boolean> => {
+    const { id, nvRef, title } = doc
+    const nv = nvRef.current
+    const jsonStr = JSON.stringify(nv.document.json())
+    const base = (title || id).replace(/\.nvd(\.gz)?$/, '')
+    const suggestedName = `${base}.nvd`
+    const savedPath = await window.electron.ipcRenderer.invoke(
+      'saveCompressedNVD',
+      jsonStr,
+      suggestedName
+    )
+    if (!savedPath) return false
+    const raw = savedPath.split('/').pop() || suggestedName
+    const newTitle = raw.replace(/\.nvd(\.gz)?$/, '') || suggestedName
+    updateDocument(id, { title: newTitle, filePath: savedPath, isDirty: false })
+    return true
+  }
+
+  // `destructive` indicates the upcoming load will replace the target's
+  // contents (e.g. nv.loadDocument). When set, dirty work in the chosen
+  // target is preserved via the unsaved-changes prompt before clobbering.
+  const getTarget = async (
+    opts: { destructive?: boolean } = {}
+  ): Promise<NiivueInstanceContext> => {
     // Use ref to get latest selected, avoiding stale closures
     const current = selectedRef.current
     if (!current) throw new Error('no document!')
@@ -198,7 +245,19 @@ function MainApp(): JSX.Element {
     openTargetResolverRef.current = null
 
     if (choice === 'cancel') throw new Error('open cancelled by user')
-    if (choice === 'current') return current
+
+    if (choice === 'current') {
+      // Destructive load over a dirty doc would silently lose work. Ask first.
+      if (opts.destructive && current.isDirty) {
+        const saveChoice = await promptUnsavedChanges(current.title || current.id)
+        if (saveChoice === 'cancel') throw new Error('open cancelled by user')
+        if (saveChoice === 'save') {
+          const ok = await saveDocument(current)
+          if (!ok) throw new Error('open cancelled by user')
+        }
+      }
+      return current
+    }
 
     // Create new document and copy BIDS data from current
     const newDoc = await createDocument()
@@ -206,7 +265,6 @@ function MainApp(): JSX.Element {
       newDoc.setBidsMappings([...current.bidsMappings])
     }
     return newDoc
-    return createDocument()
   }
 
 
@@ -1318,31 +1376,13 @@ function MainApp(): JSX.Element {
   const handleCloseTab = async (e: React.MouseEvent, doc: NiivueInstanceContext): Promise<void> => {
     e.stopPropagation()
     if (doc.isDirty) {
-      const save = window.confirm(`Save changes to “${doc.title}”?`)
-      if (save) {
-        const { id, nvRef, title } = doc
-        const nv = nvRef.current
-        const jsonStr = JSON.stringify(nv.document.json())
-        const base = (title || id).replace(/\.nvd(\.gz)?$/, '')
-        const suggestedName = `${base}.nvd`
-        const savedPath = await window.electron.ipcRenderer.invoke(
-          'saveCompressedNVD',
-          jsonStr,
-          suggestedName
-        )
-        if (savedPath) {
-          const raw = savedPath.split('/').pop() || suggestedName
-          const newTitle = raw.replace(/\.nvd(\.gz)?$/, '') || suggestedName
-          updateDocument(id, {
-            title: newTitle,
-            filePath: savedPath,
-            isDirty: false
-          })
-        }
-      } else {
-        const discard = window.confirm(`Discard changes to “${doc.title}”?`)
-        if (!discard) return
+      const choice = await promptUnsavedChanges(doc.title || doc.id)
+      if (choice === 'cancel') return
+      if (choice === 'save') {
+        const saved = await saveDocument(doc)
+        if (!saved) return
       }
+      // 'discard' falls through to remove
     }
     removeDocument(doc.id)
   }
@@ -1667,6 +1707,13 @@ function MainApp(): JSX.Element {
         onNewDocument={() => openTargetResolverRef.current?.('new')}
         onAddToCurrent={() => openTargetResolverRef.current?.('current')}
         onCancel={() => openTargetResolverRef.current?.('cancel')}
+      />
+      <UnsavedChangesDialog
+        open={unsavedChangesTitle !== null}
+        documentTitle={unsavedChangesTitle ?? ''}
+        onSave={() => resolveUnsavedChanges('save')}
+        onDiscard={() => resolveUnsavedChanges('discard')}
+        onCancel={() => resolveUnsavedChanges('cancel')}
       />
     </div>
   )

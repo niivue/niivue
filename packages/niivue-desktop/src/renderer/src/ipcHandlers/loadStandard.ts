@@ -13,8 +13,13 @@ import { deserializeBidsState } from '../../../common/bidsState.js'
 const electron = window.electron
 
 export interface HandlerProps {
-  /** returns the proper Niivue instance or creates a new doc if it’s non-empty */
-  getTarget: () => Promise<{
+  /**
+   * Returns the proper Niivue instance or creates a new doc if it's non-empty.
+   * `destructive` indicates the upcoming load will replace the target's
+   * contents (e.g. nv.loadDocument), letting the caller prompt to save dirty
+   * work before clobbering it.
+   */
+  getTarget: (opts?: { destructive?: boolean }) => Promise<{
     id: string
     nvRef: React.RefObject<Niivue>
     setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>
@@ -35,10 +40,13 @@ export const registerLoadStandardHandler = ({
   electron.ipcRenderer.on('loadStandard', async (_, path: string) => {
     console.log('[Renderer] loadStandard received for path:', path)
 
+    const pathLower = path.toLowerCase()
+    const isDestructive = pathLower.endsWith('.nvd')
+
     // Determine the target Niivue instance (create new document if needed)
     let target
     try {
-      target = await getTarget()
+      target = await getTarget({ destructive: isDestructive })
     } catch {
       return // user cancelled
     }
@@ -47,7 +55,6 @@ export const registerLoadStandardHandler = ({
 
     // Fetch file data
     const base64 = await electron.ipcRenderer.invoke('loadStandard', path)
-    const pathLower = path.toLowerCase()
     // console.log('path lower', pathLower)
     if (pathLower.endsWith('.nvd')) {
       const json: DocumentData = isProbablyGzip(base64)

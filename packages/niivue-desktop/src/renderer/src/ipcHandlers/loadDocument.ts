@@ -15,9 +15,12 @@ const electron = window.electron
 
 export interface HandlerProps {
   /**
-   * Returns the proper Niivue instance or creates a new doc if it's non-empty
+   * Returns the proper Niivue instance or creates a new doc if it's non-empty.
+   * `destructive` indicates the upcoming load will replace the target's
+   * contents (e.g. nv.loadDocument), letting the caller prompt to save dirty
+   * work before clobbering it.
    */
-  getTarget: () => Promise<{
+  getTarget: (opts?: { destructive?: boolean }) => Promise<{
     id: string
     nvRef: React.RefObject<Niivue>
     setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>
@@ -49,7 +52,7 @@ export const registerLoadDocumentHandler = ({
     // 1️⃣ Pick or create the Niivue instance
     let target
     try {
-      target = await getTarget()
+      target = await getTarget({ destructive: true })
     } catch {
       return // user cancelled
     }
