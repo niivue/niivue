@@ -58,6 +58,7 @@
     "@tensorflow/tfjs-backend-webgl": "4.20.0",
     "@tensorflow/tfjs-backend-webgpu": "4.20.0",
     "@tensorflow/tfjs-core": "4.20.0",
+    "@xyflow/react": "^12.10.2",
     "electron-store": "^10.0.1",
     "electron-updater": "^6.1.7",
     "fflate": "^0.8.2",

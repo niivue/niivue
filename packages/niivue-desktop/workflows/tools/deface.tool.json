@@ -4,9 +4,14 @@
   "version": "1.0.0",
   "description": "Remove facial features from anatomical NIfTI volumes for anonymization",
   "inputs": {
+    "nifti_paths": {
+      "type": "volume[]",
+      "description": "Anatomical volumes to deface"
+    },
     "nifti_path": {
       "type": "volume",
-      "description": "Path to anatomical volume"
+      "description": "Per-iteration anatomical volume (set by forEach)",
+      "optional": true
     },
     "method": {
       "type": "string",
@@ -21,9 +26,9 @@
     }
   },
   "outputs": {
-    "output_path": {
-      "type": "volume",
-      "description": "Path to defaced volume"
+    "output_paths": {
+      "type": "volume[]",
+      "description": "Paths to defaced volumes"
     }
   },
   "block": {
@@ -35,7 +40,7 @@
     "defaults": {
       "method": "mask"
     },
-    "exposedFields": ["nifti_path"],
-    "hiddenFields": ["method", "output_path"]
+    "exposedFields": [],
+    "hiddenFields": ["nifti_paths", "nifti_path", "method", "output_path"]
   }
 }

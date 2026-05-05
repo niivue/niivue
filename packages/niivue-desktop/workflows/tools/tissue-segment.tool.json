@@ -4,9 +4,14 @@
   "version": "1.0.0",
   "description": "Segment brain tissue (GM, WM, CSF) using Brainchop model",
   "inputs": {
+    "nifti_paths": {
+      "type": "volume[]",
+      "description": "Skull-stripped volumes to segment"
+    },
     "nifti_path": {
       "type": "volume",
-      "description": "Path to skull-stripped volume"
+      "description": "Per-iteration volume (set by forEach)",
+      "optional": true
     },
     "model": {
       "type": "string",
@@ -16,9 +21,9 @@
     }
   },
   "outputs": {
-    "segmentation_path": {
-      "type": "volume",
-      "description": "Path to tissue segmentation volume"
+    "segmentation_paths": {
+      "type": "volume[]",
+      "description": "Paths to tissue segmentation volumes"
     },
     "volumes": {
       "type": "json[]",
@@ -34,7 +39,7 @@
     "defaults": {
       "model": "tissue-seg-light"
     },
-    "exposedFields": ["nifti_path"],
-    "hiddenFields": ["model"]
+    "exposedFields": [],
+    "hiddenFields": ["nifti_paths", "nifti_path", "model"]
   }
 }

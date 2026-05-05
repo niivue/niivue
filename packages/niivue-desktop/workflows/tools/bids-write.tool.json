@@ -13,8 +13,8 @@
       "description": "Classified series mappings with BIDS paths and metadata"
     },
     "config": {
-      "type": "string",
-      "description": "Reference to the workflow context containing dataset metadata (name, outputDir, license, authors, readme, bidsVersion)"
+      "type": "object",
+      "description": "Workflow context containing dataset metadata (name, outputDir, license, authors, readme, bidsVersion)"
     },
     "output_dir": {
       "type": "directory",
@@ -37,6 +37,10 @@
     "description": "Write classified data to a BIDS-compliant directory structure",
     "category": "Output",
     "icon": "DownloadIcon",
+    "defaults": {
+      "mappings": { "ref": "context.series_list" },
+      "config": { "ref": "context" }
+    },
     "exposedFields": ["output_dir"],
     "hiddenFields": ["volumes", "mappings", "config"],
     "formComponent": "bids-preview"

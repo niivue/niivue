@@ -4,9 +4,14 @@
   "version": "1.0.0",
   "description": "Skull strip a NIfTI volume using Brainchop MindGrab (in-browser WebGL inference)",
   "inputs": {
+    "nifti_paths": {
+      "type": "volume[]",
+      "description": "Anatomical volumes to skull strip"
+    },
     "nifti_path": {
       "type": "volume",
-      "description": "Path to the input NIfTI volume"
+      "description": "Per-iteration anatomical volume (set by forEach)",
+      "optional": true
     },
     "output_path": {
       "type": "string",
@@ -29,9 +34,9 @@
     }
   },
   "outputs": {
-    "output_path": {
-      "type": "volume",
-      "description": "Path to the skull-stripped NIfTI volume"
+    "output_paths": {
+      "type": "volume[]",
+      "description": "Paths to the skull-stripped NIfTI volumes"
     }
   },
   "block": {
@@ -44,8 +49,8 @@
       "model": "brain-extract-mindgrab",
       "dilation": 3
     },
-    "exposedFields": ["nifti_path"],
-    "hiddenFields": ["model", "dilation"],
+    "exposedFields": [],
+    "hiddenFields": ["nifti_paths", "nifti_path", "model", "dilation", "output_path"],
     "formComponent": "skull-strip-editor"
   }
 }

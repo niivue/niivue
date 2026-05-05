@@ -11,13 +11,14 @@
 // file in their text editor.
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Dialog, Button, Text, Flex } from '@radix-ui/themes'
-import { Cross1Icon } from '@radix-ui/react-icons'
+import { Dialog, Button, Text, Flex, SegmentedControl, Popover, Badge } from '@radix-ui/themes'
+import { Cross1Icon, ExclamationTriangleIcon } from '@radix-ui/react-icons'
 import type { ToolDefinition } from '../../../common/workflowTypes.js'
 import {
   blockToStepDraft,
   blockToContextFields,
   blockToFormSection,
+  repairBlockDefaults,
   type WorkflowBlock,
   type WorkflowDraft,
   type BindingDraft,
@@ -27,6 +28,8 @@ import {
 } from '../../../common/workflowBlocks.js'
 import { validateWorkflowDraft, type ValidationResult } from '../../../common/workflowValidator.js'
 import { ContextSpineDesigner } from './ContextSpineDesigner.js'
+import { WorkflowDiagramView } from './WorkflowDiagramView.js'
+import { BlockPalette } from './BlockPalette.js'
 
 const electron = window.electron
 
@@ -217,8 +220,20 @@ export function WorkflowDesignerDialog({
   const [tools, setTools] = useState<ToolDefinition[]>([])
   const [validation, setValidation] = useState<ValidationResult>({ errors: [], warnings: [] })
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [view, setView] = useState<'list' | 'diagram'>('list')
+  const [selectedStep, setSelectedStep] = useState<number | null>(null)
 
   const toolsMap = useMemo(() => new Map(tools.map((t) => [t.name, t])), [tools])
+
+  // Indices of steps that show up in any validation error message. We match
+  // by step name, which is what validator messages embed.
+  const errorSteps = useMemo(() => {
+    const set = new Set<number>()
+    draft.steps.forEach((step, i) => {
+      if (validation.errors.some((e) => e.message.includes(step.name))) set.add(i)
+    })
+    return set
+  }, [draft.steps, validation.errors])
 
   // Reset draft / load tools when dialog opens
   useEffect(() => {
@@ -234,6 +249,15 @@ export function WorkflowDesignerDialog({
       setDraft(definitionToDraft(initialDefinition))
     }
   }, [open, initialDefinition])
+
+  // Once tools are loaded, repair any missing block-default bindings on the
+  // current draft (e.g. a hidden `config: { ref: "context" }` that was added
+  // to the block after this draft was authored). Only fills empty bindings.
+  useEffect(() => {
+    if (tools.length === 0) return
+    if (draft.steps.length === 0) return
+    setDraft((prev) => repairBlockDefaults(prev, toolsMap))
+  }, [tools.length, toolsMap, draft.steps.length])
 
   // Live validation — debounced on draft changes.
   // Skip while tools are still loading so we don't flash "unknown tool"
@@ -259,7 +283,11 @@ export function WorkflowDesignerDialog({
       const newContextFields: Record<string, ContextFieldDraft> = toolDef
         ? blockToContextFields(block, toolDef)
         : {}
-      const formSection: FormSectionDraft = blockToFormSection(block)
+      // Headless blocks (no exposed fields and no form component) don't add
+      // anything to the wizard form. Skip the section so the user doesn't see
+      // a blank step.
+      const isHeadless = block.exposedFields.length === 0 && !block.formComponent
+      const formSection: FormSectionDraft | null = isHeadless ? null : blockToFormSection(block)
 
       setDraft((prev) => {
         const mergedFields = { ...prev.contextFields }
@@ -279,7 +307,7 @@ export function WorkflowDesignerDialog({
         return {
           ...prev,
           contextFields: mergedFields,
-          sections: [...prev.sections, formSection],
+          sections: formSection ? [...prev.sections, formSection] : prev.sections,
           steps: [...prev.steps, stepDraft]
         }
       })
@@ -345,19 +373,78 @@ export function WorkflowDesignerDialog({
 
         {/* Header */}
         <header className="flex items-center justify-between px-4 py-2 border-b border-neutral-5">
-          <Text size="3" weight="bold">
-            Workflow Designer
-          </Text>
+          <Flex gap="3" align="center">
+            <Text size="3" weight="bold">
+              Workflow Designer
+            </Text>
+            <SegmentedControl.Root
+              size="1"
+              value={view}
+              onValueChange={(v) => setView(v as 'list' | 'diagram')}
+            >
+              <SegmentedControl.Item value="list">List</SegmentedControl.Item>
+              <SegmentedControl.Item value="diagram">Diagram</SegmentedControl.Item>
+            </SegmentedControl.Root>
+          </Flex>
           <Flex gap="2" align="center">
             {saveError && (
               <Text size="1" color="red">
                 {saveError}
               </Text>
             )}
-            {validation.errors.length > 0 && (
-              <Text size="1" color="red">
-                {validation.errors.length} error{validation.errors.length !== 1 ? 's' : ''}
-              </Text>
+            {(validation.errors.length > 0 || validation.warnings.length > 0) && (
+              <Popover.Root>
+                <Popover.Trigger>
+                  <Button
+                    size="1"
+                    variant="soft"
+                    color={validation.errors.length > 0 ? 'red' : 'amber'}
+                  >
+                    <ExclamationTriangleIcon />
+                    {validation.errors.length > 0
+                      ? `${validation.errors.length} error${validation.errors.length !== 1 ? 's' : ''}`
+                      : `${validation.warnings.length} warning${validation.warnings.length !== 1 ? 's' : ''}`}
+                  </Button>
+                </Popover.Trigger>
+                <Popover.Content size="1" maxWidth="480px">
+                  <Flex direction="column" gap="2">
+                    {validation.errors.length > 0 && (
+                      <Flex direction="column" gap="1">
+                        <Text size="1" weight="bold" color="red">
+                          Errors
+                        </Text>
+                        {validation.errors.map((e, i) => (
+                          <Flex key={`e-${i}`} gap="2" align="start">
+                            {e.stepName && (
+                              <Badge size="1" color="red" variant="soft">
+                                {e.stepName}
+                              </Badge>
+                            )}
+                            <Text size="1">{e.message}</Text>
+                          </Flex>
+                        ))}
+                      </Flex>
+                    )}
+                    {validation.warnings.length > 0 && (
+                      <Flex direction="column" gap="1">
+                        <Text size="1" weight="bold" color="amber">
+                          Warnings
+                        </Text>
+                        {validation.warnings.map((w, i) => (
+                          <Flex key={`w-${i}`} gap="2" align="start">
+                            {w.stepName && (
+                              <Badge size="1" color="amber" variant="soft">
+                                {w.stepName}
+                              </Badge>
+                            )}
+                            <Text size="1">{w.message}</Text>
+                          </Flex>
+                        ))}
+                      </Flex>
+                    )}
+                  </Flex>
+                </Popover.Content>
+              </Popover.Root>
             )}
             <Button variant="soft" size="2" onClick={handleSave}>
               Save
@@ -368,20 +455,43 @@ export function WorkflowDesignerDialog({
           </Flex>
         </header>
 
-        {/* Body — ContextSpineDesigner fills the dialog. Must be a flex
-            container so ContextSpineDesigner's flex-1 root expands, and
-            min-h-0 so its internal overflow-y-auto columns can scroll. */}
+        {/* Body — list view delegates to ContextSpineDesigner; diagram view
+            uses WorkflowDiagramView with the same palette docked below. */}
         <div className="flex-1 min-h-0 flex overflow-hidden">
-          <ContextSpineDesigner
-            draft={draft}
-            setDraft={setDraft}
-            tools={toolsMap}
-            validation={validation}
-            onAddBlock={handleAddBlock}
-            onRemoveStep={handleRemoveStep}
-            onMoveStep={handleMoveStep}
-            onSave={handleSave}
-          />
+          {view === 'list' ? (
+            <ContextSpineDesigner
+              draft={draft}
+              setDraft={setDraft}
+              tools={toolsMap}
+              validation={validation}
+              onAddBlock={handleAddBlock}
+              onRemoveStep={handleRemoveStep}
+              onMoveStep={handleMoveStep}
+              onSave={handleSave}
+            />
+          ) : (
+            <div className="flex-1 flex flex-col min-h-0">
+              <WorkflowDiagramView
+                draft={draft}
+                setDraft={setDraft}
+                tools={toolsMap}
+                selectedStep={selectedStep}
+                onSelectStep={setSelectedStep}
+                onRemoveStep={handleRemoveStep}
+                onMoveStep={handleMoveStep}
+                errorSteps={errorSteps}
+              />
+              <div className="border-t border-neutral-5 bg-[var(--gray-2)] px-3 py-2 max-h-56 overflow-y-auto shrink-0">
+                <BlockPalette
+                  onAddBlock={handleAddBlock}
+                  tools={toolsMap}
+                  lastStepTool={
+                    draft.steps.length > 0 ? draft.steps[draft.steps.length - 1].tool : undefined
+                  }
+                />
+              </div>
+            </div>
+          )}
         </div>
       </Dialog.Content>
     </Dialog.Root>

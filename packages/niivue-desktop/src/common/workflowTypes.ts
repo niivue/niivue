@@ -31,6 +31,10 @@ export interface BlockDef {
   exposedFields: string[]
   /** Tool input names hidden in the form (typically covered by defaults). */
   hiddenFields?: string[]
+  /** Extra context fields the block's form component reads at runtime but
+   *  doesn't surface to the user as editable form fields. Names matching tool
+   *  outputs pick up that output's type/heuristic. */
+  requiredContextFields?: string[]
   /** Custom form component name. */
   formComponent?: string
   /** Dot-path condition expression for conditional execution. */

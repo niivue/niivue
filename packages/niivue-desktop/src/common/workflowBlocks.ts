@@ -218,6 +218,83 @@ function findCompatibleSource(
 }
 
 /**
+ * Apply block-default bindings to any *missing or empty* inputs on existing
+ * steps. This repairs drafts that were built or saved before a block declared
+ * new defaults (most often `{ ref: "context" }` for whole-context inputs).
+ *
+ * Non-destructive: existing non-empty bindings are preserved.
+ */
+export function repairBlockDefaults(
+  draft: WorkflowDraft,
+  tools: Map<string, ToolDefinition>
+): WorkflowDraft {
+  const blocks = getWorkflowBlocks(tools)
+  let changed = false
+  const repairedSteps = draft.steps.map((step) => {
+    const matchingBlocks = blocks.filter((b) => b.tool === step.tool)
+    if (matchingBlocks.length === 0) return step
+
+    const updatedInputs = { ...step.inputs }
+    let stepChanged = false
+    for (const block of matchingBlocks) {
+      if (!block.defaults) continue
+      for (const [key, value] of Object.entries(block.defaults)) {
+        const existing = updatedInputs[key]
+        if (existing && existing.value && existing.value.trim() !== '') continue
+        const binding = defaultToBinding(value)
+        if ('ref' in binding) {
+          updatedInputs[key] = { mode: 'ref', value: binding.ref }
+        } else {
+          updatedInputs[key] = { mode: 'constant', value: JSON.stringify(binding.constant) }
+        }
+        stepChanged = true
+      }
+    }
+    if (stepChanged) {
+      changed = true
+      return { ...step, inputs: updatedInputs }
+    }
+    return step
+  })
+
+  // Also fill in any context fields that blocks declare as required. Looks at
+  // each step's matching blocks and merges in their context fields for any
+  // names not already defined on the draft.
+  const updatedContextFields = { ...draft.contextFields }
+  let fieldsChanged = false
+  for (const step of draft.steps) {
+    const tool = tools.get(step.tool)
+    if (!tool) continue
+    const matchingBlocks = blocks.filter((b) => b.tool === step.tool)
+    for (const block of matchingBlocks) {
+      const newFields = blockToContextFields(block, tool)
+      for (const [name, field] of Object.entries(newFields)) {
+        if (!(name in updatedContextFields)) {
+          updatedContextFields[name] = field
+          fieldsChanged = true
+        }
+      }
+    }
+  }
+
+  // Prune sections that would render as blank in the wizard: no fields and
+  // no custom component. Headless steps (e.g. backend-only validators) should
+  // not surface to the user as empty wizard pages.
+  const prunedSections = draft.sections.filter(
+    (s) => s.fields.length > 0 || (s.component && s.component.trim() !== '')
+  )
+  const sectionsChanged = prunedSections.length !== draft.sections.length
+
+  if (!changed && !fieldsChanged && !sectionsChanged) return draft
+  return {
+    ...draft,
+    steps: repairedSteps,
+    contextFields: updatedContextFields,
+    sections: prunedSections
+  }
+}
+
+/**
  * Re-wire unbound inputs on a step against available sources.
  * Call this after adding a step or when the pipeline changes.
  */
@@ -257,6 +334,18 @@ export function autoWireStep(
 
 /**
  * Generate context fields for a block's exposed fields.
+ *
+ * Exposed fields usually map to tool inputs the user fills in, but some
+ * blocks expose other things:
+ *  - tool *outputs* — when a heuristic populates the field and the form
+ *    lets the user review the result before downstream steps consume it
+ *    (e.g. bids-classify's `subjects`).
+ *  - *synthetic* context fields that have no direct counterpart on the
+ *    tool — when the block's `defaults` re-bind a tool input to
+ *    `context.<exposedField>`, the field name acts as a renamed/editable
+ *    proxy for that input. We pick up the type from that input
+ *    (e.g. bids-classify exposes `series_list`, which is the editable
+ *    form of the `overrides: series-mapping[]` input).
  */
 export function blockToContextFields(
   block: WorkflowBlock,
@@ -264,17 +353,55 @@ export function blockToContextFields(
 ): Record<string, ContextFieldDraft> {
   const fields: Record<string, ContextFieldDraft> = {}
 
-  for (const fieldName of block.exposedFields) {
-    const param = toolDef.inputs[fieldName]
-    if (!param) continue
+  const namesToProcess = [...block.exposedFields, ...(block.requiredContextFields || [])]
 
-    const generated = generateContextFieldFromParam(fieldName, param)
+  for (const fieldName of namesToProcess) {
+    let param = toolDef.inputs[fieldName] || toolDef.outputs[fieldName]
+
+    // Fallback 1: find a default like `<input>: { ref: "context.<fieldName>" }`
+    // and use that input's type/description. This covers blocks whose
+    // exposedFields name a heuristic-populated synthetic context field.
+    if (!param && block.defaults) {
+      const proxyTarget = `context.${fieldName}`
+      for (const [inputName, value] of Object.entries(block.defaults)) {
+        if (
+          value &&
+          typeof value === 'object' &&
+          'ref' in value &&
+          (value as { ref: unknown }).ref === proxyTarget
+        ) {
+          const proxied = toolDef.inputs[inputName]
+          if (proxied) {
+            param = proxied
+            break
+          }
+        }
+      }
+    }
+
+    if (param) {
+      const generated = generateContextFieldFromParam(fieldName, param)
+      fields[fieldName] = {
+        type: generated.type,
+        label: generated.label,
+        description: generated.description,
+        heuristic: block.heuristics?.[fieldName] || '',
+        default: generated.default !== undefined ? JSON.stringify(generated.default) : ''
+      }
+      continue
+    }
+
+    // Fallback 2: pure viewer/editor blocks (e.g. Preview Images) name a
+    // context field that is populated entirely by other steps' heuristics
+    // and has no link to this tool's inputs/outputs. Generate a generic
+    // context entry so the form section validates; the workflow's other
+    // blocks will fill in the real type.
     fields[fieldName] = {
-      type: generated.type,
-      label: generated.label,
-      description: generated.description,
+      type: 'object',
+      label: fieldName.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+      description: `Shared workflow data — populated by another step.`,
       heuristic: block.heuristics?.[fieldName] || '',
-      default: generated.default !== undefined ? JSON.stringify(generated.default) : ''
+      default: ''
     }
   }
 

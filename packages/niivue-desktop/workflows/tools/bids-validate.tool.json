@@ -9,8 +9,8 @@
       "description": "Classified series mappings to validate"
     },
     "config": {
-      "type": "string",
-      "description": "Reference to the workflow context containing dataset metadata (name, outputDir, license, etc.)"
+      "type": "object",
+      "description": "Workflow context containing dataset metadata (name, outputDir, license, etc.)"
     }
   },
   "outputs": {
@@ -34,7 +34,13 @@
       "description": "Review images before proceeding to the next step",
       "category": "Processing",
       "icon": "EyeOpenIcon",
+      "defaults": {
+        "mappings": { "ref": "context.series_list" },
+        "config": { "ref": "context" }
+      },
       "exposedFields": ["series_list"],
+      "requiredContextFields": ["subjects"],
+      "hiddenFields": ["mappings", "config"],
       "formComponent": "bids-preview"
     },
     {
@@ -43,8 +49,12 @@
       "description": "Check that the dataset meets BIDS specification requirements",
       "category": "Quality",
       "icon": "CheckCircledIcon",
-      "exposedFields": ["mappings"],
-      "hiddenFields": ["config"]
+      "defaults": {
+        "mappings": { "ref": "context.series_list" },
+        "config": { "ref": "context" }
+      },
+      "exposedFields": [],
+      "hiddenFields": ["mappings", "config"]
     }
   ]
 }
