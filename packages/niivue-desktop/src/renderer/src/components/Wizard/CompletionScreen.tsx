@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Button, Heading, Text, Badge, Callout } from '@radix-ui/themes'
-import { CheckCircledIcon } from '@radix-ui/react-icons'
+import { CheckCircledIcon, CheckIcon } from '@radix-ui/react-icons'
 import { Niivue, NVImage, SLICE_TYPE } from '@niivue/niivue'
 import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
 import { generateBidsPath } from '../BidsWizard/bidsTreeUtil.js'
@@ -149,6 +149,15 @@ export function CompletionScreen({
     [mappings, bidsDir, originalPaths, isBidsWorkflow]
   )
 
+  const [loadedKeys, setLoadedKeys] = useState<Set<string>>(new Set())
+  const markLoaded = useCallback((keys: string[]) => {
+    setLoadedKeys((prev) => {
+      const next = new Set(prev)
+      for (const k of keys) next.add(k)
+      return next
+    })
+  }, [])
+
   const handleOpenBidsFile = useCallback(
     async (file: WrittenFile) => {
       let filePath: string
@@ -158,20 +167,26 @@ export function CompletionScreen({
         const exists = await electron.ipcRenderer.invoke('file-exists', file.bidsPath).catch(() => false)
         filePath = exists ? file.bidsPath : file.sourcePath
       }
-      if (onLoadFile) await onLoadFile(filePath)
+      if (onLoadFile) {
+        await onLoadFile(filePath)
+        markLoaded([file.key])
+      }
     },
-    [onLoadFile]
+    [onLoadFile, markLoaded]
   )
 
   const handleLoadAll = useCallback(
     async () => {
       if (!onLoadFile) return
-      const files = isBidsWorkflow
-        ? writtenFiles.map((f) => f.sourcePath)
-        : plainVolumes
-      for (const f of files) await onLoadFile(f)
+      const items: { key: string; path: string }[] = isBidsWorkflow
+        ? writtenFiles.map((f) => ({ key: f.key, path: f.sourcePath }))
+        : plainVolumes.map((vol, i) => ({ key: String(i), path: vol }))
+      for (const item of items) {
+        await onLoadFile(item.path)
+        markLoaded([item.key])
+      }
     },
-    [onLoadFile, isBidsWorkflow, writtenFiles, plainVolumes]
+    [onLoadFile, isBidsWorkflow, writtenFiles, plainVolumes, markLoaded]
   )
 
   const displayDir = bidsDir || outDir
@@ -245,18 +260,26 @@ export function CompletionScreen({
                   {onLoadFile && (
                     <Button
                       size="1"
-                      variant="soft"
+                      variant={loadedKeys.has(file.key) ? 'outline' : 'soft'}
+                      color={loadedKeys.has(file.key) ? 'green' : undefined}
                       className="shrink-0"
                       onClick={(e) => {
                         e.stopPropagation()
                         if (isBidsWorkflow) {
                           void handleOpenBidsFile(file)
                         } else if (onLoadFile) {
-                          void onLoadFile(file.sourcePath)
+                          void (async () => {
+                            await onLoadFile(file.sourcePath)
+                            markLoaded([file.key])
+                          })()
                         }
                       }}
                     >
-                      {isBidsWorkflow ? 'Open' : 'Load in Viewer'}
+                      {loadedKeys.has(file.key) ? (
+                        <><CheckIcon /> Loaded</>
+                      ) : (
+                        isBidsWorkflow ? 'Open' : 'Load in Viewer'
+                      )}
                     </Button>
                   )}
                 </div>

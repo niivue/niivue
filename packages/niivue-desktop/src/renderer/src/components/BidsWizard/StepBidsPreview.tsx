@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import { Button, Text } from '@radix-ui/themes'
+import { CheckIcon } from '@radix-ui/react-icons'
 import { Niivue, NVImage, SLICE_TYPE } from '@niivue/niivue'
 import type {
   BidsSeriesMapping,
@@ -88,6 +89,16 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
 
   const [validation, setValidation] = useState<ValidationResult | null>(null)
   const [validating, setValidating] = useState(false)
+  const [loadedPaths, setLoadedPaths] = useState<Set<string>>(new Set())
+
+  const handleOpenInViewer = useCallback(
+    async (path: string): Promise<void> => {
+      if (!onLoadFile) return
+      await onLoadFile(path)
+      setLoadedPaths((prev) => (prev.has(path) ? prev : new Set(prev).add(path)))
+    },
+    [onLoadFile]
+  )
 
   const originalPaths = (context._originalPaths as Record<number, string>) || {}
   const included = mappings.filter((m) => !m.excluded)
@@ -222,14 +233,19 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                   {onLoadFile && (
                     <Button
                       size="1"
-                      variant="soft"
+                      variant={loadedPaths.has(m.niftiPath) ? 'outline' : 'soft'}
+                      color={loadedPaths.has(m.niftiPath) ? 'green' : undefined}
                       className="flex-shrink-0"
                       onClick={(e) => {
                         e.stopPropagation()
-                        void onLoadFile(m.niftiPath)
+                        void handleOpenInViewer(m.niftiPath)
                       }}
                     >
-                      Open in Viewer
+                      {loadedPaths.has(m.niftiPath) ? (
+                        <><CheckIcon /> Loaded</>
+                      ) : (
+                        'Open in Viewer'
+                      )}
                     </Button>
                   )}
                 </div>
@@ -258,14 +274,19 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                     {onLoadFile && (
                       <Button
                         size="1"
-                        variant="soft"
+                        variant={loadedPaths.has(origPath) ? 'outline' : 'soft'}
+                        color={loadedPaths.has(origPath) ? 'green' : undefined}
                         className="flex-shrink-0"
                         onClick={(e) => {
                           e.stopPropagation()
-                          void onLoadFile(origPath)
+                          void handleOpenInViewer(origPath)
                         }}
                       >
-                        Open in Viewer
+                        {loadedPaths.has(origPath) ? (
+                          <><CheckIcon /> Loaded</>
+                        ) : (
+                          'Open in Viewer'
+                        )}
                       </Button>
                     )}
                   </div>
