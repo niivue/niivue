@@ -42,8 +42,9 @@ describe('File Loading', () => {
     expect(await canvas.isExisting()).toBe(true)
 
     // Visual regression test - compare against baseline
-    // Allow up to 10% difference to account for GPU-specific WebGL rendering variations
+    // Mesh rendering varies more across GPUs than volume rendering (lighting,
+    // anti-aliasing on curved surfaces), so use a looser tolerance here.
     const result = await browser.checkScreen('aal-mesh')
-    expect(result).toBeLessThanOrEqual(10)
+    expect(result).toBeLessThanOrEqual(20)
   })
 })
