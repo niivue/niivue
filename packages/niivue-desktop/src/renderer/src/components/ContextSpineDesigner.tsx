@@ -581,7 +581,7 @@ export function ContextSpineDesigner({
                             return (
                               <div key={inp.name} className="flex items-center gap-2">
                                 <Text size="1" className="text-neutral-9 w-28 shrink-0 truncate">
-                                  {inp.paramDef.label || inp.name}
+                                  {inp.name}
                                 </Text>
                                 <Select.Root
                                   value={displayValue}
@@ -604,7 +604,7 @@ export function ContextSpineDesigner({
                           return (
                             <div key={inp.name} className="flex items-center gap-2">
                               <Text size="1" className="text-neutral-9 w-28 shrink-0 truncate">
-                                {inp.paramDef.label || inp.name}
+                                {inp.name}
                               </Text>
 
                               {/* Source selector dropdown */}

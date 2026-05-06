@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Button, Text } from '@radix-ui/themes'
+import { Text } from '@radix-ui/themes'
 import type { BidsSeriesMapping, FieldmapIntendedFor } from '../../../../common/bidsTypes.js'
 import { SeriesRow } from './SeriesRow.js'
 import { BidsPreview } from './BidsPreview.js'

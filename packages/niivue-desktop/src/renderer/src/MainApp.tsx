@@ -111,7 +111,7 @@ function MainApp(): JSX.Element {
 
   // Heuristic designer state
   const [heuristicDesignerOpen, setHeuristicDesignerOpen] = useState(false)
-  const [heuristicInitialDefinition, setHeuristicInitialDefinition] = useState<import('../../common/workflowTypes').HeuristicDefinition | null>(null)
+  const [heuristicInitialDefinition, setHeuristicInitialDefinition] = useState<import('../../common/workflowTypes.js').HeuristicDefinition | null>(null)
 
   // Listen for workflow:open from menu
   useEffect(() => {
@@ -154,7 +154,7 @@ function MainApp(): JSX.Element {
 
     const handleEditHeuristicDesigner = (_evt: unknown, heuristicName: string): void => {
       electron.ipcRenderer.invoke('workflow:get-heuristic-definition', heuristicName).then(
-        (definition: import('../../common/workflowTypes').HeuristicDefinition | null) => {
+        (definition: import('../../common/workflowTypes.js').HeuristicDefinition | null) => {
           if (definition) {
             setHeuristicInitialDefinition(definition)
             setHeuristicDesignerOpen(true)

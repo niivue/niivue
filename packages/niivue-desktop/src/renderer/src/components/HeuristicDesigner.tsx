@@ -17,7 +17,6 @@ import {
   Tooltip
 } from '@radix-ui/themes'
 import {
-  Cross1Icon,
   PlusIcon,
   TrashIcon,
   DragHandleDots2Icon,
@@ -27,7 +26,7 @@ import {
   MixerHorizontalIcon,
   CheckCircledIcon
 } from '@radix-ui/react-icons'
-import type { HeuristicDefinition, HeuristicOperation } from '../../../common/workflowTypes'
+import type { HeuristicDefinition, HeuristicOperation } from '../../../common/workflowTypes.js'
 
 const electron = window.electron
 
@@ -90,7 +89,6 @@ function OperationEditor({
   onMoveUp: () => void
   onMoveDown: () => void
 }): React.ReactElement {
-  const opMeta = OPERATIONS.find((o) => o.value === operation.op)
   const needsField = ['filter', 'map', 'sort', 'group-by', 'unique', 'set-field'].includes(operation.op)
   const needsOperator = operation.op === 'filter'
   const needsValue = ['filter', 'default', 'set-field'].includes(operation.op)

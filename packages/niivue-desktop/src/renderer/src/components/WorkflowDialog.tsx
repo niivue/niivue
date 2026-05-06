@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { Text, Callout, Heading, TextField, Select } from '@radix-ui/themes'
+import { Text, Callout, Heading, TextField } from '@radix-ui/themes'
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons'
-import type { ContextFieldDef } from '../../../common/workflowTypes.js'
 import type {
   BidsSeriesMapping,
   BidsValidationResult,
@@ -10,7 +9,9 @@ import type {
   DetectedSubject,
   SidecarAutoFixRecord
 } from '../../../common/bidsTypes.js'
-import { Niivue, NVImage, SLICE_TYPE } from '@niivue/niivue'
+import { Niivue } from '@niivue/niivue'
+
+const electron = window.electron
 import { WizardShell, type WizardStep } from './Wizard/index.js'
 import { FormSection } from './Wizard/FormSection.js'
 import { CompletionScreen } from './Wizard/CompletionScreen.js'
