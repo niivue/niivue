@@ -26,6 +26,13 @@ describe('File Loading', () => {
       win.webContents.send('loadStandard', filename)
     }, 'aal.mz3')
 
+    // The previous test left MNI152 loaded, so loadStandard now prompts via
+    // OpenTargetDialog. Choose "New Document" to load the mesh into a fresh
+    // tab — this matches what the visual baseline was captured against.
+    const newDocButton = await $('button=New Document')
+    await newDocButton.waitForClickable({ timeout: 5000 })
+    await newDocButton.click()
+
     // Wait for mesh to load
     await browser.pause(3000)
 
