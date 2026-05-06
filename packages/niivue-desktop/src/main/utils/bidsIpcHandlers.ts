@@ -18,6 +18,7 @@ import {
   parseEventFile
 } from './bidsEngine.js'
 import { writeDataset } from './bidsWriter.js'
+import { registerAllowedRoot } from './pathSafety.js'
 import { validateBidsDirectory, validateWithTempWrite } from './bidsExternalValidator.js'
 import {
   analyzeValidatorIssues,
@@ -258,6 +259,8 @@ export function registerBidsIpcHandlers(): void {
         payload.allDemographics,
         payload.fieldmapIntendedFor
       )
+      // Allow the renderer to probe inside the dataset we just wrote
+      registerAllowedRoot(result.outputDir)
       debugLog(`bids:write success, filesCopied: ${result.filesCopied}`)
       return { success: true, outputDir: result.outputDir, filesCopied: result.filesCopied }
     } catch (err) {

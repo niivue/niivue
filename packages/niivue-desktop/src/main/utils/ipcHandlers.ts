@@ -18,6 +18,7 @@ import type { ConvertSeriesOptions } from '../../common/dcm2niixTypes.js'
 import { openReplaceVolumeFileDialog } from './openReplaceVolumeFileDialog.js'
 import { registerBidsIpcHandlers } from './bidsIpcHandlers.js'
 import { registerWorkflowIpcHandlers } from './workflowIpcHandlers.js'
+import { isPathUnderAllowedRoot, registerAllowedRoot } from './pathSafety.js'
 
 const isDev = !app.isPackaged
 const RESOURCES_DIR = isDev
@@ -30,7 +31,11 @@ export const registerIpcHandlers = (): void => {
   ipcMain.handle('openMeshFileDialog', openMeshFileDialog)
   ipcMain.handle('loadFromFile', loadFromFileHandler)
 
+  // Confine renderer probes to app-managed roots and user-registered dirs
+  // (see pathSafety.ts). Returns false for any path outside, regardless of
+  // actual existence, to avoid leaking filesystem layout to the renderer.
   ipcMain.handle('file-exists', (_evt, filePath: string) => {
+    if (typeof filePath !== 'string' || !isPathUnderAllowedRoot(filePath)) return false
     return fs.existsSync(filePath)
   })
   ipcMain.handle('loadStandard', loadStandardHandler)
@@ -59,6 +64,11 @@ export const registerIpcHandlers = (): void => {
       properties,
       filters
     })
+    // User picked these explicitly — register their containing dirs so later
+    // file-exists probes against them succeed.
+    for (const p of result.filePaths) {
+      registerAllowedRoot(path.dirname(p))
+    }
     return result.filePaths
   })
 
@@ -123,6 +133,7 @@ export const registerIpcHandlers = (): void => {
     if (result.canceled || result.filePaths.length === 0) {
       return null
     }
+    registerAllowedRoot(result.filePaths[0])
     return result.filePaths[0]
   })
 
