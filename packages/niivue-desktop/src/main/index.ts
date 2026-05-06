@@ -356,6 +356,16 @@ function createWindow(): void {
     show: !isHeadless,
     icon: getPlatformIcon(),
     ...(process.platform === 'linux' ? { icon } : {}),
+    // SECURITY-DEBT: contextIsolation should be true and nodeIntegration false
+    // (PR #1596 review, task #11). The renderer's ~140 ipcRenderer.invoke
+    // call sites already route through window.electron.ipcRenderer (the
+    // @electron-toolkit/preload proxy that works under isolation), so flipping
+    // these flags should be largely transparent — but the change requires
+    // smoke-testing the full app (open volume, run workflow, run DICOM->BIDS,
+    // headless modes) which can't be done from this automated change. Tracked
+    // for follow-up; in the meantime the IPC path-validation hardening from
+    // PR #1596 (file-exists confinement, headless save root, BIDS validator)
+    // narrows the blast radius if the renderer is compromised.
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
