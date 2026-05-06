@@ -9,13 +9,16 @@ import type {
 // ── Mocks ────────────────────────────────────────────────────────────
 
 const mockDefinitions = new Map<string, WorkflowDefinition>()
+const mockToolDefinitions = new Map<string, { name: string; inputs: Record<string, { optional?: boolean }> }>()
+const mockToolExecutors = new Map<string, (inputs: Record<string, unknown>) => Promise<Record<string, unknown>>>()
 
 vi.mock('../../src/main/utils/workflowLoader.js', () => ({
-  getWorkflowDefinitions: () => mockDefinitions
+  getWorkflowDefinitions: () => mockDefinitions,
+  getToolDefinitions: () => mockToolDefinitions
 }))
 
 vi.mock('../../src/main/utils/toolRegistry.js', () => ({
-  getToolExecutor: vi.fn()
+  getToolExecutor: (name: string) => mockToolExecutors.get(name)
 }))
 
 vi.mock('../../src/main/utils/heuristicRegistry.js', () => ({
@@ -36,7 +39,9 @@ import {
   startWorkflow,
   getAutoRunnableSteps,
   resolveBinding,
-  cancelRun
+  cancelRun,
+  executeAllSteps,
+  getRunState
 } from '../../src/main/utils/workflowEngine.js'
 
 // ── Test fixture definitions ─────────────────────────────────────────
@@ -565,6 +570,67 @@ describe('workflowEngine', () => {
 
     it('is safe to call on a non-existent run', () => {
       expect(() => cancelRun('nonexistent-run-id')).not.toThrow()
+    })
+  })
+
+  describe('executeAllSteps - failure handling', () => {
+    beforeEach(() => {
+      mockDefinitions.clear()
+      mockToolDefinitions.clear()
+      mockToolExecutors.clear()
+    })
+
+    it('cleans up activeRuns and records error when a middle step throws', async () => {
+      const def: WorkflowDefinition = {
+        name: 'failing-workflow',
+        version: '1.0.0',
+        description: '',
+        menu: 'Test',
+        inputs: { dicom_dir: { type: 'string', description: '' } },
+        steps: {
+          first: {
+            tool: 'tool_a',
+            inputs: { dicom_dir: { ref: 'inputs.dicom_dir' } }
+          },
+          middle: {
+            tool: 'tool_b',
+            inputs: { x: { ref: 'steps.first.outputs.out' } }
+          },
+          last: {
+            tool: 'tool_c',
+            inputs: { y: { ref: 'steps.middle.outputs.out' } }
+          }
+        },
+        outputs: { result: { type: 'string', ref: 'steps.last.outputs.out' } }
+      }
+      mockDefinitions.set('failing-workflow', def)
+
+      // Tool definitions so step input resolution works
+      mockToolDefinitions.set('tool_a', { name: 'tool_a', inputs: { dicom_dir: {} } })
+      mockToolDefinitions.set('tool_b', { name: 'tool_b', inputs: { x: {} } })
+      mockToolDefinitions.set('tool_c', { name: 'tool_c', inputs: { y: {} } })
+
+      mockToolExecutors.set('tool_a', async () => ({ out: 'first-output' }))
+      mockToolExecutors.set('tool_b', async () => {
+        throw new Error('boom from middle step')
+      })
+      mockToolExecutors.set('tool_c', async () => ({ out: 'last-output' }))
+
+      const { runId } = startWorkflow('failing-workflow', { dicom_dir: '/data' })
+
+      // Capture state reference before executeAllSteps deletes it
+      const stateBefore = getRunState(runId)
+      expect(stateBefore).toBeDefined()
+
+      await expect(executeAllSteps(runId)).rejects.toThrow(/boom from middle step/)
+
+      // Run is removed from activeRuns
+      expect(getRunState(runId)).toBeUndefined()
+
+      // The captured reference still reflects status=error and the error message
+      expect(stateBefore!.status).toBe('error')
+      expect(stateBefore!.error).toBeDefined()
+      expect(stateBefore!.error).toContain('boom from middle step')
     })
   })
 })

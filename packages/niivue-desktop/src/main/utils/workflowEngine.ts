@@ -397,25 +397,36 @@ export async function executeAllSteps(runId: string): Promise<Record<string, unk
 
   state.status = 'running'
 
-  const stepNames = Object.keys(definition.steps)
-  for (const stepName of stepNames) {
-    if (state.stepOutputs[stepName]) continue // already executed
-    await executeStep(runId, stepName)
+  // Per-step outputs from earlier steps are intentionally retained on failure;
+  // we record the error and let the caller inspect partial results rather than
+  // rolling back. The run is always removed from activeRuns to avoid leaks.
+  try {
+    const stepNames = Object.keys(definition.steps)
+    for (const stepName of stepNames) {
+      if (state.stepOutputs[stepName]) continue // already executed
+      try {
+        await executeStep(runId, stepName)
+      } catch (err) {
+        state.status = 'error'
+        const msg = err instanceof Error ? err.message : String(err)
+        if (!state.error) state.error = msg
+        throw err
+      }
+    }
+
+    state.status = 'completed'
+
+    // Resolve workflow outputs
+    const outputs: Record<string, unknown> = {}
+    for (const [key, outputDef] of Object.entries(definition.outputs)) {
+      outputs[key] = resolveBinding({ ref: outputDef.ref }, state)
+    }
+
+    return outputs
+  } finally {
+    clearRunCache(runId)
+    activeRuns.delete(runId)
   }
-
-  state.status = 'completed'
-
-  // Resolve workflow outputs
-  const outputs: Record<string, unknown> = {}
-  for (const [key, outputDef] of Object.entries(definition.outputs)) {
-    outputs[key] = resolveBinding({ ref: outputDef.ref }, state)
-  }
-
-  // Clean up completed run to prevent memory leaks
-  clearRunCache(runId)
-  activeRuns.delete(runId)
-
-  return outputs
 }
 
 /**
