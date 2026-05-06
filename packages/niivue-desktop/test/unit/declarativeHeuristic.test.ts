@@ -182,6 +182,26 @@ describe('compare', () => {
     expect(compare(123, 'matches', '\\d+')).toBe(false)
   })
 
+  it('matches: rejects catastrophic patterns with nested unbounded quantifiers', () => {
+    expect(() => compare('aaaaaaaaaaaaaaaa!', 'matches', '(a+)+$')).toThrow(
+      /nested unbounded quantifiers/
+    )
+    expect(() => compare('xxxxxxxx', 'matches', '(.*)*')).toThrow(/nested unbounded quantifiers/)
+    expect(() => compare('xxxx', 'matches', '(\\w+)*$')).toThrow(/nested unbounded quantifiers/)
+    expect(() => compare('xx', 'matches', '(a*){5,}')).toThrow(/nested unbounded quantifiers/)
+  })
+
+  it('matches: rejects pattern strings longer than the safety cap', () => {
+    const huge = 'a'.repeat(1500)
+    expect(() => compare('foo', 'matches', huge)).toThrow(/exceeds/)
+  })
+
+  it('matches: returns false for inputs longer than the safety cap', () => {
+    // Long input + simple pattern should not throw, just short-circuit
+    const longInput = 'a'.repeat(20_000)
+    expect(compare(longInput, 'matches', '^a+$')).toBe(false)
+  })
+
   // Exists / not-exists
   it('exists: true when value is present', () => {
     expect(compare(0, 'exists', undefined)).toBe(true)

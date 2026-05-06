@@ -72,6 +72,41 @@ export function resolveSource(
 
 // ── Comparison helpers ─────────────────────────────────────────────
 
+const MAX_REGEX_PATTERN_LENGTH = 1000
+const MAX_REGEX_INPUT_LENGTH = 10_000
+
+/**
+ * Reject regex patterns that are obviously vulnerable to catastrophic
+ * backtracking, e.g. `(a+)+`, `(.*)*`, `(\w+|\w+)*`. We don't aim to be a full
+ * regex parser — just a conservative gate: groups containing an unbounded
+ * quantifier that themselves are followed by an unbounded quantifier are
+ * blocked. This still allows simple forms like `^foo.*bar$`.
+ *
+ * Throws a descriptive error so the heuristic validator surfaces the cause
+ * instead of a silent skip. (Mitigation choice #1 from the PR review.)
+ */
+export function assertSafeRegexPattern(pattern: string): void {
+  if (typeof pattern !== 'string') {
+    throw new Error('matches: pattern must be a string')
+  }
+  if (pattern.length > MAX_REGEX_PATTERN_LENGTH) {
+    throw new Error(`matches: pattern exceeds ${MAX_REGEX_PATTERN_LENGTH} chars`)
+  }
+  // Star-height check: detect a group whose body contains an unbounded
+  // quantifier and which is itself followed by an unbounded quantifier.
+  // Quantifiers considered unbounded: *, +, {n,}, *?, +?, {n,}?
+  const groupRe = /\(([^()]*)\)\s*(?:[*+]\??|\{\d+,\}\??)/g
+  let match: RegExpExecArray | null
+  while ((match = groupRe.exec(pattern)) !== null) {
+    const body = match[1]
+    if (/(?:[*+]\??|\{\d+,\}\??)/.test(body)) {
+      throw new Error(
+        `matches: regex contains nested unbounded quantifiers (likely ReDoS): ${pattern}`
+      )
+    }
+  }
+}
+
 export function compare(actual: unknown, operator: string, expected: unknown): boolean {
   switch (operator) {
     case 'eq':
@@ -96,8 +131,13 @@ export function compare(actual: unknown, operator: string, expected: unknown): b
       return typeof actual === 'string' && actual.startsWith(String(expected))
     case 'ends-with':
       return typeof actual === 'string' && actual.endsWith(String(expected))
-    case 'matches':
-      return typeof actual === 'string' && new RegExp(String(expected)).test(actual)
+    case 'matches': {
+      if (typeof actual !== 'string') return false
+      if (actual.length > MAX_REGEX_INPUT_LENGTH) return false
+      const pattern = String(expected)
+      assertSafeRegexPattern(pattern)
+      return new RegExp(pattern).test(actual)
+    }
     case 'exists':
       return actual !== undefined && actual !== null
     case 'not-exists':
