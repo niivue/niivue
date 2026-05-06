@@ -389,6 +389,15 @@ function createWindow(): void {
   }
 }
 
+import { resolveSafeHeadlessOutput as resolveSafeHeadlessOutputBase } from './utils/headlessOutputGuard.js'
+
+function resolveSafeHeadlessOutput(outputPath: string): string {
+  return resolveSafeHeadlessOutputBase(outputPath, {
+    cliOutput: cliOptions.output,
+    fallbackRoot: app.getPath('userData')
+  })
+}
+
 // Headless mode IPC handlers
 ipcMain.handle('headless:get-options', () => {
   return cliOptions
@@ -401,14 +410,15 @@ ipcMain.handle('headless:resolve-input', async (_event, input: string) => {
 
 ipcMain.handle('headless:save-output', async (_event, data: string, outputPath: string) => {
   try {
-    const ext = outputPath.toLowerCase().split('.').pop()
+    const safePath = resolveSafeHeadlessOutput(outputPath)
+    const ext = safePath.toLowerCase().split('.').pop()
     if (ext === 'png') {
       // data is base64 PNG (with or without data URL prefix)
       const base64Data = data.replace(/^data:image\/png;base64,/, '')
-      await fs.promises.writeFile(outputPath, Buffer.from(base64Data, 'base64'))
+      await fs.promises.writeFile(safePath, Buffer.from(base64Data, 'base64'))
     } else {
       // data is JSON string for .nvd or other formats
-      await fs.promises.writeFile(outputPath, data, 'utf-8')
+      await fs.promises.writeFile(safePath, data, 'utf-8')
     }
     return { success: true }
   } catch (error) {
@@ -418,7 +428,8 @@ ipcMain.handle('headless:save-output', async (_event, data: string, outputPath: 
 
 ipcMain.handle('headless:save-nifti', async (_event, base64Data: string, outputPath: string) => {
   try {
-    await fs.promises.writeFile(outputPath, Buffer.from(base64Data, 'base64'))
+    const safePath = resolveSafeHeadlessOutput(outputPath)
+    await fs.promises.writeFile(safePath, Buffer.from(base64Data, 'base64'))
     return { success: true }
   } catch (error) {
     return { success: false, error: String(error) }
