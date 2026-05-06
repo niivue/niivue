@@ -122,6 +122,7 @@ export type NVConfigOptions = {
     selectionBoxColor: number[]
     clipPlaneColor: number[]
     isClipPlanesCutaway: boolean
+    isClipAllVolumes: boolean
     paqdUniforms: number[]
     rulerColor: number[]
     colorbarMargin: number
@@ -213,11 +214,14 @@ export type NVConfigOptions = {
     bounds: [[number, number], [number, number]] | null
     showBoundsBorder?: boolean
     boundsBorderColor?: number[] // [r,g,b,a]
+    windowingGainFactor: number
     // Zarr options
     /** Chunk cache size for zarr viewing (default 500) */
     zarrCacheSize: number
     /** Number of chunk rings to prefetch around the visible region for zarr viewing (0 disables, default 1) */
     zarrPrefetchRings: number
+    /** Smooth drawing surfaces in 3D rendering. 0 = off, > 0 = Box blur radius in voxels (default 0) */
+    smoothDrawing: number
 }
 
 export const DEFAULT_OPTIONS: NVConfigOptions = {
@@ -239,6 +243,7 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     selectionBoxColor: [1, 1, 1, 0.5],
     clipPlaneColor: [0.7, 0, 0.7, 0.5],
     isClipPlanesCutaway: false,
+    isClipAllVolumes: false,
     paqdUniforms: [0.3, 0.5, 0.5, 1.0],
     rulerColor: [1, 0, 0, 0.8],
     colorbarMargin: 0.05,
@@ -330,9 +335,11 @@ export const DEFAULT_OPTIONS: NVConfigOptions = {
     bounds: null,
     showBoundsBorder: false,
     boundsBorderColor: [1, 1, 1, 1], // white border by default
+    windowingGainFactor: 2,
     // Zarr options
     zarrCacheSize: 1000,
-    zarrPrefetchRings: 10
+    zarrPrefetchRings: 10,
+    smoothDrawing: 0
 }
 
 //

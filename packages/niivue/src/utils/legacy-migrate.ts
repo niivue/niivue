@@ -355,13 +355,13 @@ export function migrateLegacyDocument(input: DocumentData | any | undefined): Do
                     }
                 }
             }
-            if (copy.colormap && !Array.isArray(copy.colormap)) {
+            if (copy.colormap && typeof copy.colormap !== 'string' && !Array.isArray(copy.colormap)) {
                 const arr = extractNumberArray(copy.colormap)
                 if (arr) {
                     copy.colormap = arr
                 }
             }
-            if (copy.colormapNegative && !Array.isArray(copy.colormapNegative)) {
+            if (copy.colormapNegative && typeof copy.colormapNegative !== 'string' && !Array.isArray(copy.colormapNegative)) {
                 const arr = extractNumberArray(copy.colormapNegative)
                 if (arr) {
                     copy.colormapNegative = arr

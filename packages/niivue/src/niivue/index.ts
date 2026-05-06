@@ -170,6 +170,7 @@ export class Niivue extends EventTarget {
     useCustomGradientTexture = false // flag to indicate if a custom gradient texture is used
     renderGradientValues = false
     drawTexture: WebGLTexture | null = null // the GPU memory storage of the drawing
+    drawSmoothedTexture: WebGLTexture | null = null // the GPU memory storage of the smoothed drawing
     paqdTexture: WebGLTexture | null = null // the GPU memory storage of the probabilistic atlas
     drawUndoBitmaps: Uint8Array[] = [] // array of drawBitmaps for undo
     drawLut = cmapper.makeDrawLut('$itksnap') // the color lookup table for drawing
@@ -226,7 +227,7 @@ export class Niivue extends EventTarget {
     orientShaderPAQD: Shader | null = null
     surfaceShader: Shader | null = null
     blurShader: Shader | null = null
-    sobelBlurShader: Shader | null = null
+    gradientPrePassShader: Shader | null = null
     sobelFirstOrderShader: Shader | null = null
     sobelSecondOrderShader: Shader | null = null
     genericVAO: WebGLVertexArrayObject | null = null // used for 2D slices, 2D lines, 2D Fonts
@@ -1373,8 +1374,8 @@ export class Niivue extends EventTarget {
             this.mouseDown(pos.x, pos.y)
             this.mouseClick(pos.x, pos.y)
         } else if (dragMode === DRAG_MODE.windowing) {
-            this.uiData.windowX = e.x
-            this.uiData.windowY = e.y
+            this.uiData.windowX = pos.x
+            this.uiData.windowY = pos.y
         } else {
             // Handle all other drag modes (contrast, measurement, pan, etc.)
             this.mousePos = [pos.x * this.uiData.dpr!, pos.y * this.uiData.dpr!]
@@ -1854,19 +1855,30 @@ export class Niivue extends EventTarget {
 
     /**
      * Adjusts window/level (cal_min and cal_max) based on mouse or touch drag direction.
+     * Expects x and y to be in the same coordinate space as uiData.windowX/Y
+     * (typically canvas-relative) so that deltas are consistent.
      * @internal
      */
     windowingHandler(x: number, y: number, volIdx: number = 0): void {
+        // Prevent huge delta values on the first drag when reference points
+        // are far from the current position
+        const deltaDistance = Math.sqrt((x - this.uiData.windowX) ** 2 + (y - this.uiData.windowY) ** 2)
+        if (deltaDistance > 100) {
+            this.uiData.windowX = x
+            this.uiData.windowY = y
+        }
+
         // Calculate windowing adjustments using helper
         const result = DragModeManager.calculateWindowingAdjustment({
             x,
             y,
             windowX: this.uiData.windowX,
             windowY: this.uiData.windowY,
-            currentCalMin: this.volumes[0].cal_min!,
-            currentCalMax: this.volumes[0].cal_max!,
-            globalMin: this.volumes[0].global_min!,
-            globalMax: this.volumes[0].global_max!
+            currentCalMin: this.volumes[volIdx].cal_min!,
+            currentCalMax: this.volumes[volIdx].cal_max!,
+            globalMin: this.volumes[volIdx].global_min!,
+            globalMax: this.volumes[volIdx].global_max!,
+            gainFactor: this.opts.windowingGainFactor ?? 2
         })
 
         this.volumes[volIdx].cal_min = result.calMin
@@ -2155,7 +2167,7 @@ export class Niivue extends EventTarget {
                 this.mouseClick(touchMovePos.x, touchMovePos.y)
                 this.mouseMove(touchMovePos.x, touchMovePos.y)
             } else if (dragMode === DRAG_MODE.windowing) {
-                this.windowingHandler(touchMovePos.pageX, touchMovePos.pageY)
+                this.windowingHandler(touchMovePos.x, touchMovePos.y)
                 this.drawScene()
             }
         } else {
@@ -3535,7 +3547,7 @@ export class Niivue extends EventTarget {
             this.createEmptyDrawing()
         }
         const result = ImageProcessing.applyOtsuToDrawing({
-            img: this.volumes[0].img!,
+            img: this.volumes[0].img2RAS(),
             drawBitmap: this.drawBitmap as Uint8Array,
             thresholds
         })
@@ -6004,6 +6016,56 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
     }
 
     /**
+     * GPU single-pass 3D box blur of the drawing bitmap.
+     * Reads from TEXTURE7_DRAW (R8) and writes the blurred result to
+     * TEXTURE10_DRAW_SMOOTH (R8 with LINEAR filtering) for isosurface rendering.
+     * Reuses `blurShader` with its parameterised `(2r+1)^3` box-blur path.
+     * @internal
+     */
+    blurDrawingGL(dims: number[]): void {
+        const gl = this.gl
+        const shader = this.blurShader
+        if (!shader || !this.drawTexture) {
+            return
+        }
+        const radius = Math.max(1, Math.round(this.opts.smoothDrawing))
+
+        // Create / recreate output texture (R8 + LINEAR for smooth isosurface sampling)
+        this.drawSmoothedTexture = glUtils.r8TexLinear(gl, this.drawSmoothedTexture, TEXTURE_CONSTANTS.TEXTURE10_DRAW_SMOOTH, dims)
+
+        // Use a transient texture unit for blur source reads to avoid
+        // disturbing persistent texture bindings.
+        const BLUR_SRC_UNIT = TEXTURE_CONSTANTS.TEXTURE11_GC_BACK
+        const BLUR_SRC_UNIT_NUM = 11
+
+        gl.bindVertexArray(this.genericVAO)
+        const fb = gl.createFramebuffer()
+        gl.bindFramebuffer(gl.FRAMEBUFFER, fb)
+        gl.viewport(0, 0, dims[1], dims[2])
+        gl.disable(gl.BLEND)
+
+        shader.use(gl)
+        gl.activeTexture(BLUR_SRC_UNIT)
+        gl.bindTexture(gl.TEXTURE_3D, this.drawTexture)
+        gl.uniform1i(shader.uniforms.intensityVol, BLUR_SRC_UNIT_NUM)
+        gl.uniform1f(shader.uniforms.dX, 1.0 / dims[1])
+        gl.uniform1f(shader.uniforms.dY, 1.0 / dims[2])
+        gl.uniform1f(shader.uniforms.dZ, 1.0 / dims[3])
+        gl.uniform1i(shader.uniforms.kernelRadius, radius)
+        gl.uniform1i(shader.uniforms.binarize, 1) // convert pen colours to 0/1
+
+        for (let i = 0; i < dims[3]; i++) {
+            gl.uniform1f(shader.uniforms.coordZ, (i + 0.5) / dims[3])
+            gl.framebufferTextureLayer(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, this.drawSmoothedTexture, 0, i)
+            gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
+        }
+
+        gl.deleteFramebuffer(fb)
+        gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+        gl.bindVertexArray(this.unusedVAO)
+    }
+
+    /**
      * close drawing: make sure you have saved any changes before calling this!
      * @example niivue.closeDrawing();
      * @see {@link https://niivue.com/demos/features/draw.ui.html | live demo usage}
@@ -6011,6 +6073,10 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
     closeDrawing(): void {
         this.drawClearAllUndoBitmaps()
         this.drawTexture = this.rgbaTex(this.drawTexture, TEXTURE_CONSTANTS.TEXTURE7_DRAW, [2, 2, 2, 2], true)
+        if (this.drawSmoothedTexture) {
+            this.gl.deleteTexture(this.drawSmoothedTexture)
+            this.drawSmoothedTexture = null
+        }
         this.drawBitmap = null
         this.clickToSegmentGrowingBitmap = null
         this._emitEvent('drawingChanged', { action: 'close' })
@@ -6095,6 +6161,13 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             return
         }
 
+        // Update smoothed drawing texture if smooth drawing is enabled.
+        // Uses a GPU shader to perform a 3-pass separable box blur.
+        const hasAnyVoxel = bitmapDataSource.some((v) => v !== 0)
+        if (this.opts.smoothDrawing > 0 && !this.opts.is2DSliceShader && hasAnyVoxel) {
+            this.blurDrawingGL(dims)
+        }
+
         if (isForceRedraw) {
             this.drawScene()
         }
@@ -6154,25 +6227,23 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         if (!this.fontMetrics) {
             throw new Error('fontMetrics undefined')
         }
-
         this.fontMets = {
             distanceRange: this.fontMetrics.atlas.distanceRange,
             size: this.fontMetrics.atlas.size,
             mets: {}
-        }
-        for (let id = 0; id < 256; id++) {
-            // clear ASCII codes 0..256
-            this.fontMets.mets[id] = {
-                xadv: 0,
-                uv_lbwh: [0, 0, 0, 0],
-                lbwh: [0, 0, 0, 0]
-            }
         }
         const scaleW = this.fontMetrics.atlas.width
         const scaleH = this.fontMetrics.atlas.height
         for (let i = 0; i < this.fontMetrics.glyphs.length; i++) {
             const glyph = this.fontMetrics.glyphs[i]
             const id = glyph.unicode
+            if (!this.fontMets.mets[id]) {
+                this.fontMets.mets[id] = {
+                    xadv: 0,
+                    uv_lbwh: [0, 0, 0, 0],
+                    lbwh: [0, 0, 0, 0]
+                }
+            }
             this.fontMets.mets[id].xadv = glyph.advance
             if (glyph.planeBounds === undefined) {
                 continue
@@ -6485,7 +6556,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         // Initialize image processing shaders
         const imageProcessingShaders = ShaderManager.initImageProcessingShaders(gl)
         this.blurShader = imageProcessingShaders.blurShader
-        this.sobelBlurShader = imageProcessingShaders.sobelBlurShader
+        this.gradientPrePassShader = imageProcessingShaders.gradientPrePassShader
         this.sobelFirstOrderShader = imageProcessingShaders.sobelFirstOrderShader
         this.sobelSecondOrderShader = imageProcessingShaders.sobelSecondOrderShader
         this.growCutShader = imageProcessingShaders.growCutShader
@@ -6535,7 +6606,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             gradientTexture: this.gradientTexture,
             gradientOrder: this.opts.gradientOrder,
             blurShader: this.blurShader!,
-            sobelBlurShader: this.sobelBlurShader!,
+            gradientPrePassShader: this.gradientPrePassShader!,
             sobelFirstOrderShader: this.sobelFirstOrderShader!,
             sobelSecondOrderShader: this.sobelSecondOrderShader!,
             rgbaTex: this.rgbaTex.bind(this)
@@ -7016,7 +7087,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
                 gradientTexture: this.gradientTexture,
                 gradientOrder: this.opts.gradientOrder,
                 blurShader: this.blurShader!,
-                sobelBlurShader: this.sobelBlurShader!,
+                gradientPrePassShader: this.gradientPrePassShader!,
                 sobelFirstOrderShader: this.sobelFirstOrderShader!,
                 sobelSecondOrderShader: this.sobelSecondOrderShader!,
                 rgbaTex: this.rgbaTex.bind(this)
@@ -9065,16 +9136,21 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             throw new Error('fontShader undefined')
         }
         // draw single character, never call directly: ALWAYS call from drawText()
-        const metrics = this.fontMets!.mets[char]!
-        const l = xy[0] + scale * metrics.lbwh[0]
-        const b = -(scale * metrics.lbwh[1])
-        const w = scale * metrics.lbwh[2]
-        const h = scale * metrics.lbwh[3]
-        const t = xy[1] + (b - h) + scale
-        this.gl.uniform4f(this.fontShader.uniforms.leftTopWidthHeight, l, t, w, h)
-        this.gl.uniform4fv(this.fontShader.uniforms.uvLeftTopWidthHeight!, metrics.uv_lbwh)
-        this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
-        return scale * metrics.xadv
+        const metrics = this.fontMets!.mets[char]
+        if (!metrics) {
+            console.warn(`drawChar() : Missing font metric for char : "${char}"`)
+            return 0
+        } else {
+            const l = xy[0] + scale * metrics.lbwh[0]
+            const b = -(scale * metrics.lbwh[1])
+            const w = scale * metrics.lbwh[2]
+            const h = scale * metrics.lbwh[3]
+            const t = xy[1] + (b - h) + scale
+            this.gl.uniform4f(this.fontShader.uniforms.leftTopWidthHeight, l, t, w, h)
+            this.gl.uniform4fv(this.fontShader.uniforms.uvLeftTopWidthHeight!, metrics.uv_lbwh)
+            this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
+            return scale * metrics.xadv
+        }
     }
 
     /**
@@ -9125,11 +9201,13 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         let screenPxRange = (size / this.fontMets!.size) * this.fontMets!.distanceRange
         screenPxRange = Math.max(screenPxRange, 1.0) // screenPxRange() must never be lower than 1
         this.gl.uniform1f(this.fontShader.uniforms.screenPxRange, screenPxRange)
-        const bytes = new TextEncoder().encode(str)
+
         this.gl.bindVertexArray(this.genericVAO)
-        for (let i = 0; i < str.length; i++) {
-            xy[0] += this.drawChar(xy, size, bytes[i])
+        for (const char of str) {
+            const codePoint = char.codePointAt(0)
+            xy[0] += this.drawChar(xy, size, codePoint)
         }
+
         this.gl.bindVertexArray(this.unusedVAO)
     }
 
@@ -9259,6 +9337,15 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             this.updateInterpolation(i)
         }
         this.drawScene()
+    }
+
+    /**
+     * Query whether nearest neighbor interpolation is active
+     * @returns true if nearest neighbor interpolation is used, false if linear
+     * @example let isNearest = niivue.getNearestInterpolation()
+     */
+    getNearestInterpolation(): boolean {
+        return this.opts.isNearestInterpolation
     }
 
     /**
@@ -10215,11 +10302,14 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             drawBitmap: this.drawBitmap,
             renderDrawAmbientOcclusion: this.renderDrawAmbientOcclusion,
             drawOpacity: this.drawOpacity,
+            smoothDrawing: this.opts.smoothDrawing,
+            drawSmoothedTexture: this.drawSmoothedTexture,
             paqdUniforms: this.opts.paqdUniforms,
             matRAS: this.back!.matRAS!,
             crosshairPos: this.scene.crosshairPos,
             clipPlaneDepthAziElevs: this.scene.clipPlaneDepthAziElevs,
             isClipPlanesCutaway: this.opts.isClipPlanesCutaway,
+            isClipAllVolumes: this.opts.isClipAllVolumes,
             obliqueRAS: this.back?.obliqueRAS
         })
     }
@@ -11762,6 +11852,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
                 if (this.opts.isColorbar) {
                     this.drawColorbar()
                 }
+                this.drawAnchoredLabels()
                 return
             }
             this.drawLoadingText(this.opts.loadingText)
@@ -11811,6 +11902,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             if (this.opts.isColorbar) {
                 this.drawColorbar()
             }
+            this.drawAnchoredLabels()
             return
         }
 
@@ -12188,6 +12280,10 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         posString = pos[0].toFixed(2) + '×' + pos[1].toFixed(2) + '×' + pos[2].toFixed(2)
         this.readyForSync = true // by the time we get here, all volumes should be loaded and ready to be drawn. We let other niivue instances know that we can now reliably sync draw calls (images are loaded)
         this.sync()
+        const has3DTile = this.screenSlices.some((s) => s.axCorSag === SLICE_TYPE.RENDER)
+        if (!has3DTile) {
+            this.draw3DLabels(mat4.create(), [0, 0, 0, 0], true)
+        }
         this.drawAnchoredLabels()
         this.drawBoundsBorder()
         return posString
@@ -12236,6 +12332,14 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
     }
 
     /**
+     * Creates a 3D 1-component float16 texture with LINEAR filtering for smooth drawing.
+     * @internal
+     */
+    r16fTex(texID: WebGLTexture | null, activeID: number, dims: number[], data: Float32Array): WebGLTexture | null {
+        return glUtils.r16fTex(this.gl, texID, activeID, dims, data)
+    }
+
+    /**
      * Creates a 2D 4-component (RGBA) uint8 texture on the GPU with optional vertical flip.
      * @internal
      */
@@ -12275,23 +12379,9 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
      * @internal
      */
     async loadPngAsTexture(pngUrl: string, textureNum: number): Promise<WebGLTexture | null> {
-        const texture = await glUtils.loadPngAsTexture(
-            this.gl,
-            pngUrl,
-            textureNum,
-            this.fontShader,
-            this.bmpShader,
-            this.fontTexture,
-            this.bmpTexture,
-            this.matCapTexture,
-            (widthHeightRatio) => {
-                this.bmpTextureWH = widthHeightRatio
-            },
-            () => {
-                this.drawScene()
-            }
-        )
-
+        const texture = await glUtils.loadPngAsTexture(this.gl, pngUrl, textureNum, this.fontShader, this.bmpShader, this.fontTexture, this.bmpTexture, this.matCapTexture, (widthHeightRatio) => {
+            this.bmpTextureWH = widthHeightRatio
+        })
         // Update the appropriate texture property based on textureNum
         if (textureNum === 3) {
             this.fontTexture = texture
@@ -12300,7 +12390,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         } else if (textureNum === 5) {
             this.matCapTexture = texture
         }
-
+        this.drawScene()
         return texture
     }
 

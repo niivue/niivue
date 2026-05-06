@@ -129,7 +129,7 @@ export interface GradientGLParams {
     gradientTexture: WebGLTexture | null
     gradientOrder: number
     blurShader: Shader
-    sobelBlurShader: Shader
+    gradientPrePassShader: Shader
     sobelFirstOrderShader: Shader
     sobelSecondOrderShader: Shader
     rgbaTex: (tex: WebGLTexture | null, textureNum: number, dims: number[], isInit?: boolean) => WebGLTexture
@@ -141,7 +141,20 @@ export interface GradientGLParams {
  * @returns The generated gradient texture
  */
 export function gradientGL(params: GradientGLParams): WebGLTexture {
-    const { gl, hdr, genericVAO, unusedVAO, volumeTexture, paqdTexture, gradientOrder, blurShader: blurShaderInput, sobelBlurShader, sobelFirstOrderShader, sobelSecondOrderShader, rgbaTex } = params
+    const {
+        gl,
+        hdr,
+        genericVAO,
+        unusedVAO,
+        volumeTexture,
+        paqdTexture,
+        gradientOrder,
+        blurShader: blurShaderInput,
+        gradientPrePassShader,
+        sobelFirstOrderShader,
+        sobelSecondOrderShader,
+        rgbaTex
+    } = params
 
     let { gradientTexture } = params
 
@@ -151,7 +164,7 @@ export function gradientGL(params: GradientGLParams): WebGLTexture {
     gl.viewport(0, 0, hdr.dims[1], hdr.dims[2])
     gl.disable(gl.BLEND)
     const tempTex3D = rgbaTex(null, TEXTURE8_GRADIENT_TEMP, hdr.dims, true)
-    const blurShader = gradientOrder === 2 ? sobelBlurShader : blurShaderInput
+    const blurShader = gradientOrder === 2 ? gradientPrePassShader : blurShaderInput
     blurShader.use(gl)
     gl.activeTexture(TEXTURE0_BACK_VOL)
     gl.bindTexture(gl.TEXTURE_3D, volumeTexture)
@@ -162,6 +175,15 @@ export function gradientGL(params: GradientGLParams): WebGLTexture {
     gl.uniform1f(blurShader.uniforms.dX, blurRadius / hdr.dims[1])
     gl.uniform1f(blurShader.uniforms.dY, blurRadius / hdr.dims[2])
     gl.uniform1f(blurShader.uniforms.dZ, blurRadius / hdr.dims[3])
+    // Reset drawing-blur uniforms to restore the legacy 8-corner path.
+    // These uniforms only exist on blurFragShader, so they are no-ops for
+    // gradientPrePassShader (null uniform locations are ignored by WebGL).
+    if (blurShader.uniforms.kernelRadius) {
+        gl.uniform1i(blurShader.uniforms.kernelRadius, 0)
+    }
+    if (blurShader.uniforms.binarize) {
+        gl.uniform1i(blurShader.uniforms.binarize, 0)
+    }
     for (let i = 0; i < hdr.dims[3]; i++) {
         const coordZ = (1 / hdr.dims[3]) * (i + 0.5)
         gl.uniform1f(blurShader.uniforms.coordZ, coordZ)
@@ -418,11 +440,14 @@ export interface DrawImage3DParams {
     drawBitmap: Uint8Array | null
     renderDrawAmbientOcclusion: number
     drawOpacity: number
+    smoothDrawing: number
+    drawSmoothedTexture: WebGLTexture | null
     paqdUniforms: number[]
     matRAS: mat4
     crosshairPos: number[] | vec3
     clipPlaneDepthAziElevs: number[][]
     isClipPlanesCutaway: boolean
+    isClipAllVolumes: boolean
     obliqueRAS?: mat4 | null
 }
 
@@ -448,11 +473,14 @@ export function drawImage3D(params: DrawImage3DParams): void {
         drawBitmap,
         renderDrawAmbientOcclusion,
         drawOpacity,
+        smoothDrawing,
+        drawSmoothedTexture,
         paqdUniforms,
         matRAS,
         crosshairPos,
         clipPlaneDepthAziElevs,
         isClipPlanesCutaway,
+        isClipAllVolumes,
         obliqueRAS
     } = params
 
@@ -485,8 +513,16 @@ export function drawImage3D(params: DrawImage3DParams): void {
         }
         if (drawBitmap && drawBitmap.length > 8) {
             gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, renderDrawAmbientOcclusion, drawOpacity)
+            if (smoothDrawing > 0 && drawSmoothedTexture) {
+                gl.uniform1f(shader.uniforms.smoothDrawing, smoothDrawing)
+                gl.activeTexture(gl.TEXTURE10)
+                gl.bindTexture(gl.TEXTURE_3D, drawSmoothedTexture)
+            } else {
+                gl.uniform1f(shader.uniforms.smoothDrawing, 0.0)
+            }
         } else {
             gl.uniform2f(shader.uniforms.renderDrawAmbientOcclusionXY, renderDrawAmbientOcclusion, 0.0)
+            gl.uniform1f(shader.uniforms.smoothDrawing, 0.0)
         }
         gl.uniform4fv(shader.uniforms.paqdUniforms, paqdUniforms)
         gl.uniformMatrix4fv(shader.uniforms.mvpMtx, false, mvpMatrix)
@@ -510,6 +546,7 @@ export function drawImage3D(params: DrawImage3DParams): void {
         }
         gl.uniform1f(shader.uniforms.drawOpacity, 1.0)
         gl.uniform1i(shader.uniforms.isClipCutaway, isClipPlanesCutaway ? 1 : 0)
+        gl.uniform1i(shader.uniforms.isClipAllVolumes, isClipAllVolumes ? 1 : 0)
         gl.bindVertexArray(object3D.vao)
         gl.drawElements(object3D.mode, object3D.indexCount, gl.UNSIGNED_SHORT, 0)
         gl.bindVertexArray(unusedVAO)

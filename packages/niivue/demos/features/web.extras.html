@@ -87,7 +87,8 @@
   }
   //fonts
   const fontUrl = "https://raw.githubusercontent.com/niivue/fonts/main/fonts/"
-  const fontItems = await loadManifest(fontUrl)
+  // Poem is a non-Latin (CJK) font; showcased separately in nonlatin.html
+  const fontItems = (await loadManifest(fontUrl)).filter(f => f !== "Poem")
   populateSelect(fontSelect, fontItems)
   fontSelect.onchange = async function () {
     let fontName = fontUrl + fontSelect.value

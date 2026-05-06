@@ -179,6 +179,8 @@ const kRenderInit = `void main() {
 		samplePos += deltaDir * ran * 1.41; //jitter ray
 	else
 		samplePos += deltaDir * ran; //jitter ray
+	vec2 overlaySampleRange = isClipAllVolumes ? sampleRange : vec2(0.0, len);
+	bool overlayIsClipCutaway = isClipAllVolumes && isClipCutaway;
 `
 
 const kRenderTail = `
@@ -250,9 +252,18 @@ const kRenderTail = `
 	stepSizeFast = sliceSize * 1.0;
 	deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
 	while (samplePos.a <= len) {
+		if (skipSample(samplePos.a, overlaySampleRange) ^^ overlayIsClipCutaway) {
+			samplePos += deltaDirFast;
+			continue;
+		}
 		float val = texture(overlay, samplePos.xyz).a;
-		if (drawOpacity > 0.0)
-			val = max(val, texture(drawing, samplePos.xyz).r);
+		if (drawOpacity > 0.0) {
+			if (smoothDrawing > 0.0) {
+				if (!isClipAllVolumes || !(skipSample(samplePos.a, sampleRange) ^^ isClipCutaway))
+					val = max(val, texture(drawSmoothed, samplePos.xyz).r * 2.0);
+			} else
+				val = max(val, texture(drawing, samplePos.xyz).r);
+		}
 		if (val > 0.001)
 			break;
 		samplePos += deltaDirFast; //advance ray position
@@ -274,12 +285,84 @@ const kRenderTail = `
 	if (backgroundMasksOverlays > 0)
 		samplePos = firstHit;
 	bool firstDraw = true;
+	// Hoist per-ray constants used by the smooth drawing path.
+	vec3 vxSize = 1.0 / vec3(textureSize(drawing, 0));
+	vec3 nRayDir = normalize(rayDir);
+	// For smooth drawing with a clip plane: if the ray enters the unclipped region
+	// already inside the drawn volume, start with prevSmoothOut=false so no
+	// outside→inside transition is detected, suppressing the clip-plane cap face.
+	bool prevSmoothOut = true;
+	bool enteredFromOutside = false;
+	vec4 cachedSmoothColor = vec4(0.0);
+	if (isClipAllVolumes && isClip && !isClipCutaway && smoothDrawing > 0.0) {
+		vec3 clipEntry = start.xyz + dir * sampleRange.x;
+		if (texture(drawSmoothed, clipEntry).r >= 0.5)
+			prevSmoothOut = false;
+	}
 	while (samplePos.a <= len) {
+		if (skipSample(samplePos.a, overlaySampleRange) ^^ overlayIsClipCutaway) {
+			samplePos += deltaDirFast;
+			continue;
+		}
 		vec4 colorSample = texture(overlay, samplePos.xyz);
 		if ((colorSample.a < 0.01) && (drawOpacity > 0.0)) {
-			float val = texture(drawing, samplePos.xyz).r;
-			vec4 draw = drawColor(val, drawOpacity);
-			if ((draw.a > 0.0) && (firstDraw)) {
+			if (smoothDrawing > 0.0) {
+				// Smooth drawing: isosurface rendering with gradient-based shading
+				// Clip the smooth surface only when isClipAllVolumes is set
+				if (isClipAllVolumes && (skipSample(samplePos.a, sampleRange) ^^ isClipCutaway)) {
+					samplePos += deltaDir;
+					continue;
+				}
+				float smoothVal = texture(drawSmoothed, samplePos.xyz).r;
+				bool nowSmoothInside = (smoothVal > 0.5);
+				// Track entry transitions: only mark enteredFromOutside on a genuine
+				// outside→inside crossing; clear it when we exit.
+				if (!nowSmoothInside) {
+					prevSmoothOut = true;
+					enteredFromOutside = false;
+				} else if (prevSmoothOut) {
+					// First inside sample: compute gradient, pen color, and Phong shading
+					// once and cache the result for all subsequent interior steps.
+					prevSmoothOut = false;
+					enteredFromOutside = true;
+					float gx = texture(drawSmoothed, samplePos.xyz + vec3(vxSize.x, 0.0, 0.0)).r
+					         - texture(drawSmoothed, samplePos.xyz - vec3(vxSize.x, 0.0, 0.0)).r;
+					float gy = texture(drawSmoothed, samplePos.xyz + vec3(0.0, vxSize.y, 0.0)).r
+					         - texture(drawSmoothed, samplePos.xyz - vec3(0.0, vxSize.y, 0.0)).r;
+					float gz = texture(drawSmoothed, samplePos.xyz + vec3(0.0, 0.0, vxSize.z)).r
+					         - texture(drawSmoothed, samplePos.xyz - vec3(0.0, 0.0, vxSize.z)).r;
+					vec3 grad = vec3(gx, gy, gz);
+					float gradLen = length(grad);
+					vec3 normal = gradLen > 0.001 ? normalize(grad) : vec3(0.0, 0.0, 1.0);
+					// Get pen color from original drawing texture.
+					float drawVal = texture(drawing, samplePos.xyz).r;
+					if (drawVal == 0.0) {
+						// Between painted voxels: step inward along the gradient
+						// to find the nearest painted voxel's pen color.
+						// (normal points inward toward higher smooth values)
+						for (int k = 1; k <= 8; k++) {
+							drawVal = texture(drawing, samplePos.xyz + normal * vxSize * float(k)).r;
+							if (drawVal > 0.0) break;
+						}
+					}
+					vec4 draw = drawColor(max(drawVal, 1.0 / 255.0), drawOpacity);
+					// Phong shading with two-sided lighting.
+					float NdotL = abs(dot(normal, nRayDir));
+					vec3 reflected = reflect(nRayDir, normal);
+					float spec = pow(max(dot(reflected, -nRayDir), 0.0), 20.0);
+					draw.rgb *= (0.4 + 0.6 * NdotL);
+					draw.rgb += vec3(0.2 * spec);
+					cachedSmoothColor = draw;
+				}
+				// Use the cached shaded color for every interior step.
+				if (nowSmoothInside && enteredFromOutside) {
+					colorSample = cachedSmoothColor;
+				}
+			} else {
+				// Original discrete drawing path
+				float val = texture(drawing, samplePos.xyz).r;
+				vec4 draw = drawColor(val, drawOpacity);
+				if ((draw.a > 0.0) && (firstDraw)) {
 				firstDraw = false;
 				float sum = 0.0;
 				const float mn = 1.0 / 256.0;
@@ -322,6 +405,7 @@ const kRenderTail = `
 				draw.rgb = mix (draw.rgb, ao , renderDrawAmbientOcclusionX);
 			}
 			colorSample = draw;
+			} // end else (discrete drawing path)
 		}
 		samplePos += deltaDir; //advance ray position
 		if (colorSample.a >= 0.01) {
@@ -380,8 +464,11 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
+uniform highp sampler3D drawSmoothed;
+uniform float smoothDrawing;
 uniform highp sampler2D colormap;
 uniform vec2 renderDrawAmbientOcclusionXY;
+uniform bool isClipAllVolumes;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -436,10 +523,12 @@ out vec4 fColor;
 	bool isColorPlaneInVolume = false;
 	bool isClip = false;
 	bool isClipCutaway = false;
-	vec2 sampleRange;
+	vec2 sampleRange = vec2(0.0, len);
 	// vec4 clipPos = applyClip(dir, samplePos, len, isClip);
 	float stepSizeFast = sliceSize * 1.9;
 	vec4 deltaDirFast = vec4(dir.xyz * stepSizeFast, stepSizeFast);
+	vec2 overlaySampleRange = vec2(0.0, len);
+	bool overlayIsClipCutaway = false;
 	if (samplePos.a < 0.0)
 		vec4 samplePos = vec4(start.xyz, 0.0); //ray position
 	float ran = fract(sin(gl_FragCoord.x * 12.9898 + gl_FragCoord.y * 78.233) * 43758.5453);
@@ -470,8 +559,11 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float renderOverlayBlend;
 uniform highp sampler3D drawing;
+uniform highp sampler3D drawSmoothed;
+uniform float smoothDrawing;
 uniform highp sampler2D colormap;
 uniform vec2 renderDrawAmbientOcclusionXY;
+uniform bool isClipAllVolumes;
 in vec3 vColor;
 out vec4 fColor;
 ` +
@@ -525,12 +617,15 @@ uniform mat4 matRAS;
 uniform vec4 clipPlaneColor;
 uniform float renderOverlayBlend;
 uniform highp sampler3D drawing, gradient;
+uniform highp sampler3D drawSmoothed;
+uniform float smoothDrawing;
 uniform highp sampler2D colormap;
 uniform highp sampler2D matCap;
 uniform vec2 renderDrawAmbientOcclusionXY;
 uniform float gradientAmount;
 uniform float silhouettePower;
 uniform float gradientOpacity[${gradientOpacityLutCount}];
+uniform bool isClipAllVolumes;
 in vec3 vColor;
 out vec4 fColor;
 `
@@ -2217,9 +2312,31 @@ uniform float coordZ;
 uniform float dX;
 uniform float dY;
 uniform float dZ;
+// Optional uniforms for parameterised (2r+1)^3 box blur. When kernelRadius
+// is 0 (default / gradient pipeline) the legacy 8-corner sample is used.
+uniform int kernelRadius;
+uniform bool binarize;
 uniform highp sampler3D intensityVol;
 void main(void) {
  vec3 vx = vec3(TexCoord.xy, coordZ);
+ if (kernelRadius > 0) {
+  vec4 sum = vec4(0.0);
+  float count = 0.0;
+  for (int k = -kernelRadius; k <= kernelRadius; k++) {
+   for (int j = -kernelRadius; j <= kernelRadius; j++) {
+    for (int i = -kernelRadius; i <= kernelRadius; i++) {
+     vec3 off = vec3(float(i) * dX, float(j) * dY, float(k) * dZ);
+     vec4 v = texture(intensityVol, vx + off);
+     if (binarize) v = vec4(v.r > 0.0 ? 1.0 : 0.0, 0.0, 0.0, 0.0);
+     sum += v;
+     count += 1.0;
+    }
+   }
+  }
+  FragColor = sum / count;
+  return;
+ }
+ // Legacy 8-corner box blur (gradient pipeline)
  vec4 samp = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
  samp += texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
  samp += texture(intensityVol,vx+vec3(+dX,-dY,+dZ));
@@ -2231,7 +2348,7 @@ void main(void) {
  FragColor = samp*0.125;
 }`
 
-export const sobelBlurFragShader = `#version 300 es
+export const gradientPrePassFragShader = `#version 300 es
 #line 298
 precision highp int;
 precision highp float;
@@ -2243,44 +2360,48 @@ uniform float dY;
 uniform float dZ;
 uniform highp sampler3D intensityVol;
 void main(void) {
- vec3 vx = vec3(TexCoord.xy, coordZ);
- vec4 XYZ = texture(intensityVol,vx+vec3(+dX,+dY,+dZ));
- vec4 OYZ = texture(intensityVol,vx+vec3(0.0,+dY,+dZ));
- vec4 xYZ = texture(intensityVol,vx+vec3(-dX,+dY,+dZ));
- vec4 XOZ = texture(intensityVol,vx+vec3(+dX,0.0,+dZ));
- vec4 OOZ = texture(intensityVol,vx+vec3(0.0,0.0,+dZ));
- vec4 xOZ = texture(intensityVol,vx+vec3(-dX,0.0,+dZ));
- vec4 XyZ = texture(intensityVol,vx+vec3(+dX,-dY,+dZ));
- vec4 OyZ = texture(intensityVol,vx+vec3(0.0,-dY,+dZ));
- vec4 xyZ = texture(intensityVol,vx+vec3(-dX,-dY,+dZ));
-
- vec4 XYO = texture(intensityVol,vx+vec3(+dX,+dY,0.0));
- vec4 OYO = texture(intensityVol,vx+vec3(0.0,+dY,0.0));
- vec4 xYO = texture(intensityVol,vx+vec3(-dX,+dY,0.0));
- vec4 XOO = texture(intensityVol,vx+vec3(+dX,0.0,0.0));
- vec4 OOO = texture(intensityVol,vx+vec3(0.0,0.0,0.0));
- vec4 xOO = texture(intensityVol,vx+vec3(-dX,0.0,0.0));
- vec4 XyO = texture(intensityVol,vx+vec3(+dX,-dY,0.0));
- vec4 OyO = texture(intensityVol,vx+vec3(0.0,-dY,0.0));
- vec4 xyO = texture(intensityVol,vx+vec3(-dX,-dY,0.0));
-
- vec4 XYz = texture(intensityVol,vx+vec3(+dX,+dY,-dZ));
- vec4 OYz = texture(intensityVol,vx+vec3(0.0,+dY,-dZ));
- vec4 xYz = texture(intensityVol,vx+vec3(-dX,+dY,-dZ));
- vec4 XOz = texture(intensityVol,vx+vec3(+dX,0.0,-dZ));
- vec4 OOz = texture(intensityVol,vx+vec3(0.0,0.0,-dZ));
- vec4 xOz = texture(intensityVol,vx+vec3(-dX,0.0,-dZ));
- vec4 Xyz = texture(intensityVol,vx+vec3(+dX,-dY,-dZ));
- vec4 Oyz = texture(intensityVol,vx+vec3(0.0,-dY,-dZ));
- vec4 xyz = texture(intensityVol,vx+vec3(-dX,-dY,-dZ));
-
- vec4 blurred = vec4 (0.0, 0.0, 0.0, 0.0);
- blurred.r = 2.0*(xOz.r +xOZ.r +xyO.r +xYO.r +xOO.r +XOz.r +XOZ.r +XyO.r +XYO.r +XOO.r) +xyz.r +xyZ.r +xYz.r +xYZ.r +Xyz.r +XyZ.r +XYz.r +XYZ.r;
- blurred.g = 2.0*(Oyz.r +OyZ.r +xyO.r +XyO.r +OyO.r +OYz.r +OYZ.r +xYO.r +XYO.r +OYO.r) +xyz.r +Xyz.r +xyZ.r +XyZ.r +xYz.r +XYz.r +xYZ.r +XYZ.r;
- blurred.b = 2.0*(Oyz.r +OYz.r +xOz.r +XOz.r +OOz.r +OyZ.r +OYZ.r +xOZ.r +XOZ.r +OOZ.r) +xyz.r +Xyz.r +xYz.r +XYz.r +xyZ.r +XyZ.r +XyZ.r +XYZ.r;
- blurred.a = 0.32*(abs(blurred.r)+abs(blurred.g)+abs(blurred.b));
- // 0.0357 = 1/28 to account for weights, rescale to 2**16,
- FragColor = 0.0357*blurred;
+  vec3 vx = vec3(TexCoord.xy, coordZ);
+  // --- Z+ Plane (+dZ) ---
+  float XYZ = texture(intensityVol, vx + vec3(+dX, +dY, +dZ)).a;
+  float OYZ = texture(intensityVol, vx + vec3(0.0, +dY, +dZ)).a;
+  float xYZ = texture(intensityVol, vx + vec3(-dX, +dY, +dZ)).a;
+  float XOZ = texture(intensityVol, vx + vec3(+dX, 0.0, +dZ)).a;
+  float OOZ = texture(intensityVol, vx + vec3(0.0, 0.0, +dZ)).a;
+  float xOZ = texture(intensityVol, vx + vec3(-dX, 0.0, +dZ)).a;
+  float XyZ = texture(intensityVol, vx + vec3(+dX, -dY, +dZ)).a;
+  float OyZ = texture(intensityVol, vx + vec3(0.0, -dY, +dZ)).a;
+  float xyZ = texture(intensityVol, vx + vec3(-dX, -dY, +dZ)).a;
+  // --- Z0 Plane (0.0) ---
+  float XYO = texture(intensityVol, vx + vec3(+dX, +dY, 0.0)).a;
+  float OYO = texture(intensityVol, vx + vec3(0.0, +dY, 0.0)).a;
+  float xYO = texture(intensityVol, vx + vec3(-dX, +dY, 0.0)).a;
+  float XOO = texture(intensityVol, vx + vec3(+dX, 0.0, 0.0)).a;
+  float OOO = texture(intensityVol, vx + vec3(0.0, 0.0, 0.0)).a;
+  float xOO = texture(intensityVol, vx + vec3(-dX, 0.0, 0.0)).a;
+  float XyO = texture(intensityVol, vx + vec3(+dX, -dY, 0.0)).a;
+  float OyO = texture(intensityVol, vx + vec3(0.0, -dY, 0.0)).a;
+  float xyO = texture(intensityVol, vx + vec3(-dX, -dY, 0.0)).a;
+  // --- Z- Plane (-dZ) ---
+  float XYz = texture(intensityVol, vx + vec3(+dX, +dY, -dZ)).a;
+  float OYz = texture(intensityVol, vx + vec3(0.0, +dY, -dZ)).a;
+  float xYz = texture(intensityVol, vx + vec3(-dX, +dY, -dZ)).a;
+  float XOz = texture(intensityVol, vx + vec3(+dX, 0.0, -dZ)).a;
+  float OOz = texture(intensityVol, vx + vec3(0.0, 0.0, -dZ)).a;
+  float xOz = texture(intensityVol, vx + vec3(-dX, 0.0, -dZ)).a;
+  float Xyz = texture(intensityVol, vx + vec3(+dX, -dY, -dZ)).a;
+  float Oyz = texture(intensityVol, vx + vec3(0.0, -dY, -dZ)).a;
+  float xyz = texture(intensityVol, vx + vec3(-dX, -dY, -dZ)).a;
+  // --- Directional blur sums ---
+  vec3 blurred;
+  blurred.x = 2.0 * (xOz + xOZ + xyO + xYO + xOO + XOz + XOZ + XyO + XYO + XOO)
+              + xyz + xyZ + xYz + xYZ + Xyz + XyZ + XYz + XYZ;
+  blurred.y = 2.0 * (Oyz + OyZ + xyO + XyO + OyO + OYz + OYZ + xYO + XYO + OYO)
+              + xyz + Xyz + xyZ + XyZ + xYz + XYz + xYZ + XYZ;
+  blurred.z = 2.0 * (Oyz + OYz + xOz + XOz + OOz + OyZ + OYZ + xOZ + XOZ + OOZ)
+              + xyz + Xyz + xYz + XYz + xyZ + XyZ + xYZ + XYZ;
+  float finalAlpha = 0.32 * (abs(blurred.x) + abs(blurred.y) + abs(blurred.z));
+  // 0.0357 = 1/28 to account for weights, rescale to 2**16,
+  FragColor = 0.0357 * vec4(blurred, finalAlpha);
 }`
 
 // -18.988706873717717 = log2(1/(255**2*8)) // 8 is chosen for contrast
@@ -2303,14 +2424,14 @@ uniform highp sampler3D intensityVol;
 void main(void) {
   vec3 vx = vec3(TexCoord.xy, coordZ);
   //Neighboring voxels 'T'op/'B'ottom, 'A'nterior/'P'osterior, 'R'ight/'L'eft
-  float TAR = texture(intensityVol,vx+vec3(+dX,+dY,+dZ)).r;
-  float TAL = texture(intensityVol,vx+vec3(+dX,+dY,-dZ)).r;
-  float TPR = texture(intensityVol,vx+vec3(+dX,-dY,+dZ)).r;
-  float TPL = texture(intensityVol,vx+vec3(+dX,-dY,-dZ)).r;
-  float BAR = texture(intensityVol,vx+vec3(-dX,+dY,+dZ)).r;
-  float BAL = texture(intensityVol,vx+vec3(-dX,+dY,-dZ)).r;
-  float BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ)).r;
-  float BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ)).r;
+  float TAR = texture(intensityVol,vx+vec3(+dX,+dY,+dZ)).a;
+  float TAL = texture(intensityVol,vx+vec3(+dX,+dY,-dZ)).a;
+  float TPR = texture(intensityVol,vx+vec3(+dX,-dY,+dZ)).a;
+  float TPL = texture(intensityVol,vx+vec3(+dX,-dY,-dZ)).a;
+  float BAR = texture(intensityVol,vx+vec3(-dX,+dY,+dZ)).a;
+  float BAL = texture(intensityVol,vx+vec3(-dX,+dY,-dZ)).a;
+  float BPR = texture(intensityVol,vx+vec3(-dX,-dY,+dZ)).a;
+  float BPL = texture(intensityVol,vx+vec3(-dX,-dY,-dZ)).a;
   vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
   gradientSample.r = BAR+BAL+BPR+BPL -TAR-TAL-TPR-TPL;
   gradientSample.g = TPR+TPL+BPR+BPL -TAR-TAL-BAR-BAL;
@@ -2356,13 +2477,13 @@ void main(void) {
   vec4 P = texture(intensityVol,vx+vec3(0.0,-dY2,0.0));
   vec4 L = texture(intensityVol,vx+vec3(0.0,0.0,-dZ2));
   vec4 gradientSample = vec4 (0.0, 0.0, 0.0, 0.0);
-  gradientSample.r = -4.0*B.r +8.0*(BAR.r+BAL.r+BPR.r+BPL.r) -8.0*(TAR.r+TAL.r+TPR.r+TPL.r) +4.0*T.r;
-  gradientSample.g = -4.0*P.g +8.0*(TPR.g+TPL.g+BPR.g+BPL.g) -8.0*(TAR.g+TAL.g+BAR.g+BAL.g) +4.0*A.g;
-  gradientSample.b = -4.0*L.b +8.0*(TAL.b+TPL.b+BAL.b+BPL.b) -8.0*(TAR.b+TPR.b+BAR.b+BPR.b) +4.0*R.b;
+  gradientSample.x = -4.0*B.x +8.0*(BAR.x+BAL.x+BPR.x+BPL.x) -8.0*(TAR.x+TAL.x+TPR.x+TPL.x) +4.0*T.x;
+  gradientSample.y = -4.0*P.y +8.0*(TPR.y+TPL.y+BPR.y+BPL.y) -8.0*(TAR.y+TAL.y+BAR.y+BAL.y) +4.0*A.y;
+  gradientSample.z = -4.0*L.z +8.0*(TAL.z+TPL.z+BAL.z+BPL.z) -8.0*(TAR.z+TPR.z+BAR.z+BPR.z) +4.0*R.z;
 ${kGradientMagnitude}
 	gradientSample.a *= 0.0325;
-  float gradLen = length(gradientSample.rgb);
-  gradientSample.rgb = gradLen > 0.001 ? gradientSample.rgb / gradLen : vec3(0.0);
-  gradientSample.rgb =  (gradientSample.rgb * 0.5)+0.5;
+  float gradLen = length(gradientSample.xyz);
+  gradientSample.xyz = gradLen > 0.001 ? gradientSample.xyz / gradLen : vec3(0.0);
+  gradientSample.xyz =  (gradientSample.xyz * 0.5)+0.5;
   FragColor = gradientSample;
 }`
