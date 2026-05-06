@@ -6,6 +6,17 @@ const BIDS_FILENAME_RE = /^sub-[a-zA-Z0-9]+(_ses-[a-zA-Z0-9]+)?(_task-[a-zA-Z0-9
 
 const REQUIRED_TASK_DATATYPES = new Set(['func'])
 
+// BIDS prohibits the `task` entity on fieldmap suffixes
+const FMAP_SUFFIXES = new Set([
+  'epi',
+  'magnitude1',
+  'magnitude2',
+  'phasediff',
+  'phase1',
+  'phase2',
+  'fieldmap'
+])
+
 export function validateProposedDataset(
   config: BidsDatasetConfig,
   mappings: BidsSeriesMapping[]
@@ -37,6 +48,18 @@ export function validateProposedDataset(
       errors.push({
         severity: 'error',
         message: `Invalid BIDS filename: "${filename}"`,
+        file: filename
+      })
+    }
+
+    // BIDS prohibits the `task` entity on fmap suffixes
+    if (
+      (m.datatype === 'fmap' || FMAP_SUFFIXES.has(m.suffix)) &&
+      filename.includes('_task-')
+    ) {
+      errors.push({
+        severity: 'error',
+        message: `Task entity is not allowed for fmap suffix "${m.suffix}": "${filename}"`,
         file: filename
       })
     }

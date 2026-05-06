@@ -114,6 +114,37 @@ describe('bidsValidator - validateProposedDataset', () => {
     expect(result.warnings.some((w) => w.message.includes('Low confidence'))).toBe(true)
   })
 
+  it('should pass for valid fmap filename without task entity', () => {
+    const fmap = makeMapping({
+      datatype: 'fmap',
+      suffix: 'epi',
+      task: ''
+    })
+    const result = validateProposedDataset(makeConfig(), [fmap])
+    expect(result.errors.some((e) => e.message.includes('Task entity is not allowed'))).toBe(false)
+  })
+
+  it('should reject fmap suffix when filename contains task entity', () => {
+    const fmap = makeMapping({
+      datatype: 'func',
+      suffix: 'epi',
+      task: 'rest'
+    })
+    const result = validateProposedDataset(makeConfig(), [fmap])
+    expect(result.valid).toBe(false)
+    expect(result.errors.some((e) => e.message.includes('Task entity is not allowed'))).toBe(true)
+  })
+
+  it('should pass for valid func filename with task entity', () => {
+    const func = makeMapping({
+      datatype: 'func',
+      suffix: 'bold',
+      task: 'rest'
+    })
+    const result = validateProposedDataset(makeConfig(), [func])
+    expect(result.errors.some((e) => e.message.includes('Task entity is not allowed'))).toBe(false)
+  })
+
   it('should warn on fieldmap without IntendedFor', () => {
     const fmap = makeMapping({
       index: 0,
