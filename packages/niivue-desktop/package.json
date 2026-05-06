@@ -42,7 +42,10 @@
     "pretest:e2e": "node scripts/ensure-electron-symlink.cjs",
     "test:e2e": "env -u ELECTRON_RUN_AS_NODE wdio run wdio.conf.ts",
     "test:cli": "vitest run --config vitest.cli.config.ts",
-    "test:unit": "vitest run --config vitest.unit.config.ts"
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "presentation": "PORT=4040 npx --yes @marp-team/marp-cli@latest -s docs/",
+    "presentation:pdf": "npx --yes @marp-team/marp-cli@latest docs/presentation.md --pdf --allow-local-files",
+    "presentation:html": "npx --yes @marp-team/marp-cli@latest docs/presentation.md --html --allow-local-files"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.1",
