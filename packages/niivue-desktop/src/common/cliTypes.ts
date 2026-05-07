@@ -3,8 +3,8 @@
  */
 export interface CLIOptions {
   /** The subcommand to execute */
-  subcommand: 'view' | 'segment' | 'extract' | 'dcm2niix' | 'niimath' | null
-  /** Second-level subcommand (for dcm2niix: 'list' | 'convert') */
+  subcommand: 'view' | 'segment' | 'extract' | 'dcm2niix' | 'niimath' | 'allineate' | 'workflow' | null
+  /** Second-level subcommand (for dcm2niix: 'list' | 'convert'; for workflow: workflow name) */
   subcommandMode?: string
   /** Input file path, URL, standard name, or '-' for stdin */
   input: string | null
@@ -34,6 +34,20 @@ export interface CLIOptions {
   labelJson: string | null
   /** Comma-separated label names to extract (requires labelJson) */
   labelNames: string | null
+  /** allineate: stationary/target image path */
+  stationary: string | null
+  /** allineate: cost function (hel, ls, lpc, lpa) */
+  cost: string | null
+  /** allineate: center-of-mass initialization */
+  cmass: boolean
+  /** allineate: source automask */
+  sourceAutomask: boolean
+  /** allineate: interpolation for output (NN, linear, cubic) */
+  final: string | null
+  /** workflow: JSON string of workflow inputs */
+  workflowInputs: string | null
+  /** workflow: path to JSON file with context overrides */
+  workflowContext: string | null
   /** Show help */
   help: boolean
 }
@@ -69,7 +83,7 @@ export type SegmentationModel = (typeof AVAILABLE_MODELS)[number]
 /**
  * Available standard/bundled image names
  */
-export const STANDARD_IMAGES = ['mni152', 'chris_t1'] as const
+export const STANDARD_IMAGES = ['mni152', 'mni152_head', 'mniMask', 'chris_t1'] as const
 
 export type StandardImage = (typeof STANDARD_IMAGES)[number]
 
@@ -85,8 +99,10 @@ export const EXIT_CODES = {
   MODEL_NOT_FOUND: 5,
   DCM2NIIX_ERROR: 6,
   NIIMATH_ERROR: 7,
+  ALLINEATE_ERROR: 10,
   STDIN_TIMEOUT: 8,
-  URL_FETCH_ERROR: 9
+  URL_FETCH_ERROR: 9,
+  WORKFLOW_ERROR: 11
 } as const
 
 /**
@@ -110,6 +126,13 @@ export function getDefaultCLIOptions(): CLIOptions {
     binarize: false,
     labelJson: null,
     labelNames: null,
+    stationary: null,
+    cost: null,
+    cmass: false,
+    sourceAutomask: false,
+    final: null,
+    workflowInputs: null,
+    workflowContext: null,
     help: false
   }
 }

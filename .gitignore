@@ -54,3 +54,7 @@ packages/niivue/public/
 
 # dynamic API docs
 packages/docs/docs/api
+
+# Claude Code machine-local state
+.claude/scheduled_tasks.lock
+.claude/settings.local.json

@@ -1,0 +1,56 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "brainchop",
+  "version": "1.0.0",
+  "description": "Skull strip a NIfTI volume using Brainchop MindGrab (in-browser WebGL inference)",
+  "inputs": {
+    "nifti_paths": {
+      "type": "volume[]",
+      "description": "Anatomical volumes to skull strip"
+    },
+    "nifti_path": {
+      "type": "volume",
+      "description": "Per-iteration anatomical volume (set by forEach)",
+      "optional": true
+    },
+    "output_path": {
+      "type": "string",
+      "description": "Path for the skull-stripped output NIfTI",
+      "optional": true
+    },
+    "model": {
+      "type": "string",
+      "description": "Brainchop model to use for brain extraction",
+      "optional": true,
+      "default": "brain-extract-mindgrab"
+    },
+    "dilation": {
+      "type": "number",
+      "description": "Number of voxels to dilate the brain mask",
+      "optional": true,
+      "default": 3,
+      "min": 0,
+      "max": 10
+    }
+  },
+  "outputs": {
+    "output_paths": {
+      "type": "volume[]",
+      "description": "Paths to the skull-stripped NIfTI volumes"
+    }
+  },
+  "block": {
+    "id": "skull-strip",
+    "label": "Skull Strip",
+    "description": "Remove non-brain tissue using ML-based extraction",
+    "category": "Processing",
+    "icon": "ScissorsIcon",
+    "defaults": {
+      "model": "brain-extract-mindgrab",
+      "dilation": 3
+    },
+    "exposedFields": [],
+    "hiddenFields": ["nifti_paths", "nifti_path", "model", "dilation", "output_path"],
+    "formComponent": "skull-strip-editor"
+  }
+}

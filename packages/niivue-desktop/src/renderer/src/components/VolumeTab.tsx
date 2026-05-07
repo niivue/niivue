@@ -62,7 +62,7 @@ export const VolumeTab = (): JSX.Element => {
       <Accordion.Root type="multiple" className="w-full">
         {/* Graph Settings */}
         {hasTimeSeries && (
-          <Accordion.Item value="graph-settings" className="border-b border-gray-200">
+          <Accordion.Item value="graph-settings" className="border-b border-[var(--gray-5)]">
             <Accordion.Header>
               <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
                 <Text size="2" weight="bold">
@@ -114,7 +114,7 @@ export const VolumeTab = (): JSX.Element => {
         )}
 
         {/* Color Map Display */}
-        <Accordion.Item value="colormap-settings" className="border-b border-gray-200">
+        <Accordion.Item value="colormap-settings" className="border-b border-[var(--gray-5)]">
           <Accordion.Header>
             <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
               <Text size="2" weight="bold">
@@ -144,7 +144,7 @@ export const VolumeTab = (): JSX.Element => {
 
         {/* Mosaic Settings */}
         {instance.sliceMosaicString.trim() !== '' && (
-          <Accordion.Item value="mosaic-settings" className="border-b border-gray-200">
+          <Accordion.Item value="mosaic-settings" className="border-b border-[var(--gray-5)]">
             <Accordion.Header>
               <Accordion.Trigger className="flex justify-between items-center w-full my-2 pr-2 text-left group">
                 <Text size="2" weight="bold">
@@ -163,7 +163,7 @@ export const VolumeTab = (): JSX.Element => {
               </Accordion.Trigger>
             </Accordion.Header>
             <Accordion.Content className="px-4 py-2">
-              <p className="text-xs italic text-gray-500 mt-2">
+              <p className="text-xs italic text-[var(--gray-9)] mt-2">
                 Edit the mosaic string to change the mosaic view.
               </p>
               <MosaicControls />

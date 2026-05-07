@@ -17,3 +17,35 @@ body {
   display: flex;
   flex-direction: column;
 }
+
+/* ── Wizard step transitions ──────────────────────────────────────── */
+.wizard-step-enter {
+  opacity: 0;
+}
+.wizard-step-enter[data-direction='forward'] {
+  transform: translateX(24px);
+}
+.wizard-step-enter[data-direction='backward'] {
+  transform: translateX(-24px);
+}
+.wizard-step-enter-active {
+  opacity: 1;
+  transform: translateX(0);
+  transition: opacity 150ms ease-out, transform 150ms ease-out;
+}
+.wizard-step-exit {
+  opacity: 1;
+  transform: translateX(0);
+}
+.wizard-step-exit-active {
+  opacity: 0;
+  transition: opacity 100ms ease-in;
+}
+.wizard-step-exit-active[data-direction='forward'] {
+  transform: translateX(-24px);
+  transition: opacity 100ms ease-in, transform 100ms ease-in;
+}
+.wizard-step-exit-active[data-direction='backward'] {
+  transform: translateX(24px);
+  transition: opacity 100ms ease-in, transform 100ms ease-in;
+}

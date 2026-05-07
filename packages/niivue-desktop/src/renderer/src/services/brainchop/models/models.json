@@ -85,6 +85,24 @@
       "isBundled": true
     },
     {
+      "id": "brain-extract-mindgrab",
+      "name": "Brain Extraction (MindGrab)",
+      "type": "brain-extraction",
+      "category": "Brain Extraction",
+      "description": "MindGrab brain extraction with progressive dilation",
+      "expectedInputShape": [1, 256, 256, 256],
+      "outputClasses": 2,
+      "modelPath": "brainchop-models/mindgrab/model.bcmodel",
+      "estimatedTimeSeconds": 3,
+      "memoryRequirementMB": 400,
+      "enableSeqConv": false,
+      "cropPadding": 18,
+      "autoThreshold": 0.02,
+      "enableQuantileNorm": false,
+      "enableTranspose": true,
+      "isBundled": true
+    },
+    {
       "id": "parcellation-50",
       "name": "Parcellation (50 regions)",
       "type": "parcellation",

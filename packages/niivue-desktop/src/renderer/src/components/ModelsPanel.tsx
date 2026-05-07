@@ -16,7 +16,11 @@ const categories: Array<{ label: string; value: string }> = [
   { label: 'Regional Parcellation', value: 'Regional Parcellation' }
 ]
 
-export function ModelsPanel({ availableModels, onRunSegmentation, onModelsChanged }: ModelsPanelProps): JSX.Element {
+export function ModelsPanel({
+  availableModels,
+  onRunSegmentation,
+  onModelsChanged
+}: ModelsPanelProps): JSX.Element {
   const [categoryFilter, setCategoryFilter] = useState('all')
   const [wizardOpen, setWizardOpen] = useState(false)
 
@@ -47,7 +51,7 @@ export function ModelsPanel({ availableModels, onRunSegmentation, onModelsChange
 
         <button
           onClick={() => setWizardOpen(true)}
-          className="w-full px-3 py-2 mb-3 text-xs bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors"
+          className="w-full px-3 py-2 mb-3 text-xs bg-[var(--gray-11)] text-white rounded hover:bg-[var(--gray-10)] transition-colors"
         >
           + Add Model
         </button>
@@ -117,18 +121,22 @@ function ModelCard({
   }, [model.previewPath])
 
   return (
-    <div className="bg-white rounded-md border border-gray-200 p-3 flex flex-col gap-1.5">
+    <div className="bg-[var(--color-background)] rounded-md border border-[var(--gray-5)] p-3 flex flex-col gap-1.5">
       {/* Preview image */}
       {model.previewPath && (
-        <div className="w-full h-36 bg-gray-100 rounded overflow-hidden mb-1">
+        <div className="w-full h-36 bg-[var(--gray-3)] rounded overflow-hidden mb-1">
           {previewLoading ? (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+            <div className="w-full h-full flex items-center justify-center text-[var(--gray-8)] text-xs">
               Loading...
             </div>
           ) : previewSrc ? (
-            <img src={previewSrc} alt={`${model.name} preview`} className="w-full h-full object-contain" />
+            <img
+              src={previewSrc}
+              alt={`${model.name} preview`}
+              className="w-full h-full object-contain"
+            />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-gray-400 text-xs">
+            <div className="w-full h-full flex items-center justify-center text-[var(--gray-8)] text-xs">
               No preview
             </div>
           )}
@@ -158,7 +166,7 @@ function ModelCard({
         {model.description}
       </Text>
 
-      <div className="flex gap-3 text-xs text-gray-500">
+      <div className="flex gap-3 text-xs text-[var(--gray-9)]">
         <span>{model.outputClasses} classes</span>
         <span>~{model.estimatedTimeSeconds}s</span>
         <span>{model.memoryRequirementMB}MB</span>
@@ -168,14 +176,14 @@ function ModelCard({
         {(isBundled || isUserLocal) && (
           <button
             onClick={() => onRun(model.id)}
-            className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+            className="px-3 py-1 text-xs bg-[var(--accent-9)] text-white rounded hover:bg-[var(--accent-10)] transition-colors"
           >
             Run
           </button>
         )}
         {hasRemote && !isBundled && (
           <button
-            className="px-3 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700 transition-colors"
+            className="px-3 py-1 text-xs bg-[var(--gray-10)] text-white rounded hover:bg-[var(--gray-11)] transition-colors"
             onClick={() => {
               /* TODO: download then run */
             }}

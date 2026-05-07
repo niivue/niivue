@@ -101,7 +101,9 @@ export const registerSegmentationHandlers = ({
       if (result.modelInfo.colormapPath) {
         console.log('[Renderer] Loading colormap labels from:', result.modelInfo.colormapPath)
         try {
-          const colormapJson = await window.electron.loadBrainchopLabels(result.modelInfo.colormapPath)
+          const colormapJson = await window.electron.loadBrainchopLabels(
+            result.modelInfo.colormapPath
+          )
           result.volume.setColormapLabel(colormapJson)
           if (result.volume.colormapLabel?.lut) {
             result.volume.colormapLabel.lut = result.volume.colormapLabel.lut.map((v, i) =>

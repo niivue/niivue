@@ -3,6 +3,8 @@ import { loadStandardHandler } from './loadStandard.js'
 import { openMeshFileDialog } from './openMeshFileDialog.js'
 import { saveCompressedNVDHandler, saveHTMLHandler } from './saveFile.js'
 import { runNiimath, startNiimathJob } from './runNiimath.js'
+import { runAllineate, runAllineateJob } from './runAllineate.js'
+import { getStandardImagePath } from './inputResolver.js'
 import { app, dialog, ipcMain, Menu, nativeImage } from 'electron'
 import { NVConfigOptions } from '@niivue/niivue'
 import { store } from '../utils/appStore.js'
@@ -14,6 +16,9 @@ import path from 'path'
 import { convertSeriesByNumber } from './runDcm2niix.js'
 import type { ConvertSeriesOptions } from '../../common/dcm2niixTypes.js'
 import { openReplaceVolumeFileDialog } from './openReplaceVolumeFileDialog.js'
+import { registerBidsIpcHandlers } from './bidsIpcHandlers.js'
+import { registerWorkflowIpcHandlers } from './workflowIpcHandlers.js'
+import { isPathUnderAllowedRoot, registerAllowedRoot } from './pathSafety.js'
 
 const isDev = !app.isPackaged
 const RESOURCES_DIR = isDev
@@ -21,8 +26,18 @@ const RESOURCES_DIR = isDev
   : path.join(process.resourcesPath)
 
 export const registerIpcHandlers = (): void => {
+  registerBidsIpcHandlers()
+  registerWorkflowIpcHandlers()
   ipcMain.handle('openMeshFileDialog', openMeshFileDialog)
   ipcMain.handle('loadFromFile', loadFromFileHandler)
+
+  // Confine renderer probes to app-managed roots and user-registered dirs
+  // (see pathSafety.ts). Returns false for any path outside, regardless of
+  // actual existence, to avoid leaking filesystem layout to the renderer.
+  ipcMain.handle('file-exists', (_evt, filePath: string) => {
+    if (typeof filePath !== 'string' || !isPathUnderAllowedRoot(filePath)) return false
+    return fs.existsSync(filePath)
+  })
   ipcMain.handle('loadStandard', loadStandardHandler)
   ipcMain.handle('saveCompressedNVD', saveCompressedNVDHandler)
   ipcMain.handle('saveHTML', saveHTMLHandler)
@@ -49,6 +64,11 @@ export const registerIpcHandlers = (): void => {
       properties,
       filters
     })
+    // User picked these explicitly — register their containing dirs so later
+    // file-exists probes against them succeed.
+    for (const p of result.filePaths) {
+      registerAllowedRoot(path.dirname(p))
+    }
     return result.filePaths
   })
 
@@ -113,6 +133,7 @@ export const registerIpcHandlers = (): void => {
     if (result.canceled || result.filePaths.length === 0) {
       return null
     }
+    registerAllowedRoot(result.filePaths[0])
     return result.filePaths[0]
   })
 
@@ -187,6 +208,53 @@ export const registerIpcHandlers = (): void => {
     }
   )
 
+  // run allineate CLI
+  ipcMain.handle('allineate:run', async (_evt, args: string[]) => {
+    try {
+      const result = await runAllineate(args)
+      return { success: true, ...result }
+    } catch (err) {
+      return { success: false, error: (err as Error).message }
+    }
+  })
+
+  /**
+   * Run allineate registration: moving + stationary + opts → output file.
+   * Expects (movingPath, stationaryPath, outputPath, opts[]).
+   */
+  ipcMain.handle(
+    'allineate:register',
+    async (
+      _evt,
+      movingPath: string,
+      stationaryPath: string,
+      outputPath: string,
+      opts: string[]
+    ) => {
+      try {
+        const result = await runAllineateJob(movingPath, stationaryPath, outputPath, opts)
+        return { success: true, ...result }
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        return { success: false, error: msg }
+      }
+    }
+  )
+
+  // Resolve standard image path for allineate (needs file path, not base64)
+  ipcMain.handle('allineate:standard-path', (_evt, name: string) => {
+    const imagePath = getStandardImagePath(name)
+    if (fs.existsSync(imagePath)) return imagePath
+    return null
+  })
+
+  // Relay a load request from the renderer back through the same channel the menu uses.
+  // This ensures proper timing: the loadVolume event arrives on a fresh event tick,
+  // giving React time to render any new document Viewer before addVolume is called.
+  ipcMain.on('relay-load-volume', (event, filePath: string) => {
+    event.sender.send('loadVolume', filePath)
+  })
+
   ipcMain.on('base-image-loaded', () => {
     const item = Menu.getApplicationMenu()?.getMenuItemById('addOverlay')
     if (item) item.enabled = true
@@ -204,7 +272,7 @@ export const registerIpcHandlers = (): void => {
   ipcMain.handle(
     'dcm2niix:convert-series',
     async (
-      evt,
+      _evt,
       payload: {
         dicomDir: string
         seriesNumbers: number[]
@@ -212,6 +280,7 @@ export const registerIpcHandlers = (): void => {
       }
     ) => {
       try {
+        const allFiles: string[] = []
         for (const seriesNumber of payload.seriesNumbers) {
           const res = await convertSeriesByNumber(payload.dicomDir, seriesNumber, {
             pattern: '%f_%p_%t_%s', // MRIcroGL-style filenames
@@ -222,7 +291,7 @@ export const registerIpcHandlers = (): void => {
             ...payload.options
           })
 
-          // Send each produced NIfTI to the existing renderer 'loadVolume' handler by PATH
+          // Collect produced NIfTI paths
           const files = fs
             .readdirSync(res.outDir)
             .filter((f) => !f.startsWith('.'))
@@ -232,11 +301,10 @@ export const registerIpcHandlers = (): void => {
             })
 
           for (const f of files) {
-            const full = path.join(res.outDir, f)
-            evt.sender.send('loadVolume', full)
+            allFiles.push(path.join(res.outDir, f))
           }
         }
-        return { success: true }
+        return { success: true, files: allFiles }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
         return { success: false, error: msg }
@@ -244,20 +312,59 @@ export const registerIpcHandlers = (): void => {
     }
   )
 
-  // Select a local model folder (must contain model.json)
+  // Select a local model folder (must contain model.json or .bcmodel)
   ipcMain.handle('select-model-folder', async () => {
     const result = await dialog.showOpenDialog({
       title: 'Select Model Folder',
       properties: ['openDirectory'],
-      message: 'Select a folder containing a TensorFlow.js model (model.json + weights)'
+      message: 'Select a folder containing a TensorFlow.js model (model.json + weights) or a .bcmodel file'
     })
     if (result.canceled || result.filePaths.length === 0) return null
     const folderPath = result.filePaths[0]
 
+    // Check for .bcmodel file first
+    const dirFiles = fs.readdirSync(folderPath)
+    const bcmodelFile = dirFiles.find((f) => f.endsWith('.bcmodel'))
+    if (bcmodelFile) {
+      const bcmodelPath = path.join(folderPath, bcmodelFile)
+      const raw = fs.readFileSync(bcmodelPath)
+      const buf = raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength)
+      const view = new DataView(buf)
+      const headerSize = view.getUint32(0, true)
+      const headerBytes = new Uint8Array(buf, 8, headerSize)
+      const header = JSON.parse(new TextDecoder().decode(headerBytes))
+      const inf = header.inference || {}
+      const perf = header.performance || {}
+
+      return {
+        folderPath,
+        modelJson: null,
+        hasLabels: !!(header.labels && header.labels.length > 0),
+        folderName: path.basename(folderPath),
+        bcmodelFile,
+        settings: {
+          enableSeqConv: inf.enable_seq_conv || false,
+          cropPadding: inf.crop_padding ?? 18,
+          autoThreshold: inf.auto_threshold ?? 0,
+          enableQuantileNorm: inf.enable_quantile_norm || false,
+          enableTranspose: inf.enable_transpose !== false,
+          estimatedTimeSeconds: perf.estimated_time_seconds || 10,
+          memoryRequirementMB: perf.memory_requirement_mb || 800,
+          type: header.metadata?.type || 'parcellation',
+          name: header.metadata?.name || path.basename(folderPath),
+          description: header.metadata?.description || '',
+          outputClasses: header.output?.num_classes || 2,
+          expectedInputShape: header.input?.shape
+            ? [header.input.shape[0], header.input.shape[2], header.input.shape[3], header.input.shape[4]]
+            : [1, 256, 256, 256]
+        }
+      }
+    }
+
     // Validate: must contain model.json
     const modelJsonPath = path.join(folderPath, 'model.json')
     if (!fs.existsSync(modelJsonPath)) {
-      throw new Error('Selected folder does not contain a model.json file')
+      throw new Error('Selected folder does not contain a model.json or .bcmodel file')
     }
 
     // Read model.json to extract metadata
@@ -323,7 +430,9 @@ export const registerIpcHandlers = (): void => {
   // Load brainchop labels file
   ipcMain.handle('load-brainchop-labels', async (_event, labelsPath: string) => {
     try {
-      const fullPath = path.isAbsolute(labelsPath) ? labelsPath : path.join(RESOURCES_DIR, labelsPath)
+      const fullPath = path.isAbsolute(labelsPath)
+        ? labelsPath
+        : path.join(RESOURCES_DIR, labelsPath)
       console.log('[Main] Loading brainchop labels from:', fullPath)
       const json = await fs.promises.readFile(fullPath, 'utf-8')
       return JSON.parse(json)
@@ -336,7 +445,9 @@ export const registerIpcHandlers = (): void => {
   // Load brainchop preview image
   ipcMain.handle('load-brainchop-preview', async (_event, previewPath: string) => {
     try {
-      const fullPath = path.isAbsolute(previewPath) ? previewPath : path.join(RESOURCES_DIR, previewPath)
+      const fullPath = path.isAbsolute(previewPath)
+        ? previewPath
+        : path.join(RESOURCES_DIR, previewPath)
       console.log('[Main] Loading brainchop preview from:', fullPath)
 
       // Check if file exists
@@ -356,8 +467,9 @@ export const registerIpcHandlers = (): void => {
   // Load brainchop weight file
   ipcMain.handle('load-brainchop-weights', async (_event, weightPath: string) => {
     try {
-      console.log('[Main] Loading weight file:', weightPath)
-      const buffer = await fs.promises.readFile(weightPath)
+      const fullPath = path.isAbsolute(weightPath) ? weightPath : path.join(RESOURCES_DIR, weightPath)
+      console.log('[Main] Loading weight file:', fullPath)
+      const buffer = await fs.promises.readFile(fullPath)
       console.log('[Main] Weight file size:', buffer.byteLength, 'bytes')
 
       // Convert Node.js Buffer to ArrayBuffer explicitly

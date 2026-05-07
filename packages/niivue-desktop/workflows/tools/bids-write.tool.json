@@ -1,0 +1,48 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "bids-write",
+  "version": "1.0.0",
+  "description": "Write a BIDS-compliant dataset to disk from classified series and configuration",
+  "inputs": {
+    "volumes": {
+      "type": "volume[]",
+      "description": "NIfTI volume files to include in the dataset"
+    },
+    "mappings": {
+      "type": "series-mapping[]",
+      "description": "Classified series mappings with BIDS paths and metadata"
+    },
+    "config": {
+      "type": "object",
+      "description": "Workflow context containing dataset metadata (name, outputDir, license, authors, readme, bidsVersion)"
+    },
+    "output_dir": {
+      "type": "directory",
+      "description": "Output directory for the BIDS dataset"
+    }
+  },
+  "outputs": {
+    "bids_dir": {
+      "type": "bids-dir",
+      "description": "Path to the written BIDS dataset directory"
+    },
+    "files_copied": {
+      "type": "number",
+      "description": "Number of files written to the dataset"
+    }
+  },
+  "block": {
+    "id": "write-bids",
+    "label": "Write BIDS Dataset",
+    "description": "Write classified data to a BIDS-compliant directory structure",
+    "category": "Output",
+    "icon": "DownloadIcon",
+    "defaults": {
+      "mappings": { "ref": "context.series_list" },
+      "config": { "ref": "context" }
+    },
+    "exposedFields": ["output_dir"],
+    "hiddenFields": ["volumes", "mappings", "config"],
+    "formComponent": "bids-preview"
+  }
+}

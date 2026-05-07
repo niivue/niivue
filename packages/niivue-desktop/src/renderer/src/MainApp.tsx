@@ -12,12 +12,20 @@ import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
 // import { layouts } from '../../common/layouts.js'
 import { StatusBar } from './components/StatusBar.js'
 import { DicomImportDialog } from './components/DicomImportDialog.js'
+import { BidsWizard } from './components/BidsWizard/BidsWizard.js'
+import { BidsFilterDialog } from './components/BidsFilterDialog.js'
 import { RightPanel } from './components/RightPanel.js'
 import { SegmentationDialog } from './components/SegmentationDialog.js'
 import { brainchopService } from './services/brainchop/index.js'
 import type { ModelInfo } from './services/brainchop/types.js'
 import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
+import { WorkflowDialog } from './components/WorkflowDialog.js'
+import { WorkflowDesignerDialog } from './components/WorkflowDesignerDialog.js'
+import { WorkflowTemplateGallery, type TemplateChoice } from './components/WorkflowTemplateGallery.js'
+import { HeuristicDesigner } from './components/HeuristicDesigner.js'
+import { OpenTargetDialog } from './components/OpenTargetDialog.js'
+import { UnsavedChangesDialog } from './components/UnsavedChangesDialog.js'
 
 const electron = window.electron
 
@@ -84,10 +92,141 @@ function MainApp(): JSX.Element {
   const [extractSubvolumeEnabled, setExtractSubvolumeEnabled] = useState(false)
   const [selectedExtractLabels, setSelectedExtractLabels] = useState<Set<number>>(new Set())
   const availableModels = brainchopService.getAvailableModels()
+
+  // BIDS panel state — per-document
+  const bidsMappings = selected?.bidsMappings ?? []
+  const setBidsMappings = selected?.setBidsMappings
+
+  // Workflow dialog state
+  const [workflowOpen, setWorkflowOpen] = useState(false)
+  const [workflowName, setWorkflowName] = useState('')
+  const [workflowInputs, setWorkflowInputs] = useState<Record<string, unknown>>({})
+
+  // Workflow designer state
+  const [workflowDesignerOpen, setWorkflowDesignerOpen] = useState(false)
+  const [designerInitialDefinition, setDesignerInitialDefinition] = useState<Record<string, unknown> | null>(null)
+
+  // Template gallery state
+  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false)
+
+  // Heuristic designer state
+  const [heuristicDesignerOpen, setHeuristicDesignerOpen] = useState(false)
+  const [heuristicInitialDefinition, setHeuristicInitialDefinition] = useState<import('../../common/workflowTypes.js').HeuristicDefinition | null>(null)
+
+  // Listen for workflow:open from menu
+  useEffect(() => {
+    const handleWorkflowOpen = (
+      _evt: unknown,
+      payload: { workflowName: string; inputs: Record<string, unknown> }
+    ): void => {
+      setWorkflowName(payload.workflowName)
+      setWorkflowInputs(payload.inputs)
+      setWorkflowOpen(true)
+    }
+    electron.ipcRenderer.on('workflow:open', handleWorkflowOpen)
+
+    const handleOpenDesigner = (): void => {
+      setTemplateGalleryOpen(true)
+    }
+    electron.ipcRenderer.on('workflow:open-designer', handleOpenDesigner)
+
+    const handleOpenDesignerTutorial = (): void => {
+      setDesignerInitialDefinition(null)
+      setWorkflowDesignerOpen(true)
+    }
+    electron.ipcRenderer.on('workflow:open-designer-tutorial', handleOpenDesignerTutorial)
+
+    const handleEditDesigner = (_evt: unknown, workflowName: string): void => {
+      electron.ipcRenderer.invoke('workflow:get-definition', workflowName).then(
+        (definition: Record<string, unknown>) => {
+          setDesignerInitialDefinition(definition)
+          setWorkflowDesignerOpen(true)
+        }
+      )
+    }
+    electron.ipcRenderer.on('workflow:edit-designer', handleEditDesigner)
+
+    const handleOpenHeuristicDesigner = (): void => {
+      setHeuristicInitialDefinition(null)
+      setHeuristicDesignerOpen(true)
+    }
+    electron.ipcRenderer.on('heuristic:open-designer', handleOpenHeuristicDesigner)
+
+    const handleEditHeuristicDesigner = (_evt: unknown, heuristicName: string): void => {
+      electron.ipcRenderer.invoke('workflow:get-heuristic-definition', heuristicName).then(
+        (definition: import('../../common/workflowTypes.js').HeuristicDefinition | null) => {
+          if (definition) {
+            setHeuristicInitialDefinition(definition)
+            setHeuristicDesignerOpen(true)
+          }
+        }
+      )
+    }
+    electron.ipcRenderer.on('heuristic:edit-designer', handleEditHeuristicDesigner)
+
+    return (): void => {
+      electron.ipcRenderer.removeAllListeners('workflow:open')
+      electron.ipcRenderer.removeAllListeners('workflow:open-designer')
+      electron.ipcRenderer.removeAllListeners('workflow:open-designer-tutorial')
+      electron.ipcRenderer.removeAllListeners('workflow:edit-designer')
+      electron.ipcRenderer.removeAllListeners('heuristic:open-designer')
+      electron.ipcRenderer.removeAllListeners('heuristic:edit-designer')
+    }
+  }, [])
   // modelsVersion is used to trigger re-render when user adds models via wizard
   void modelsVersion
 
-  const getTarget = async (): Promise<NiivueInstanceContext> => {
+  // Open target dialog state (new doc vs add to current)
+  const [openTargetDialogOpen, setOpenTargetDialogOpen] = useState(false)
+  const openTargetResolverRef = useRef<((choice: 'new' | 'current' | 'cancel') => void) | null>(null)
+
+  // Unsaved-changes dialog (Save / Don't Save / Cancel) for close-tab and
+  // any operation about to clobber dirty work.
+  const [unsavedChangesTitle, setUnsavedChangesTitle] = useState<string | null>(null)
+  const unsavedChangesResolverRef = useRef<
+    ((choice: 'save' | 'discard' | 'cancel') => void) | null
+  >(null)
+
+  const promptUnsavedChanges = (
+    title: string
+  ): Promise<'save' | 'discard' | 'cancel'> =>
+    new Promise((resolve) => {
+      unsavedChangesResolverRef.current = resolve
+      setUnsavedChangesTitle(title)
+    })
+
+  const resolveUnsavedChanges = (choice: 'save' | 'discard' | 'cancel'): void => {
+    setUnsavedChangesTitle(null)
+    unsavedChangesResolverRef.current?.(choice)
+    unsavedChangesResolverRef.current = null
+  }
+
+  // Save a document via the native save dialog. Returns true if persisted,
+  // false if the user cancelled the save dialog.
+  const saveDocument = async (doc: NiivueInstanceContext): Promise<boolean> => {
+    const { id, nvRef, title } = doc
+    const nv = nvRef.current
+    const jsonStr = JSON.stringify(nv.document.json())
+    const base = (title || id).replace(/\.nvd(\.gz)?$/, '')
+    const suggestedName = `${base}.nvd`
+    const savedPath = await window.electron.ipcRenderer.invoke(
+      'saveCompressedNVD',
+      jsonStr,
+      suggestedName
+    )
+    if (!savedPath) return false
+    const raw = savedPath.split('/').pop() || suggestedName
+    const newTitle = raw.replace(/\.nvd(\.gz)?$/, '') || suggestedName
+    updateDocument(id, { title: newTitle, filePath: savedPath, isDirty: false })
+    return true
+  }
+
+  // `destructive` indicates the upcoming load will replace the target's
+  // contents (e.g. nv.loadDocument). When set, dirty work in the chosen
+  // target is preserved via the unsaved-changes prompt before clobbering.
+  const getTarget = async (
+    opts: { destructive?: boolean } = {}
+  ): Promise<NiivueInstanceContext> => {
     // Use ref to get latest selected, avoiding stale closures
     const current = selectedRef.current
     if (!current) throw new Error('no document!')
@@ -95,8 +234,39 @@ function MainApp(): JSX.Element {
     const nv = current.nvRef.current
     const hasContent = nv.volumes.length > 0 || nv.meshes.length > 0
     if (!hasContent) return current
-    return createDocument()
+
+    // Ask user whether to open in new document or add to current
+    const choice = await new Promise<'new' | 'current' | 'cancel'>((resolve) => {
+      openTargetResolverRef.current = resolve
+      setOpenTargetDialogOpen(true)
+    })
+
+    setOpenTargetDialogOpen(false)
+    openTargetResolverRef.current = null
+
+    if (choice === 'cancel') throw new Error('open cancelled by user')
+
+    if (choice === 'current') {
+      // Destructive load over a dirty doc would silently lose work. Ask first.
+      if (opts.destructive && current.isDirty) {
+        const saveChoice = await promptUnsavedChanges(current.title || current.id)
+        if (saveChoice === 'cancel') throw new Error('open cancelled by user')
+        if (saveChoice === 'save') {
+          const ok = await saveDocument(current)
+          if (!ok) throw new Error('open cancelled by user')
+        }
+      }
+      return current
+    }
+
+    // Create new document and copy BIDS data from current
+    const newDoc = await createDocument()
+    if (current.bidsMappings.length > 0) {
+      newDoc.setBidsMappings([...current.bidsMappings])
+    }
+    return newDoc
   }
+
 
   // Create the first document on mount
   useEffect((): void => {
@@ -180,6 +350,11 @@ function MainApp(): JSX.Element {
       setLabelEditMode,
       onDocumentLoaded: (newTitle: string, targetId: string) =>
         updateDocument(targetId, { title: newTitle, isDirty: true }),
+      onBidsStateRestored: (state) => {
+        setBidsMappings?.(state.mappings)
+        setRightPanelTab('bids')
+        setRightPanelOpen(true)
+      },
       onMosaicStringChange: selected.setSliceMosaicString,
       onToggleSegmentationPanel: () => {
         setRightPanelTab('segmentation')
@@ -273,15 +448,27 @@ function MainApp(): JSX.Element {
       if (extractSubvolumeEnabled && selectedExtractLabels.size > 0) {
         // Extract subvolume: create masked intensity volume
         // Always use rawFloat32 conform so extraction gets original-range intensities (not Uint8)
-        const sourceVolume = await nv.conform(baseVolume, false, true, false, false, [256, 256, 256], 1.0, true)
-        const extractedVolume = extractSubvolumeUtil(sourceVolume, labelVolume, selectedExtractLabels)
+        const sourceVolume = await nv.conform(
+          baseVolume,
+          false,
+          true,
+          false,
+          false,
+          [256, 256, 256],
+          1.0,
+          true
+        )
+        const extractedVolume = extractSubvolumeUtil(
+          sourceVolume,
+          labelVolume,
+          selectedExtractLabels
+        )
 
         // Build descriptive name
         const baseName = baseVolume.name?.replace(/\.(nii|nii\.gz)$/i, '') || 'volume'
         const labelCount = selectedExtractLabels.size
-        const labelSummary = labelCount <= 3
-          ? [...selectedExtractLabels].join('-')
-          : `${labelCount}labels`
+        const labelSummary =
+          labelCount <= 3 ? [...selectedExtractLabels].join('-') : `${labelCount}labels`
         extractedVolume.name = `${baseName}_extract_${labelSummary}.nii.gz`
 
         nv.addVolume(extractedVolume)
@@ -295,7 +482,9 @@ function MainApp(): JSX.Element {
         // Apply colormap labels from model-specific colormap.json (matches brainchop.org)
         if (resultModelInfo.colormapPath) {
           try {
-            const colormapJson = await window.electron.loadBrainchopLabels(resultModelInfo.colormapPath)
+            const colormapJson = await window.electron.loadBrainchopLabels(
+              resultModelInfo.colormapPath
+            )
             overlayVolume.setColormapLabel(colormapJson)
             if (overlayVolume.colormapLabel?.lut) {
               overlayVolume.colormapLabel.lut = overlayVolume.colormapLabel.lut.map((v, i) =>
@@ -366,7 +555,10 @@ function MainApp(): JSX.Element {
       input: string
     ): Promise<NVImage> => {
       const resolved = await window.electron.headlessResolveInput(input)
-      const volume = await NVImage.loadFromBase64({ base64: resolved.base64, name: resolved.filename })
+      const volume = await NVImage.loadFromBase64({
+        base64: resolved.base64,
+        name: resolved.filename
+      })
       nv.addVolume(volume)
       doc.setVolumes([...nv.volumes])
       nv.updateGLVolume()
@@ -632,9 +824,14 @@ function MainApp(): JSX.Element {
         let seriesNumbers: number[] = []
         if (options.series === 'all') {
           const series = await window.electron.headlessDcm2niixList(options.input)
-          seriesNumbers = series.map((s: { seriesNumber: number }) => s.seriesNumber).filter((n: number) => n != null)
+          seriesNumbers = series
+            .map((s: { seriesNumber: number }) => s.seriesNumber)
+            .filter((n: number) => n != null)
         } else {
-          seriesNumbers = options.series.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+          seriesNumbers = options.series
+            .split(',')
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => !isNaN(n))
         }
 
         console.error(`[niivue] Converting DICOM series: ${seriesNumbers.join(', ')}`)
@@ -678,7 +875,11 @@ function MainApp(): JSX.Element {
       console.error(`[niivue] Running niimath: ${options.ops}`)
 
       // Run niimath
-      const result = await window.electron.headlessNiimath(resolved.base64, resolved.filename, options.ops)
+      const result = await window.electron.headlessNiimath(
+        resolved.base64,
+        resolved.filename,
+        options.ops
+      )
 
       // Output result
       const isStdout = options.output === '-' || options.output.toLowerCase() === 'stdout'
@@ -690,6 +891,73 @@ function MainApp(): JSX.Element {
           throw new Error(`Failed to save niimath result: ${saveResult.error}`)
         }
       }
+    }
+
+    // ALLINEATE command: Run affine registration
+    const runAllineateCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('allineate command requires --input (moving image)')
+      }
+      if (!options.stationary) {
+        throw new Error('allineate command requires --stationary (target image)')
+      }
+      if (!options.output) {
+        throw new Error('allineate command requires --output')
+      }
+
+      // Resolve input paths — allineate works with file paths, not base64
+      const resolvedMoving = await window.electron.headlessResolveInput(options.input)
+      const resolvedStationary = await window.electron.headlessResolveInput(options.stationary)
+
+      // Write resolved inputs to temp files if they came from stdin/URL/standard
+      const movingPath = await ensureFilePath(resolvedMoving)
+      const stationaryPath = await ensureFilePath(resolvedStationary)
+
+      // Build allineate options
+      const opts: string[] = []
+      if (options.cost) opts.push('-cost', options.cost)
+      if (options.cmass) opts.push('-cmass')
+      if (options.sourceAutomask) opts.push('-source_automask')
+      if (options.final) opts.push('-final', options.final)
+
+      const isStdout = options.output === '-' || options.output.toLowerCase() === 'stdout'
+      const outputPath = isStdout ? `/tmp/allineate-out-${Date.now()}.nii.gz` : options.output
+
+      const cmdLine = `allineate ${movingPath} ${stationaryPath} ${opts.join(' ')} ${outputPath}`
+      console.error(`[niivue] ${cmdLine}`)
+
+      const result = await window.electron.headlessAllineate(
+        movingPath,
+        stationaryPath,
+        outputPath,
+        opts
+      )
+
+      if (!result.success) {
+        throw new Error(`allineate failed: ${result.stderr}`)
+      }
+
+      if (isStdout) {
+        // Read the output file and write to stdout
+        const base64 = await window.electron.ipcRenderer.invoke('read-file-as-base64', outputPath) as string
+        await window.electron.headlessWriteStdout(base64)
+      }
+    }
+
+    // Helper: ensure a resolved input is available as a file path on disk
+    const ensureFilePath = async (resolved: { type: string; base64: string; filename: string; originalPath: string }): Promise<string> => {
+      if (resolved.type === 'local-file') {
+        return resolved.originalPath
+      }
+      // For stdin, URL, or standard images, write to a temp file
+      const tmpPath = `/tmp/niivue-${Date.now()}-${resolved.filename}`
+      const saveResult = await window.electron.headlessSaveNifti(resolved.base64, tmpPath)
+      if (!saveResult.success) {
+        throw new Error(`Failed to write temp file: ${saveResult.error}`)
+      }
+      return tmpPath
     }
 
     // Main headless workflow dispatcher
@@ -718,6 +986,48 @@ function MainApp(): JSX.Element {
           case 'niimath':
             await runNiimathCommand(options)
             break
+          case 'allineate':
+            await runAllineateCommand(options)
+            break
+          case 'workflow': {
+            const workflowName = options.subcommandMode
+            if (!workflowName) throw new Error('workflow subcommand requires a workflow name. Usage: workflow <name> --inputs <json>')
+
+            let wfInputs: Record<string, unknown> = {}
+            if (options.workflowInputs) {
+              try {
+                wfInputs = JSON.parse(options.workflowInputs) as Record<string, unknown>
+              } catch (e) {
+                throw new Error(`Invalid JSON in --inputs: ${e instanceof Error ? e.message : String(e)}`)
+              }
+            }
+
+            let wfContext: Record<string, unknown> | undefined
+            if (options.workflowContext) {
+              // Could be inline JSON or a file path — try parsing as JSON first
+              try {
+                wfContext = JSON.parse(options.workflowContext) as Record<string, unknown>
+              } catch {
+                // Not valid JSON — treat as a file path
+                try {
+                  const resolved = await window.electron.headlessResolveInput(options.workflowContext)
+                  wfContext = JSON.parse(atob(resolved.base64)) as Record<string, unknown>
+                } catch (e) {
+                  throw new Error(`Failed to load --context from '${options.workflowContext}': ${e instanceof Error ? e.message : String(e)}`)
+                }
+              }
+            }
+
+            // --output flag overrides output_dir in context
+            if (options.output) {
+              wfContext = wfContext || {}
+              wfContext.output_dir = options.output
+            }
+
+            const result = await window.electron.headlessWorkflow(workflowName, wfInputs, wfContext)
+            console.error(`[workflow] outputs: ${JSON.stringify(result.outputs)}`)
+            break
+          }
           default:
             throw new Error(`Unknown subcommand: ${options.subcommand}`)
         }
@@ -769,6 +1079,7 @@ function MainApp(): JSX.Element {
       current.setVolumes([])
       current.setMeshes([])
       current.setSelectedImage(null)
+      current.setBidsMappings([])
 
       updateDocument(current.id, {
         volumes: [],
@@ -1065,31 +1376,13 @@ function MainApp(): JSX.Element {
   const handleCloseTab = async (e: React.MouseEvent, doc: NiivueInstanceContext): Promise<void> => {
     e.stopPropagation()
     if (doc.isDirty) {
-      const save = window.confirm(`Save changes to “${doc.title}”?`)
-      if (save) {
-        const { id, nvRef, title } = doc
-        const nv = nvRef.current
-        const jsonStr = JSON.stringify(nv.document.json())
-        const base = (title || id).replace(/\.nvd(\.gz)?$/, '')
-        const suggestedName = `${base}.nvd`
-        const savedPath = await window.electron.ipcRenderer.invoke(
-          'saveCompressedNVD',
-          jsonStr,
-          suggestedName
-        )
-        if (savedPath) {
-          const raw = savedPath.split('/').pop() || suggestedName
-          const newTitle = raw.replace(/\.nvd(\.gz)?$/, '') || suggestedName
-          updateDocument(id, {
-            title: newTitle,
-            filePath: savedPath,
-            isDirty: false
-          })
-        }
-      } else {
-        const discard = window.confirm(`Discard changes to “${doc.title}”?`)
-        if (!discard) return
+      const choice = await promptUnsavedChanges(doc.title || doc.id)
+      if (choice === 'cancel') return
+      if (choice === 'save') {
+        const saved = await saveDocument(doc)
+        if (!saved) return
       }
+      // 'discard' falls through to remove
     }
     removeDocument(doc.id)
   }
@@ -1229,6 +1522,7 @@ function MainApp(): JSX.Element {
               onExtractSubvolumeChange={setExtractSubvolumeEnabled}
               selectedExtractLabels={selectedExtractLabels}
               onSelectedExtractLabelsChange={setSelectedExtractLabels}
+              bidsMappings={bidsMappings}
             />
           </div>
         )}
@@ -1243,7 +1537,71 @@ function MainApp(): JSX.Element {
         editMode={labelEditMode}
         setEditMode={setLabelEditMode}
       />
-      <DicomImportDialog />
+      <DicomImportDialog
+        onLoadVolume={async (niftiPath) => {
+          try {
+            const current = selectedRef.current
+            if (!current) { console.error('[onLoadVolume] no selected document'); return }
+            const nv = current.nvRef.current
+            const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+            if (!base64) { console.error('[onLoadVolume] empty base64'); return }
+            const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+            nv.addVolume(vol)
+            current.setVolumes([...nv.volumes])
+            nv.drawScene()
+            const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
+            const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
+            updateDocument(current.id, { title })
+          } catch (err) {
+            console.error('[onLoadVolume] error:', err)
+          }
+        }}
+      />
+      <BidsWizard
+        nv={selected?.nvRef.current ?? null}
+        onConversionComplete={async (mappings) => {
+          setBidsMappings?.(mappings)
+          setRightPanelTab('bids')
+          setRightPanelOpen(true)
+        }}
+        onLoadVolume={async (niftiPath) => {
+          try {
+            const target = await getTarget()
+            const nv = target.nvRef.current
+            const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+            if (!base64) { console.error('[onLoadVolume] empty base64'); return }
+            const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+            nv.addVolume(vol)
+            target.setVolumes([...nv.volumes])
+            nv.drawScene()
+          } catch (err) {
+            if (err instanceof Error && err.message.includes('cancelled')) return
+            console.error('[onLoadVolume] error:', err)
+          }
+        }}
+        onLoadWithOverlay={async (basePath, overlayPath) => {
+          try {
+            const target = await getTarget()
+            const nv = target.nvRef.current
+            const [baseB64, overlayB64] = await Promise.all([
+              electron.ipcRenderer.invoke('loadFromFile', basePath) as Promise<string>,
+              electron.ipcRenderer.invoke('loadFromFile', overlayPath) as Promise<string>
+            ])
+            const baseVol = await NVImage.loadFromBase64({ base64: baseB64, name: basePath })
+            const overlayVol = await NVImage.loadFromBase64({ base64: overlayB64, name: overlayPath })
+            overlayVol.colormap = 'red'
+            overlayVol.opacity = 0.5
+            nv.addVolume(baseVol)
+            nv.addVolume(overlayVol)
+            target.setVolumes([...nv.volumes])
+            nv.drawScene()
+          } catch (err) {
+            if (err instanceof Error && err.message.includes('cancelled')) return
+            console.error('[onLoadWithOverlay] error:', err)
+          }
+        }}
+      />
+      <BidsFilterDialog />
       <SegmentationDialog
         open={segmentationRunning}
         progress={segmentationProgress}
@@ -1251,6 +1609,111 @@ function MainApp(): JSX.Element {
         modelName={segmentationModelName}
         onCancel={handleCancelSegmentation}
         canCancel={true}
+      />
+      <WorkflowDialog
+        open={workflowOpen}
+        onClose={() => {
+          setWorkflowOpen(false)
+        }}
+        onLoadFile={async (niftiPath: string) => {
+          try {
+            const target = await getTarget()
+            const nv = target.nvRef.current
+            const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+            if (!base64) return
+            const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+            nv.addVolume(vol)
+            target.setVolumes([...nv.volumes])
+            nv.drawScene()
+            const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
+            const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
+            updateDocument(target.id, { title })
+          } catch (err) {
+            if (err instanceof Error && err.message.includes('cancelled')) return
+            console.error('Failed to load volume from workflow:', err)
+          }
+        }}
+        onBidsInit={(mappings) => {
+          setBidsMappings?.(mappings)
+          setRightPanelTab('bids')
+          setRightPanelOpen(true)
+        }}
+        workflowName={workflowName}
+        inputs={workflowInputs}
+        onEditWorkflow={(name) => {
+          electron.ipcRenderer.invoke('workflow:get-definition', name).then(
+            (definition: Record<string, unknown>) => {
+              setDesignerInitialDefinition(definition)
+              setWorkflowDesignerOpen(true)
+            }
+          )
+        }}
+      />
+      <WorkflowTemplateGallery
+        open={templateGalleryOpen}
+        onClose={() => setTemplateGalleryOpen(false)}
+        onSelect={(choice: TemplateChoice) => {
+          setTemplateGalleryOpen(false)
+          if (choice.kind === 'run-workflow') {
+            setWorkflowName(choice.workflowName)
+            setWorkflowInputs(choice.inputs)
+            setWorkflowOpen(true)
+          } else if (
+            choice.kind === 'customize' ||
+            choice.kind === 'use-as-template' ||
+            choice.kind === 'edit-user'
+          ) {
+            setDesignerInitialDefinition(choice.definition)
+            setWorkflowDesignerOpen(true)
+          } else if (choice.kind === 'blank' || choice.kind === 'advanced') {
+            setDesignerInitialDefinition(null)
+            setWorkflowDesignerOpen(true)
+          }
+        }}
+      />
+      <WorkflowDesignerDialog
+        open={workflowDesignerOpen}
+        onClose={() => {
+          setWorkflowDesignerOpen(false)
+          setDesignerInitialDefinition(null)
+        }}
+        onSave={(schema) => {
+          electron.ipcRenderer
+            .invoke('workflow:save', schema)
+            .then(() => {
+              console.log('Workflow saved:', schema)
+              setWorkflowDesignerOpen(false)
+              setDesignerInitialDefinition(null)
+            })
+            .catch((err: Error) => {
+              console.error('Failed to save workflow:', err)
+            })
+        }}
+        initialDefinition={designerInitialDefinition}
+      />
+      <HeuristicDesigner
+        open={heuristicDesignerOpen}
+        onClose={() => {
+          setHeuristicDesignerOpen(false)
+          setHeuristicInitialDefinition(null)
+        }}
+        onSave={() => {
+          // Keep designer open after save so user can continue editing
+        }}
+        initialDefinition={heuristicInitialDefinition}
+      />
+      <OpenTargetDialog
+        open={openTargetDialogOpen}
+        onNewDocument={() => openTargetResolverRef.current?.('new')}
+        onAddToCurrent={() => openTargetResolverRef.current?.('current')}
+        onCancel={() => openTargetResolverRef.current?.('cancel')}
+      />
+      <UnsavedChangesDialog
+        open={unsavedChangesTitle !== null}
+        documentTitle={unsavedChangesTitle ?? ''}
+        onSave={() => resolveUnsavedChanges('save')}
+        onDiscard={() => resolveUnsavedChanges('discard')}
+        onCancel={() => resolveUnsavedChanges('cancel')}
       />
     </div>
   )

@@ -1,4 +1,4 @@
-import { SLICE_TYPE } from "@niivue/niivue";
+import { SLICE_TYPE } from '@niivue/niivue'
 
 export const groupedConfigMeta = {
   Text: [
@@ -12,7 +12,7 @@ export const groupedConfigMeta = {
 
   Appearance: [
     ['backColor', { type: 'color', requiresDraw: true }],
-    ['isAlphaClipDark', { type: 'boolean', requiresDraw: true }],    
+    ['isAlphaClipDark', { type: 'boolean', requiresDraw: true }],
     ['colorbarWidth', { type: 'slider', min: 0, max: 1, step: 0.01, requiresUpdateGLVolume: true }],
     ['showColorbarBorder', { type: 'boolean', requiresUpdateGLVolume: true }],
     ['legendBackgroundColor', { type: 'color', requiresDraw: true }],

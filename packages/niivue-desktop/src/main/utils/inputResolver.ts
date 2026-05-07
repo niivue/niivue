@@ -57,7 +57,12 @@ async function downloadUrl(url: string): Promise<Buffer> {
 
     const request = protocol.get(url, (response) => {
       // Handle redirects
-      if (response.statusCode && response.statusCode >= 300 && response.statusCode < 400 && response.headers.location) {
+      if (
+        response.statusCode &&
+        response.statusCode >= 300 &&
+        response.statusCode < 400 &&
+        response.headers.location
+      ) {
         downloadUrl(response.headers.location).then(resolve).catch(reject)
         return
       }

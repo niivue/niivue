@@ -2,6 +2,25 @@ import { contextBridge, ipcRenderer, webFrame } from 'electron'
 import { electronAPI } from '@electron-toolkit/preload'
 import { join } from 'path'
 import type { CLIOptions, ResolvedInput } from '../common/cliTypes.js'
+import type {
+  WorkflowDefinition,
+  WorkflowRunState,
+  WorkflowListItem
+} from '../common/workflowTypes.js'
+import type {
+  BidsConvertAndClassifyPayload,
+  BidsConvertAndClassifyResult,
+  BidsWritePayload,
+  BidsWriteResult,
+  BidsValidationResult,
+  BidsValidatePayload,
+  BidsSeriesMapping,
+  BidsFixAnalysisResult,
+  BidsAutoFixResult,
+  SidecarUpdateResult,
+  FieldmapIntendedFor,
+  ParseEventFileResult
+} from '../common/bidsTypes.js'
 
 const api = {
   ...electronAPI,
@@ -52,10 +71,16 @@ const api = {
   headlessResolveInput: (input: string): Promise<ResolvedInput> => {
     return ipcRenderer.invoke('headless:resolve-input', input)
   },
-  headlessSaveOutput: (data: string, outputPath: string): Promise<{ success: boolean; error?: string }> => {
+  headlessSaveOutput: (
+    data: string,
+    outputPath: string
+  ): Promise<{ success: boolean; error?: string }> => {
     return ipcRenderer.invoke('headless:save-output', data, outputPath)
   },
-  headlessSaveNifti: (base64Data: string, outputPath: string): Promise<{ success: boolean; error?: string }> => {
+  headlessSaveNifti: (
+    base64Data: string,
+    outputPath: string
+  ): Promise<{ success: boolean; error?: string }> => {
     return ipcRenderer.invoke('headless:save-nifti', base64Data, outputPath)
   },
   headlessWriteStdout: (base64Data: string): Promise<void> => {
@@ -91,8 +116,167 @@ const api = {
     outputDir?: string
     compress?: 'y' | 'n'
     bids?: 'y' | 'n'
-  }): Promise<{ code: number; stdout: string; stderr: string; outDir: string; files: string[] }[]> => {
+  }): Promise<
+    { code: number; stdout: string; stderr: string; outDir: string; files: string[] }[]
+  > => {
     return ipcRenderer.invoke('headless:dcm2niix-convert', options)
+  },
+  // Workflow headless execution
+  headlessWorkflow: (
+    workflowName: string,
+    inputs: Record<string, unknown>,
+    contextOverrides?: Record<string, unknown>
+  ): Promise<{ outputs: Record<string, unknown>; context: Record<string, unknown> }> => {
+    return ipcRenderer.invoke('headless:workflow', workflowName, inputs, contextOverrides)
+  },
+  // BIDS wizard methods
+  bidsConvertAndClassify: (
+    payload: BidsConvertAndClassifyPayload
+  ): Promise<BidsConvertAndClassifyResult> => {
+    return ipcRenderer.invoke('bids:convert-and-classify', payload)
+  },
+  bidsImportNiftiDir: (dirPath: string): Promise<BidsConvertAndClassifyResult> => {
+    return ipcRenderer.invoke('bids:import-nifti-dir', dirPath)
+  },
+  bidsValidate: (payload: BidsValidatePayload): Promise<BidsValidationResult> => {
+    return ipcRenderer.invoke('bids:validate', payload)
+  },
+  bidsValidateWritten: (
+    dirPath: string,
+    mappings: BidsSeriesMapping[]
+  ): Promise<BidsValidationResult> => {
+    return ipcRenderer.invoke('bids:validate-written', { dirPath, mappings })
+  },
+  bidsAnalyzeFixes: (
+    dirPath: string,
+    result: BidsValidationResult
+  ): Promise<BidsFixAnalysisResult> => {
+    return ipcRenderer.invoke('bids:analyze-fixes', { dirPath, result })
+  },
+  bidsReadSidecar: (sidecarPath: string): Promise<Record<string, unknown> | null> => {
+    return ipcRenderer.invoke('bids:read-sidecar', sidecarPath)
+  },
+  bidsUpdateSidecar: (
+    sidecarPath: string,
+    updates: Record<string, unknown>
+  ): Promise<SidecarUpdateResult> => {
+    return ipcRenderer.invoke('bids:update-sidecar', { sidecarPath, updates })
+  },
+  bidsAutoFixSidecars: (
+    dirPath: string,
+    mappings?: BidsSeriesMapping[]
+  ): Promise<BidsAutoFixResult> => {
+    return ipcRenderer.invoke('bids:auto-fix-sidecars', { dirPath, mappings })
+  },
+  bidsWrite: (payload: BidsWritePayload): Promise<BidsWriteResult> => {
+    return ipcRenderer.invoke('bids:write', payload)
+  },
+  bidsSelectOutputDir: (): Promise<string | null> => {
+    return ipcRenderer.invoke('bids:select-output-dir')
+  },
+  bidsSuggestFieldmapMappings: (mappings: BidsSeriesMapping[]): Promise<FieldmapIntendedFor[]> => {
+    return ipcRenderer.invoke('bids:suggest-fieldmap-mappings', mappings)
+  },
+  bidsSelectEventFile: (): Promise<string | null> => {
+    return ipcRenderer.invoke('bids:select-event-file')
+  },
+  bidsParseEventFile: (filePath: string): Promise<ParseEventFileResult> => {
+    return ipcRenderer.invoke('bids:parse-event-file', filePath)
+  },
+  // allineate headless
+  headlessAllineate: (
+    movingPath: string,
+    stationaryPath: string,
+    outputPath: string,
+    opts: string[]
+  ): Promise<{
+    success: boolean
+    stdout: string
+    stderr: string
+    code: number
+    outputPath: string
+  }> => {
+    return ipcRenderer.invoke('headless:allineate', movingPath, stationaryPath, outputPath, opts)
+  },
+  // allineate registration
+  allineateRun: (
+    args: string[]
+  ): Promise<{
+    success: boolean
+    stdout: string
+    stderr: string
+    code: number
+    error?: string
+  }> => {
+    return ipcRenderer.invoke('allineate:run', args)
+  },
+  allineateRegister: (
+    movingPath: string,
+    stationaryPath: string,
+    outputPath: string,
+    opts: string[] = []
+  ): Promise<{
+    success: boolean
+    stdout: string
+    stderr: string
+    code: number
+    outputPath: string
+    error?: string
+  }> => {
+    return ipcRenderer.invoke('allineate:register', movingPath, stationaryPath, outputPath, opts)
+  },
+  // Workflow engine methods
+  workflowList: (): Promise<WorkflowListItem[]> => {
+    return ipcRenderer.invoke('workflow:list')
+  },
+  workflowGetDefinition: (name: string): Promise<WorkflowDefinition> => {
+    return ipcRenderer.invoke('workflow:get-definition', name)
+  },
+  workflowStart: (
+    name: string,
+    inputs: Record<string, unknown>
+  ): Promise<{
+    runId: string
+    runState: WorkflowRunState
+    definition: WorkflowDefinition
+    autoSteps: string[]
+  }> => {
+    return ipcRenderer.invoke('workflow:start', { name, inputs })
+  },
+  workflowRunAutoSteps: (
+    runId: string
+  ): Promise<{ executed: string[]; runState: WorkflowRunState }> => {
+    return ipcRenderer.invoke('workflow:run-auto-steps', { runId })
+  },
+  workflowRunHeuristic: (
+    runId: string,
+    fieldName: string
+  ): Promise<{ value: unknown; context: Record<string, unknown> }> => {
+    return ipcRenderer.invoke('workflow:run-heuristic', { runId, fieldName })
+  },
+  workflowUpdateContext: (
+    runId: string,
+    fieldName: string,
+    value: unknown
+  ): Promise<{ context: Record<string, unknown> }> => {
+    return ipcRenderer.invoke('workflow:update-context', { runId, fieldName, value })
+  },
+  workflowExecuteStep: (
+    runId: string,
+    stepName: string
+  ): Promise<{ outputs: Record<string, unknown>; runState: WorkflowRunState }> => {
+    return ipcRenderer.invoke('workflow:execute-step', { runId, stepName })
+  },
+  workflowExecuteAll: (
+    runId: string
+  ): Promise<{ outputs: Record<string, unknown>; runState: WorkflowRunState }> => {
+    return ipcRenderer.invoke('workflow:execute-all', { runId })
+  },
+  workflowCancel: (runId: string): Promise<{ success: boolean }> => {
+    return ipcRenderer.invoke('workflow:cancel', { runId })
+  },
+  workflowSelectDirectory: (title?: string): Promise<string | null> => {
+    return ipcRenderer.invoke('workflow:select-directory', { title })
   }
 } as const
 // Use `contextBridge` APIs to expose Electron APIs to

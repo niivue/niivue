@@ -1,0 +1,66 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "bids-classify",
+  "version": "1.0.0",
+  "description": "Auto-classify DICOM series into BIDS datatypes and suffixes using heuristics",
+  "inputs": {
+    "sidecars": {
+      "type": "json[]",
+      "description": "dcm2niix sidecar JSON files to classify"
+    },
+    "overrides": {
+      "type": "series-mapping[]",
+      "description": "User-provided classification overrides from the form",
+      "optional": true
+    }
+  },
+  "outputs": {
+    "mappings": {
+      "type": "series-mapping[]",
+      "description": "Classified series with BIDS datatype, suffix, confidence, and auto-assigned run numbers"
+    },
+    "subjects": {
+      "type": "subject[]",
+      "description": "Detected subjects and sessions grouped by PatientID and AcquisitionDate"
+    }
+  },
+  "block": [
+    {
+      "id": "subject-select",
+      "label": "Subject Selection",
+      "description": "Select which subjects to include or exclude",
+      "category": "Processing",
+      "icon": "PersonIcon",
+      "exposedFields": ["subjects"],
+      "hiddenFields": ["sidecars", "overrides"],
+      "formComponent": "subject-select",
+      "heuristics": { "subjects": "detect-subjects" }
+    },
+    {
+      "id": "participants-sessions",
+      "label": "Participants & Sessions",
+      "description": "Edit subject labels, session names, and demographics",
+      "category": "Processing",
+      "icon": "PersonIcon",
+      "exposedFields": ["subjects"],
+      "hiddenFields": ["sidecars", "overrides"],
+      "formComponent": "subject-session-editor",
+      "heuristics": { "subjects": "detect-subjects" }
+    },
+    {
+      "id": "classify-bids",
+      "label": "Classify for BIDS",
+      "description": "Auto-detect and review BIDS datatype/suffix for each series",
+      "category": "Processing",
+      "icon": "MixerHorizontalIcon",
+      "defaults": {
+        "overrides": { "ref": "context.series_list" }
+      },
+      "exposedFields": ["series_list"],
+      "requiredContextFields": ["subjects"],
+      "hiddenFields": ["sidecars", "overrides"],
+      "formComponent": "bids-classification-table",
+      "heuristics": { "series_list": "bids-classify", "subjects": "detect-subjects" }
+    }
+  ]
+}

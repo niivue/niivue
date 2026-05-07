@@ -99,7 +99,7 @@ export function NiimathToolbar({ modeMap, indexMap }: NiimathToolbarProps): JSX.
   return (
     <Collapsible.Root open={open} onOpenChange={setOpen}>
       {/* Toolbar header row */}
-      <Flex align="center" justify="between" className="p-2 bg-gray-200 border-b">
+      <Flex align="center" justify="between" className="p-2 bg-[var(--gray-4)] border-b">
         <Text weight="medium">Niimath Toolbar</Text>
         <IconButton size="1" variant="ghost" onClick={(): void => setOpen(!open)}>
           {open ? <ChevronUpIcon /> : <ChevronDownIcon />}
@@ -107,7 +107,7 @@ export function NiimathToolbar({ modeMap, indexMap }: NiimathToolbarProps): JSX.
       </Flex>
 
       <Collapsible.Content>
-        <Box className="p-3 bg-gray-100 space-y-4">
+        <Box className="p-3 bg-[var(--gray-3)] space-y-4">
           <NiimathConfig operations={operations} onOperationsChange={setOperations} />
 
           <Flex gap="3" align="center">

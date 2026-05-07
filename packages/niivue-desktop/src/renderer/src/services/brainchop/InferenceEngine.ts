@@ -76,9 +76,11 @@ export class InferenceEngine {
     // 5. Layer-by-layer inference
     const layersLength = model.layers.length
     const loopEnd = modelInfo.enableSeqConv ? layersLength - 2 : layersLength - 1
-    const syncEvery = modelInfo.enableSeqConv ? 1 : 15
+    const syncEvery = modelInfo.enableSeqConv ? 5 : 15
 
-    console.log(`[InferenceEngine] Running ${layersLength} layers (loopEnd=${loopEnd}, seqConv=${modelInfo.enableSeqConv})`)
+    console.log(
+      `[InferenceEngine] Running ${layersLength} layers (loopEnd=${loopEnd}, seqConv=${modelInfo.enableSeqConv})`
+    )
 
     for (let i = 1; i <= loopEnd; i++) {
       if (abortSignal?.aborted) {
@@ -118,24 +120,17 @@ export class InferenceEngine {
         currentTensor = nextTensor
       } catch (err) {
         currentTensor.dispose()
-        throw new Error(`Inference failed at layer ${i}: ${err instanceof Error ? err.message : String(err)}`)
-      }
-
-      // Sync GPU periodically to prevent timeout and update progress
-      if (i % syncEvery === 0) {
-        const firstEl = currentTensor.slice(
-          Array(currentTensor.shape.length).fill(0),
-          Array(currentTensor.shape.length).fill(1)
+        throw new Error(
+          `Inference failed at layer ${i}: ${err instanceof Error ? err.message : String(err)}`
         )
-        await firstEl.data()
-        firstEl.dispose()
       }
 
-      const progress = 10 + Math.floor((i / loopEnd) * 70)
-      onProgress?.(progress, `Layer ${i}/${loopEnd}`)
-      // Yield to event loop so React can render progress updates
-      await new Promise(resolve => setTimeout(resolve, 0))
-      console.log(`[InferenceEngine] Layer ${i} output shape:`, currentTensor.shape)
+      // Yield to UI periodically for progress updates
+      if (i % syncEvery === 0) {
+        const progress = 10 + Math.floor((i / loopEnd) * 70)
+        onProgress?.(progress, `Layer ${i}/${loopEnd}`)
+        await new Promise(resolve => setTimeout(resolve, 0))
+      }
     }
 
     // 6. Final layer processing
@@ -144,7 +139,12 @@ export class InferenceEngine {
 
     if (modelInfo.enableSeqConv) {
       console.log('[InferenceEngine] Using SequentialConvLayer for final layer')
-      outLabelVolume = await sequentialConvLayerApply(currentTensor, model, isChannelLast, onProgress)
+      outLabelVolume = await sequentialConvLayerApply(
+        currentTensor,
+        model,
+        isChannelLast,
+        onProgress
+      )
       currentTensor.dispose()
     } else {
       console.log('[InferenceEngine] Using argMax for final layer')
@@ -207,19 +207,25 @@ async function applyMriThreshold(tensor: tf.Tensor3D, percentage: number): Promi
 async function firstLastNonZero(tensor3D: tf.Tensor3D, dim: number): Promise<[number, number]> {
   let mxs: number[]
   if (dim === 0) {
-    mxs = await (tensor3D.max(2).max(1) as tf.Tensor).arraySync() as number[]
+    mxs = (await (tensor3D.max(2).max(1) as tf.Tensor).arraySync()) as number[]
   } else if (dim === 1) {
-    mxs = await (tensor3D.max(2).max(0) as tf.Tensor).arraySync() as number[]
+    mxs = (await (tensor3D.max(2).max(0) as tf.Tensor).arraySync()) as number[]
   } else {
-    mxs = await (tensor3D.max(1).max(0) as tf.Tensor).arraySync() as number[]
+    mxs = (await (tensor3D.max(1).max(0) as tf.Tensor).arraySync()) as number[]
   }
   let mn = mxs.length
   let mx = 0
   for (let i = 0; i < mxs.length; i++) {
-    if (mxs[i] > 0) { mn = i; break }
+    if (mxs[i] > 0) {
+      mn = i
+      break
+    }
   }
   for (let i = mxs.length - 1; i >= 0; i--) {
-    if (mxs[i] > 0) { mx = i; break }
+    if (mxs[i] > 0) {
+      mx = i
+      break
+    }
   }
   return [mn, mx]
 }
@@ -228,7 +234,14 @@ async function firstLastNonZero3D(tensor3D: tf.Tensor3D): Promise<number[]> {
   const [row_min, row_max] = await firstLastNonZero(tensor3D, 0)
   const [col_min, col_max] = await firstLastNonZero(tensor3D, 1)
   const [depth_min, depth_max] = await firstLastNonZero(tensor3D, 2)
-  console.log('[InferenceEngine] Bounding box:', { row_min, row_max, col_min, col_max, depth_min, depth_max })
+  console.log('[InferenceEngine] Bounding box:', {
+    row_min,
+    row_max,
+    col_min,
+    col_max,
+    depth_min,
+    depth_max
+  })
   return [row_min, row_max, col_min, col_max, depth_min, depth_max]
 }
 
@@ -237,7 +250,8 @@ async function cropAndGetCorner(
   mask3d: tf.Tensor3D,
   userPadding: number
 ): Promise<{ cropped: tf.Tensor3D; corner: [number, number, number] }> {
-  const [row_min, row_max, col_min, col_max, depth_min, depth_max] = await firstLastNonZero3D(mask3d)
+  const [row_min, row_max, col_min, col_max, depth_min, depth_max] =
+    await firstLastNonZero3D(mask3d)
 
   const adjustCorner = (min: number, max: number, pad: number): [number, number] => {
     const startPad = Math.min(min, pad)
@@ -253,13 +267,20 @@ async function cropAndGetCorner(
 
   const cropped = tensor3d.slice(
     [safeRowStart, safeColStart, safeDepthStart],
-    [safeRowEnd - safeRowStart + 1, safeColEnd - safeColStart + 1, safeDepthEnd - safeDepthStart + 1]
+    [
+      safeRowEnd - safeRowStart + 1,
+      safeColEnd - safeColStart + 1,
+      safeDepthEnd - safeDepthStart + 1
+    ]
   ) as tf.Tensor3D
 
   return { cropped, corner: [safeRowStart, safeColStart, safeDepthStart] }
 }
 
-async function restoreTo256Cube(tensor3d: tf.Tensor3D, corner: [number, number, number]): Promise<tf.Tensor3D> {
+async function restoreTo256Cube(
+  tensor3d: tf.Tensor3D,
+  corner: [number, number, number]
+): Promise<tf.Tensor3D> {
   const [row_min, col_min, depth_min] = corner
   const [height, width, depth] = tensor3d.shape
 
@@ -320,9 +341,22 @@ async function convByOutputChannelAndInputSlicing(
       const endChannel = Math.min((i + 1) * sliceSize, inChannels)
       if (startChannel < inChannels) {
         const resultSlice = tf.tidy(() => {
-          const inputSlice = input.slice([0, 0, 0, 0, startChannel], [-1, -1, -1, -1, endChannel - startChannel])
-          const filterSlice = filter.slice([0, 0, 0, startChannel, channel], [-1, -1, -1, endChannel - startChannel, 1])
-          return tf.conv3d(inputSlice as tf.Tensor5D, filterSlice as tf.Tensor5D, stride as any, pad as any, 'NDHWC', dilationRate as any)
+          const inputSlice = input.slice(
+            [0, 0, 0, 0, startChannel],
+            [-1, -1, -1, -1, endChannel - startChannel]
+          )
+          const filterSlice = filter.slice(
+            [0, 0, 0, startChannel, channel],
+            [-1, -1, -1, endChannel - startChannel, 1]
+          )
+          return tf.conv3d(
+            inputSlice as tf.Tensor5D,
+            filterSlice as tf.Tensor5D,
+            stride as any,
+            pad as any,
+            'NDHWC',
+            dilationRate as any
+          )
         })
         if (outputChannel === null) {
           outputChannel = resultSlice
@@ -380,9 +414,22 @@ async function gnConvByOutputChannelAndInputSlicing(
       const endChannel = Math.min((i + 1) * sliceSize, inChannels)
       if (startChannel < inChannels) {
         const resultSlice = tf.tidy(() => {
-          const inputSlice = input.slice([0, 0, 0, 0, startChannel], [-1, -1, -1, -1, endChannel - startChannel])
-          const filterSlice = filter.slice([0, 0, 0, startChannel, channel], [-1, -1, -1, endChannel - startChannel, 1])
-          return tf.conv3d(inputSlice as tf.Tensor5D, filterSlice as tf.Tensor5D, stride as any, pad as any, 'NDHWC', dilationRate as any)
+          const inputSlice = input.slice(
+            [0, 0, 0, 0, startChannel],
+            [-1, -1, -1, -1, endChannel - startChannel]
+          )
+          const filterSlice = filter.slice(
+            [0, 0, 0, startChannel, channel],
+            [-1, -1, -1, endChannel - startChannel, 1]
+          )
+          return tf.conv3d(
+            inputSlice as tf.Tensor5D,
+            filterSlice as tf.Tensor5D,
+            stride as any,
+            pad as any,
+            'NDHWC',
+            dilationRate as any
+          )
         })
         if (outputChannel === null) {
           outputChannel = resultSlice
@@ -421,7 +468,11 @@ async function gnConvByOutputChannelAndInputSlicing(
   return outputChannels!
 }
 
-function processTensorInChunks(inputTensor: tf.Tensor, filterWeights: tf.Tensor, chunkSize: number): tf.Tensor {
+function processTensorInChunks(
+  inputTensor: tf.Tensor,
+  filterWeights: tf.Tensor,
+  chunkSize: number
+): tf.Tensor {
   const inChannels = inputTensor.shape[4]!
   const numSlices = Math.ceil(inChannels / chunkSize)
   let accumulatedResult: tf.Tensor | null = null
@@ -431,10 +482,21 @@ function processTensorInChunks(inputTensor: tf.Tensor, filterWeights: tf.Tensor,
     const endChannel = Math.min((i + 1) * chunkSize, inChannels)
     const channels = endChannel - startChannel
 
-    const inputSlice = tf.tidy(() => inputTensor.slice([0, 0, 0, 0, startChannel], [-1, -1, -1, -1, channels]))
-    const filterSlice = tf.tidy(() => filterWeights.slice([0, 0, 0, startChannel, 0], [-1, -1, -1, channels, -1]))
+    const inputSlice = tf.tidy(() =>
+      inputTensor.slice([0, 0, 0, 0, startChannel], [-1, -1, -1, -1, channels])
+    )
+    const filterSlice = tf.tidy(() =>
+      filterWeights.slice([0, 0, 0, startChannel, 0], [-1, -1, -1, channels, -1])
+    )
 
-    const resultSlice = tf.conv3d(inputSlice as tf.Tensor5D, filterSlice as tf.Tensor5D, 1, 'valid', 'NDHWC', 1)
+    const resultSlice = tf.conv3d(
+      inputSlice as tf.Tensor5D,
+      filterSlice as tf.Tensor5D,
+      1,
+      'valid',
+      'NDHWC',
+      1
+    )
     inputSlice.dispose()
     filterSlice.dispose()
 
@@ -509,7 +571,7 @@ async function sequentialConvLayerApply(
     onProgress?.(progress, `Final layer chunk ${chunk + 1}/${chunks}`)
 
     // Allow UI update
-    await new Promise(resolve => setTimeout(resolve, 0))
+    await new Promise((resolve) => setTimeout(resolve, 0))
   }
 
   const result = outC.clone() as tf.Tensor3D

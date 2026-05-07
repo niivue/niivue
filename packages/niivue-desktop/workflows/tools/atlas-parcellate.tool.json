@@ -1,0 +1,39 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "atlas-parcellate",
+  "version": "1.0.0",
+  "description": "Apply atlas parcellation via Brainchop model",
+  "inputs": {
+    "nifti_path": {
+      "type": "volume",
+      "description": "Path to skull-stripped anatomical"
+    },
+    "atlas": {
+      "type": "string",
+      "description": "Atlas parcellation model",
+      "default": "parcellation-104",
+      "enum": ["parcellation-50", "parcellation-104"]
+    }
+  },
+  "outputs": {
+    "parcellation_path": {
+      "type": "volume",
+      "description": "Path to parcellation volume"
+    },
+    "label_json": {
+      "type": "string",
+      "description": "Path to label definitions JSON"
+    }
+  },
+  "block": {
+    "id": "atlas-parcellate",
+    "label": "Atlas Parcellation",
+    "description": "Apply atlas parcellation to a skull-stripped anatomical volume",
+    "category": "Processing",
+    "icon": "LayoutIcon",
+    "defaults": {
+      "atlas": "parcellation-104"
+    },
+    "exposedFields": ["nifti_path", "atlas"]
+  }
+}

@@ -1,0 +1,93 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "bids-validate",
+  "version": "1.0.0",
+  "description": "Validate a proposed BIDS dataset configuration and series mappings",
+  "inputs": {
+    "mappings": {
+      "type": "series-mapping[]",
+      "description": "Classified series mappings to validate"
+    },
+    "config": {
+      "type": "object",
+      "description": "Workflow context containing dataset metadata (name, outputDir, license, etc.)"
+    }
+  },
+  "outputs": {
+    "valid": {
+      "type": "boolean",
+      "description": "Whether the proposed dataset passes all validation checks"
+    },
+    "errors": {
+      "type": "json[]",
+      "description": "Validation errors that must be fixed before writing"
+    },
+    "warnings": {
+      "type": "json[]",
+      "description": "Non-blocking validation warnings"
+    }
+  },
+  "block": [
+    {
+      "id": "preview-images",
+      "label": "Preview Images",
+      "description": "Review images before proceeding to the next step",
+      "category": "Processing",
+      "icon": "EyeOpenIcon",
+      "defaults": {
+        "mappings": { "ref": "context.series_list" },
+        "config": { "ref": "context" }
+      },
+      "exposedFields": ["series_list"],
+      "requiredContextFields": ["subjects"],
+      "hiddenFields": ["mappings", "config"],
+      "formComponent": "bids-preview"
+    },
+    {
+      "id": "validate-bids",
+      "label": "Validate BIDS",
+      "description": "Configure required dataset metadata, then check that it meets BIDS specification requirements",
+      "category": "Quality",
+      "icon": "CheckCircledIcon",
+      "defaults": {
+        "mappings": { "ref": "context.series_list" },
+        "config": { "ref": "context" }
+      },
+      "exposedFields": ["dataset_name", "dataset_version", "license", "authors", "readme"],
+      "hiddenFields": ["mappings", "config"],
+      "contextFields": {
+        "dataset_name": {
+          "type": "string",
+          "label": "Dataset Name",
+          "description": "BIDS dataset name (used for the dataset_description.json and the output folder)",
+          "default": "My Dataset"
+        },
+        "dataset_version": {
+          "type": "string",
+          "label": "BIDS Version",
+          "description": "BIDS version recorded in dataset_description.json",
+          "default": "1.9.0"
+        },
+        "license": {
+          "type": "string",
+          "label": "License",
+          "description": "Dataset license",
+          "default": "CC0",
+          "enum": ["CC0", "CC-BY-4.0", "PDDL", "custom"]
+        },
+        "authors": {
+          "type": "string",
+          "label": "Authors",
+          "description": "Dataset authors (comma-separated)",
+          "default": ""
+        },
+        "readme": {
+          "type": "string",
+          "label": "README",
+          "description": "Dataset README content (Markdown)",
+          "default": ""
+        }
+      }
+    }
+  ]
+}

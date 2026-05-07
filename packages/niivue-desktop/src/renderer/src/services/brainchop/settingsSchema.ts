@@ -76,7 +76,9 @@ export function parseModelSettings(json: unknown): ModelSettings | null {
     },
     performance: {
       estimatedTimeSeconds:
-        typeof performance.estimatedTimeSeconds === 'number' ? performance.estimatedTimeSeconds : 10,
+        typeof performance.estimatedTimeSeconds === 'number'
+          ? performance.estimatedTimeSeconds
+          : 10,
       memoryRequirementMB:
         typeof performance.memoryRequirementMB === 'number' ? performance.memoryRequirementMB : 800
     },

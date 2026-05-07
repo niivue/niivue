@@ -1,0 +1,237 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://niivue.github.io/niivue/schemas/workflow.schema.json",
+  "title": "NiiVue Workflow Definition",
+  "description": "Connects tools into a pipeline with context sidecar and custom form layout",
+  "type": "object",
+  "required": ["name", "version", "description", "menu", "inputs", "steps", "outputs"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for editor support"
+    },
+    "name": {
+      "type": "string",
+      "description": "Unique workflow identifier (kebab-case)",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of the workflow"
+    },
+    "menu": {
+      "type": "string",
+      "description": "Menu heading this workflow appears under",
+      "enum": ["Import", "Processing", "Export"]
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Workflow-level inputs provided at launch",
+      "additionalProperties": {
+        "$ref": "#/$defs/inputDef"
+      }
+    },
+    "context": {
+      "type": "object",
+      "description": "Workflow run sidecar — metadata accumulated during the run",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "fields": {
+          "type": "object",
+          "additionalProperties": {
+            "$ref": "#/$defs/contextFieldDef"
+          }
+        }
+      },
+      "required": ["fields"],
+      "additionalProperties": false
+    },
+    "form": {
+      "type": "object",
+      "description": "Custom form layout for reviewing/editing context fields",
+      "required": ["sections"],
+      "additionalProperties": false,
+      "properties": {
+        "sections": {
+          "type": "array",
+          "items": {
+            "$ref": "#/$defs/formSectionDef"
+          },
+          "minItems": 1
+        }
+      }
+    },
+    "steps": {
+      "type": "object",
+      "description": "Ordered tool pipeline steps",
+      "additionalProperties": {
+        "$ref": "#/$defs/stepDef"
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "description": "Workflow-level outputs",
+      "additionalProperties": {
+        "$ref": "#/$defs/outputDef"
+      }
+    }
+  },
+  "$defs": {
+    "inputDef": {
+      "type": "object",
+      "required": ["type", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        }
+      }
+    },
+    "contextFieldDef": {
+      "type": "object",
+      "required": ["type", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string",
+          "description": "Short label displayed above the field in the form"
+        },
+        "description": {
+          "type": "string",
+          "description": "Tooltip text shown on hover"
+        },
+        "heuristic": {
+          "type": "string",
+          "description": "Name of a registered heuristic function that auto-populates this field"
+        },
+        "default": {
+          "description": "Static default value"
+        },
+        "enum": {
+          "type": "array",
+          "items": {}
+        },
+        "min": {
+          "type": "number"
+        },
+        "max": {
+          "type": "number"
+        }
+      }
+    },
+    "formSectionDef": {
+      "type": "object",
+      "required": ["title", "fields"],
+      "additionalProperties": false,
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Section heading"
+        },
+        "description": {
+          "type": "string",
+          "description": "Optional explanatory text"
+        },
+        "fields": {
+          "type": "array",
+          "description": "Context field names to display in this section",
+          "items": {
+            "type": "string"
+          }
+        },
+        "component": {
+          "type": "string",
+          "description": "Optional registered custom component name instead of auto-generated controls"
+        },
+        "buttonText": {
+          "type": "string",
+          "description": "Custom label for the primary action button when this is the last section (defaults to 'Run')"
+        }
+      }
+    },
+    "stepDef": {
+      "type": "object",
+      "required": ["tool", "inputs"],
+      "additionalProperties": false,
+      "properties": {
+        "tool": {
+          "type": "string",
+          "description": "Tool name (must match a *.tool.json name)"
+        },
+        "inputs": {
+          "type": "object",
+          "description": "Input bindings for the tool",
+          "additionalProperties": {
+            "$ref": "#/$defs/bindingDef"
+          }
+        },
+        "outputMappings": {
+          "type": "object",
+          "description": "Map tool output field names to context field names",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "condition": {
+          "type": "string",
+          "description": "Dot-path expression evaluated against the run state; step is skipped when the resolved value is falsy"
+        }
+      }
+    },
+    "bindingDef": {
+      "oneOf": [
+        {
+          "type": "object",
+          "required": ["ref"],
+          "additionalProperties": false,
+          "properties": {
+            "ref": {
+              "type": "string",
+              "description": "Dot-path reference: inputs.X, context.X, or steps.Y.outputs.Z",
+              "pattern": "^(inputs\\.[a-zA-Z_]+|context(\\.[a-zA-Z_]+)?|steps\\.[a-zA-Z_]+\\.outputs\\.[a-zA-Z_]+)$"
+            }
+          }
+        },
+        {
+          "type": "object",
+          "required": ["constant"],
+          "additionalProperties": false,
+          "properties": {
+            "constant": {
+              "description": "Fixed value passed to the tool input"
+            }
+          }
+        }
+      ]
+    },
+    "outputDef": {
+      "type": "object",
+      "required": ["type", "ref"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string"
+        },
+        "ref": {
+          "type": "string",
+          "description": "Reference to a step output",
+          "pattern": "^steps\\.[a-zA-Z_]+\\.outputs\\.[a-zA-Z_]+$"
+        }
+      }
+    }
+  }
+}

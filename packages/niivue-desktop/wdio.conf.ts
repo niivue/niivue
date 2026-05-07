@@ -95,9 +95,15 @@ export const config: Options.Testrunner & Record<string, unknown> = {
     try {
       if (process.platform === 'win32') {
         // wmic finds processes whose command line contains our app entry point
-        execSync(`wmic process where "CommandLine like '%${appEntry.replace(/\\/g, '\\\\')}%'" call terminate 2>nul`, { stdio: 'ignore' })
+        execSync(
+          `wmic process where "CommandLine like '%${appEntry.replace(/\\/g, '\\\\')}%'" call terminate 2>nul`,
+          { stdio: 'ignore' }
+        )
       } else {
-        execSync(`pkill -f "${appEntry}" 2>/dev/null; pkill -f "chromedriver.*mac_arm" 2>/dev/null`, { stdio: 'ignore' })
+        execSync(
+          `pkill -f "${appEntry}" 2>/dev/null; pkill -f "chromedriver.*mac_arm" 2>/dev/null`,
+          { stdio: 'ignore' }
+        )
       }
       console.log('[wdio] Cleaned up orphaned test processes')
     } catch {

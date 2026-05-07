@@ -7,37 +7,54 @@ import {
   decompressGzipBase64ToJson,
   isProbablyGzip
 } from '@renderer/utils/base64ToJSON.js'
+import type { BidsWizardState } from '../../../common/bidsTypes.js'
+import { deserializeBidsState } from '../../../common/bidsState.js'
 
 const electron = window.electron
 
 export interface HandlerProps {
-  /** returns the proper Niivue instance or creates a new doc if it’s non-empty */
-  getTarget: () => Promise<{
+  /**
+   * Returns the proper Niivue instance or creates a new doc if it's non-empty.
+   * `destructive` indicates the upcoming load will replace the target's
+   * contents (e.g. nv.loadDocument), letting the caller prompt to save dirty
+   * work before clobbering it.
+   */
+  getTarget: (opts?: { destructive?: boolean }) => Promise<{
     id: string
     nvRef: React.RefObject<Niivue>
     setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>
     setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>
   }>
   onDocumentLoaded?: (title: string, targetId: string) => void
+  onBidsStateRestored?: (state: BidsWizardState) => void
 }
 
 console.log('[Renderer] registering loadStandard handler')
 
 export const registerLoadStandardHandler = ({
   getTarget,
-  onDocumentLoaded
+  onDocumentLoaded,
+  onBidsStateRestored
 }: HandlerProps): void => {
   electron.ipcRenderer.removeAllListeners('loadStandard')
   electron.ipcRenderer.on('loadStandard', async (_, path: string) => {
     console.log('[Renderer] loadStandard received for path:', path)
 
+    const pathLower = path.toLowerCase()
+    const isDestructive = pathLower.endsWith('.nvd')
+
     // Determine the target Niivue instance (create new document if needed)
-    const { id, nvRef, setVolumes, setMeshes } = await getTarget()
+    let target
+    try {
+      target = await getTarget({ destructive: isDestructive })
+    } catch {
+      return // user cancelled
+    }
+    const { id, nvRef, setVolumes, setMeshes } = target
     const nv = nvRef.current!
 
     // Fetch file data
     const base64 = await electron.ipcRenderer.invoke('loadStandard', path)
-    const pathLower = path.toLowerCase()
     // console.log('path lower', pathLower)
     if (pathLower.endsWith('.nvd')) {
       const json: DocumentData = isProbablyGzip(base64)
@@ -63,7 +80,15 @@ export const registerLoadStandardHandler = ({
         onDocumentLoaded(title, id)
       }
 
-      // 6️⃣ Redraw scene
+      // 6️⃣ Restore BIDS state from customData if present
+      if (onBidsStateRestored && nv.document.customData) {
+        const bidsState = deserializeBidsState(nv.document.customData)
+        if (bidsState) {
+          onBidsStateRestored(bidsState)
+        }
+      }
+
+      // 7️⃣ Redraw scene
       nv.drawScene()
     } else if (MESH_EXTENSIONS.some((ext) => pathLower.endsWith(ext.toLowerCase()))) {
       // Mesh case

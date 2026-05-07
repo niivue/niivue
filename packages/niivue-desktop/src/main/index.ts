@@ -5,6 +5,7 @@ import { registerIpcHandlers } from './utils/ipcHandlers.js'
 import icon from '../../resources/icons/app_icon.png?asset'
 import { createMenu } from './utils/menu.js'
 import { getPlatformIcon } from './utils/getPlatformIcon.js'
+import { loadAllDefinitions } from './utils/workflowLoader.js'
 import {
   type CLIOptions,
   getDefaultCLIOptions,
@@ -12,11 +13,15 @@ import {
   AVAILABLE_MODELS
 } from '../common/cliTypes.js'
 
+// Enable WebGPU so TF.js can use GPU without conflicting with Niivue's WebGL context
+app.commandLine.appendSwitch('enable-unsafe-webgpu')
+app.commandLine.appendSwitch('enable-features', 'Vulkan')
+
 // Helper to check if in development mode
 const isDev = !app.isPackaged
 
 // Valid subcommands
-const VALID_SUBCOMMANDS = ['view', 'segment', 'extract', 'dcm2niix', 'niimath'] as const
+const VALID_SUBCOMMANDS = ['view', 'segment', 'extract', 'dcm2niix', 'niimath', 'allineate', 'workflow'] as const
 
 // Parse CLI arguments with subcommand architecture
 function parseCLIArgs(): CLIOptions {
@@ -30,7 +35,8 @@ function parseCLIArgs(): CLIOptions {
       options.subcommand = cmd as CLIOptions['subcommand']
 
       // dcm2niix has a second-level subcommand (list/convert)
-      if (cmd === 'dcm2niix' && args[1] && !args[1].startsWith('-')) {
+      // workflow has a second-level subcommand (workflow name)
+      if ((cmd === 'dcm2niix' || cmd === 'workflow') && args[1] && !args[1].startsWith('-')) {
         options.subcommandMode = args[1]
       }
     }
@@ -112,6 +118,32 @@ function parseCLIArgs(): CLIOptions {
       case '--label-names':
       case '-n':
         options.labelNames = args[++i] || null
+        break
+
+      // Allineate options
+      case '--stationary':
+      case '--target':
+        options.stationary = args[++i] || null
+        break
+      case '--cost':
+        options.cost = args[++i] || null
+        break
+      case '--cmass':
+        options.cmass = true
+        break
+      case '--source-automask':
+        options.sourceAutomask = true
+        break
+      case '--final':
+        options.final = args[++i] || null
+        break
+
+      // Workflow options
+      case '--inputs':
+        options.workflowInputs = args[++i] || null
+        break
+      case '--context':
+        options.workflowContext = args[++i] || null
         break
     }
   }
@@ -233,6 +265,22 @@ Examples:
   niivue-desktop niimath --input brain.nii.gz --ops "-s 2 -thr 100 -bin" --output mask.nii.gz
   niivue-desktop view --input mni152 --output - | niivue-desktop niimath --input - --ops "-s 3" --output smooth.nii.gz
 `)
+  } else if (subcommand === 'workflow') {
+    console.log(`
+niivue-desktop workflow - Run a declarative workflow pipeline
+
+Usage:
+  niivue-desktop workflow <name> --inputs <json> [--context <json-file>] [--output <dir>]
+
+Options:
+  --inputs        JSON string of workflow inputs (e.g., '{"dicom_dir":"/path/to/dicoms"}')
+  --context       Path to JSON file with context overrides (skip interactive form)
+  --output, -o    Output directory (overrides context output_dir)
+
+Examples:
+  niivue-desktop workflow dicom-to-bids --inputs '{"dicom_dir":"/dicoms"}' --output /output
+  niivue-desktop workflow dicom-to-bids --inputs '{"dicom_dir":"/dicoms"}' --context overrides.json
+`)
   } else {
     console.log(`
 NiiVue Desktop - Neuroimaging visualization and processing
@@ -247,6 +295,7 @@ Subcommands:
   extract     Extract subvolume using label mask
   dcm2niix    Convert DICOM to NIfTI
   niimath     Apply niimath operations
+  workflow    Run a declarative workflow pipeline
 
 Universal Options:
   --input, -i     Input file, URL, standard name, or "-" for stdin
@@ -300,7 +349,6 @@ if (process.platform === 'darwin') {
 }
 
 function createWindow(): void {
-
   // Create the browser window.
   mainWindow = new BrowserWindow({
     width: 900,
@@ -308,6 +356,16 @@ function createWindow(): void {
     show: !isHeadless,
     icon: getPlatformIcon(),
     ...(process.platform === 'linux' ? { icon } : {}),
+    // SECURITY-DEBT: contextIsolation should be true and nodeIntegration false
+    // (PR #1596 review, task #11). The renderer's ~140 ipcRenderer.invoke
+    // call sites already route through window.electron.ipcRenderer (the
+    // @electron-toolkit/preload proxy that works under isolation), so flipping
+    // these flags should be largely transparent — but the change requires
+    // smoke-testing the full app (open volume, run workflow, run DICOM->BIDS,
+    // headless modes) which can't be done from this automated change. Tracked
+    // for follow-up; in the meantime the IPC path-validation hardening from
+    // PR #1596 (file-exists confinement, headless save root, BIDS validator)
+    // narrows the blast radius if the renderer is compromised.
     webPreferences: {
       preload: join(__dirname, '../preload/index.mjs'),
       sandbox: false,
@@ -341,6 +399,15 @@ function createWindow(): void {
   }
 }
 
+import { resolveSafeHeadlessOutput as resolveSafeHeadlessOutputBase } from './utils/headlessOutputGuard.js'
+
+function resolveSafeHeadlessOutput(outputPath: string): string {
+  return resolveSafeHeadlessOutputBase(outputPath, {
+    cliOutput: cliOptions.output,
+    fallbackRoot: app.getPath('userData')
+  })
+}
+
 // Headless mode IPC handlers
 ipcMain.handle('headless:get-options', () => {
   return cliOptions
@@ -353,14 +420,15 @@ ipcMain.handle('headless:resolve-input', async (_event, input: string) => {
 
 ipcMain.handle('headless:save-output', async (_event, data: string, outputPath: string) => {
   try {
-    const ext = outputPath.toLowerCase().split('.').pop()
+    const safePath = resolveSafeHeadlessOutput(outputPath)
+    const ext = safePath.toLowerCase().split('.').pop()
     if (ext === 'png') {
       // data is base64 PNG (with or without data URL prefix)
       const base64Data = data.replace(/^data:image\/png;base64,/, '')
-      await fs.promises.writeFile(outputPath, Buffer.from(base64Data, 'base64'))
+      await fs.promises.writeFile(safePath, Buffer.from(base64Data, 'base64'))
     } else {
       // data is JSON string for .nvd or other formats
-      await fs.promises.writeFile(outputPath, data, 'utf-8')
+      await fs.promises.writeFile(safePath, data, 'utf-8')
     }
     return { success: true }
   } catch (error) {
@@ -370,7 +438,8 @@ ipcMain.handle('headless:save-output', async (_event, data: string, outputPath: 
 
 ipcMain.handle('headless:save-nifti', async (_event, base64Data: string, outputPath: string) => {
   try {
-    await fs.promises.writeFile(outputPath, Buffer.from(base64Data, 'base64'))
+    const safePath = resolveSafeHeadlessOutput(outputPath)
+    await fs.promises.writeFile(safePath, Buffer.from(base64Data, 'base64'))
     return { success: true }
   } catch (error) {
     return { success: false, error: String(error) }
@@ -389,12 +458,18 @@ ipcMain.handle('headless:write-stdout', async (_event, base64Data: string) => {
   await writeBase64ToStdout(base64Data)
 })
 
-ipcMain.handle('headless:niimath', async (_event, inputBase64: string, inputName: string, operations: string) => {
-  const { startNiimathJob } = await import('./utils/runNiimath.js')
-  const args = operations.trim().split(/\s+/)
-  const result = await startNiimathJob(`headless-${Date.now()}`, args, { base64: inputBase64, name: inputName })
-  return { base64: result.base64, success: true }
-})
+ipcMain.handle(
+  'headless:niimath',
+  async (_event, inputBase64: string, inputName: string, operations: string) => {
+    const { startNiimathJob } = await import('./utils/runNiimath.js')
+    const args = operations.trim().split(/\s+/)
+    const result = await startNiimathJob(`headless-${Date.now()}`, args, {
+      base64: inputBase64,
+      name: inputName
+    })
+    return { base64: result.base64, success: true }
+  }
+)
 
 ipcMain.handle('headless:dcm2niix-list', async (_event, dicomDir: string) => {
   const { listDicomSeries } = await import('./utils/runDcm2niix.js')
@@ -414,7 +489,13 @@ ipcMain.handle(
     }
   ) => {
     const { convertSeriesByNumber } = await import('./utils/runDcm2niix.js')
-    const results: { code: number; stdout: string; stderr: string; outDir: string; files: string[] }[] = []
+    const results: {
+      code: number
+      stdout: string
+      stderr: string
+      outDir: string
+      files: string[]
+    }[] = []
     for (const seriesNum of options.seriesNumbers) {
       const result = await convertSeriesByNumber(options.dicomDir, seriesNum, {
         outDir: options.outputDir,
@@ -429,6 +510,25 @@ ipcMain.handle(
     return results
   }
 )
+
+ipcMain.handle(
+  'headless:allineate',
+  async (_event, movingPath: string, stationaryPath: string, outputPath: string, opts: string[]) => {
+    const { runAllineateJob } = await import('./utils/runAllineate.js')
+    const result = await runAllineateJob(movingPath, stationaryPath, outputPath, opts)
+    return { success: true, ...result }
+  }
+)
+
+ipcMain.handle('headless:workflow', async (_event, workflowName: string, inputs: Record<string, unknown>, contextOverrides?: Record<string, unknown>) => {
+  const { runWorkflowHeadless } = await import('./utils/headlessWorkflowRunner.js')
+  return runWorkflowHeadless({
+    workflowName,
+    inputs,
+    contextOverrides,
+    onProgress: (step, status) => process.stderr.write(`[workflow] ${step}: ${status}\n`)
+  })
+})
 
 ipcMain.on('headless:complete', () => {
   process.stderr.write('[niivue] Completed successfully\n')
@@ -467,6 +567,9 @@ app.whenReady().then(() => {
       })
     })
   }
+
+  // Load workflow definitions from JSON files
+  loadAllDefinitions()
 
   // register all IPC events at once
   registerIpcHandlers()

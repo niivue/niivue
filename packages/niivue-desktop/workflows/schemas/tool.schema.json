@@ -1,0 +1,346 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://niivue.github.io/niivue/schemas/tool.schema.json",
+  "title": "NiiVue Tool Definition",
+  "description": "Describes a single operation (CLI or internal) with typed inputs and outputs",
+  "type": "object",
+  "required": ["name", "version", "description", "inputs", "outputs"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string",
+      "description": "JSON Schema reference for editor support"
+    },
+    "name": {
+      "type": "string",
+      "description": "Unique tool identifier (kebab-case)",
+      "pattern": "^[a-z][a-z0-9-]*$"
+    },
+    "version": {
+      "type": "string",
+      "description": "Semantic version",
+      "pattern": "^\\d+\\.\\d+\\.\\d+$"
+    },
+    "description": {
+      "type": "string",
+      "description": "Human-readable description of what the tool does"
+    },
+    "inputs": {
+      "type": "object",
+      "description": "Named input parameters",
+      "additionalProperties": {
+        "$ref": "#/$defs/parameterDef"
+      }
+    },
+    "outputs": {
+      "type": "object",
+      "description": "Named output values",
+      "additionalProperties": {
+        "$ref": "#/$defs/parameterDef"
+      }
+    },
+    "exec": {
+      "$ref": "#/$defs/execDef"
+    },
+    "block": {
+      "description": "Optional block metadata for the visual workflow designer. A single object produces one palette entry; an array produces multiple variants backed by this tool. Omit to hide the tool from the palette.",
+      "oneOf": [
+        { "$ref": "#/$defs/blockDef" },
+        { "type": "array", "items": { "$ref": "#/$defs/blockDef" } }
+      ]
+    }
+  },
+  "$defs": {
+    "blockDef": {
+      "type": "object",
+      "description": "Describes how a tool appears as a block in the visual designer",
+      "required": ["id", "label", "description", "category", "exposedFields"],
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique block identifier (kebab-case). Must be unique across all tools.",
+          "pattern": "^[a-z][a-z0-9-]*$"
+        },
+        "label": {
+          "type": "string",
+          "description": "Friendly label shown in the palette"
+        },
+        "description": {
+          "type": "string",
+          "description": "One-line description shown below the label"
+        },
+        "category": {
+          "type": "string",
+          "enum": ["Import", "Processing", "Quality", "Output"]
+        },
+        "icon": {
+          "type": "string",
+          "description": "Radix icon component name (e.g. UploadIcon)"
+        },
+        "defaults": {
+          "type": "object",
+          "description": "Pre-filled input values (hidden from the user form)",
+          "additionalProperties": true
+        },
+        "exposedFields": {
+          "type": "array",
+          "description": "Tool input names that appear in the user-facing form",
+          "items": { "type": "string" }
+        },
+        "hiddenFields": {
+          "type": "array",
+          "description": "Tool input names that are hidden (typically covered by defaults)",
+          "items": { "type": "string" }
+        },
+        "requiredContextFields": {
+          "type": "array",
+          "description": "Extra context fields the block's form component reads at runtime but doesn't surface as editable form fields",
+          "items": { "type": "string" }
+        },
+        "contextFields": {
+          "type": "object",
+          "description": "Inline context-field definitions for fields exposed by this block that don't correspond to a tool input/output (e.g. workflow-level metadata)",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["type", "description"],
+            "properties": {
+              "type": { "type": "string" },
+              "label": { "type": "string" },
+              "description": { "type": "string" },
+              "optional": { "type": "boolean" },
+              "heuristic": { "type": "string" },
+              "default": {},
+              "enum": { "type": "array" },
+              "min": { "type": "number" },
+              "max": { "type": "number" }
+            }
+          }
+        },
+        "formComponent": {
+          "type": "string",
+          "description": "Custom form component name (e.g. 'subject-select', 'bids-classification-table')"
+        },
+        "condition": {
+          "type": "string",
+          "description": "Optional dot-path condition expression for conditional execution"
+        },
+        "heuristics": {
+          "type": "object",
+          "description": "Map from exposed field name → heuristic name that auto-populates it",
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "parameterDef": {
+      "type": "object",
+      "required": ["type", "description"],
+      "additionalProperties": false,
+      "properties": {
+        "type": {
+          "type": "string",
+          "description": "Parameter type",
+          "enum": [
+            "string",
+            "number",
+            "boolean",
+            "volume",
+            "volume[]",
+            "mask",
+            "dicom-folder",
+            "json[]",
+            "series-mapping[]",
+            "subject[]",
+            "number[]",
+            "bids-dir"
+          ]
+        },
+        "description": {
+          "type": "string",
+          "description": "Human-readable label"
+        },
+        "optional": {
+          "type": "boolean",
+          "description": "Whether the parameter can be omitted",
+          "default": false
+        },
+        "default": {
+          "description": "Default value when optional"
+        },
+        "enum": {
+          "type": "array",
+          "description": "Constrained choices (renders as dropdown)",
+          "items": {}
+        },
+        "min": {
+          "type": "number",
+          "description": "Minimum value for numeric parameters"
+        },
+        "max": {
+          "type": "number",
+          "description": "Maximum value for numeric parameters"
+        }
+      }
+    },
+    "execDef": {
+      "type": "object",
+      "description": "Declarative executor — defines how to run this tool as a CLI process without hand-coded TypeScript",
+      "required": ["binary", "args", "outputs"],
+      "additionalProperties": false,
+      "properties": {
+        "binary": {
+          "type": "object",
+          "description": "Platform-specific binary path resolution",
+          "required": ["name", "paths", "packagedPaths"],
+          "additionalProperties": false,
+          "properties": {
+            "name": {
+              "type": "string",
+              "description": "Human-readable name for error messages"
+            },
+            "paths": {
+              "type": "object",
+              "description": "Dev-mode paths relative to project root, keyed by process.platform",
+              "additionalProperties": { "type": "string" }
+            },
+            "packagedPaths": {
+              "type": "object",
+              "description": "Packaged-app paths relative to process.resourcesPath",
+              "additionalProperties": { "type": "string" }
+            }
+          }
+        },
+        "outputDir": {
+          "type": "object",
+          "description": "Output directory configuration",
+          "additionalProperties": false,
+          "properties": {
+            "input": {
+              "type": "string",
+              "description": "Input name that may supply the output directory"
+            },
+            "tempPrefix": {
+              "type": "string",
+              "description": "Prefix for temp directory if input is absent"
+            }
+          }
+        },
+        "resources": {
+          "type": "object",
+          "description": "Named references to bundled standard images",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["standardImage"],
+            "additionalProperties": false,
+            "properties": {
+              "standardImage": {
+                "type": "string",
+                "description": "Standard image name (resolved via getStandardImagePath)"
+              }
+            }
+          }
+        },
+        "forEach": {
+          "type": "string",
+          "description": "Input name containing an array to iterate over"
+        },
+        "forEachExtract": {
+          "type": "string",
+          "description": "When each forEach element is an object, extract this field as the scalar iteration value (e.g. 'seriesNumber' to turn DicomSeries[] into number[])"
+        },
+        "iterationVar": {
+          "type": "string",
+          "description": "Single-item input name bound on each iteration"
+        },
+        "parallel": {
+          "type": "boolean",
+          "description": "Run iterations in parallel (default false)",
+          "default": false
+        },
+        "outputFile": {
+          "type": "object",
+          "description": "How to construct the output filename for each invocation",
+          "required": ["template"],
+          "additionalProperties": false,
+          "properties": {
+            "template": {
+              "type": "string",
+              "description": "Filename template, e.g. {{inputBasename}}_brain.nii.gz"
+            },
+            "stripExtensions": {
+              "type": "array",
+              "description": "Extensions to strip from input basename before applying template",
+              "items": { "type": "string" }
+            }
+          }
+        },
+        "args": {
+          "type": "array",
+          "description": "Ordered list of CLI arguments",
+          "items": {
+            "type": "object",
+            "description": "A single CLI argument definition",
+            "additionalProperties": false,
+            "properties": {
+              "input": {
+                "type": "string",
+                "description": "Input name to read value from"
+              },
+              "flag": {
+                "type": "string",
+                "description": "CLI flag prefix (e.g. -f, --cost)"
+              },
+              "value": {
+                "type": "string",
+                "description": "Literal or template value"
+              },
+              "default": {
+                "description": "Default value when input is absent"
+              }
+            }
+          }
+        },
+        "exitCodes": {
+          "type": "array",
+          "description": "Acceptable exit codes (default [0])",
+          "items": { "type": "integer" },
+          "default": [0]
+        },
+        "outputs": {
+          "type": "object",
+          "description": "Maps execution results to tool output names",
+          "additionalProperties": {
+            "type": "object",
+            "properties": {
+              "collect": {
+                "type": "string",
+                "description": "Collection strategy: 'outputFiles' or 'glob'",
+                "enum": ["outputFiles", "glob"]
+              },
+              "pattern": {
+                "type": "string",
+                "description": "Glob pattern (when collect=glob)"
+              },
+              "value": {
+                "type": "string",
+                "description": "Template string value"
+              },
+              "fromStdout": {
+                "type": "boolean",
+                "description": "Use combined stdout as value"
+              },
+              "fromStderr": {
+                "type": "boolean",
+                "description": "Use combined stderr as value"
+              }
+            }
+          }
+        },
+        "postProcess": {
+          "type": "string",
+          "description": "Name of a registered post-processor function to transform outputs"
+        }
+      }
+    }
+  }
+}
