@@ -142,16 +142,20 @@
           "description": "Parameter type",
           "enum": [
             "string",
+            "string[]",
             "number",
+            "number[]",
             "boolean",
             "volume",
             "volume[]",
             "mask",
+            "directory",
             "dicom-folder",
+            "dicom-series[]",
             "json[]",
+            "object",
             "series-mapping[]",
             "subject[]",
-            "number[]",
             "bids-dir"
           ]
         },

@@ -122,6 +122,10 @@
       "inputs": {
         "sidecars": { "ref": "steps.convert.outputs.sidecars" },
         "overrides": { "ref": "context.series_list" }
+      },
+      "outputMappings": {
+        "mappings": "series_list",
+        "subjects": "subjects"
       }
     },
     "validate": {

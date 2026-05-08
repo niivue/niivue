@@ -243,6 +243,17 @@ export function WorkflowDesignerDialog({
     return set
   }, [draft.steps, validation.errors])
 
+  // Indices of steps with non-fatal warnings (e.g. type-coercion mismatches).
+  // Suppressed when the same step already has a fatal error.
+  const warnSteps = useMemo(() => {
+    const set = new Set<number>()
+    draft.steps.forEach((step, i) => {
+      if (errorSteps.has(i)) return
+      if (validation.warnings.some((w) => w.message.includes(step.name))) set.add(i)
+    })
+    return set
+  }, [draft.steps, validation.warnings, errorSteps])
+
   // Reset draft / load tools when dialog opens
   useEffect(() => {
     if (!open) {
@@ -488,6 +499,7 @@ export function WorkflowDesignerDialog({
                 onRemoveStep={handleRemoveStep}
                 onMoveStep={handleMoveStep}
                 errorSteps={errorSteps}
+                warnSteps={warnSteps}
               />
               <div className="border-t border-neutral-5 bg-[var(--gray-2)] px-3 py-2 max-h-56 overflow-y-auto shrink-0">
                 <BlockPalette

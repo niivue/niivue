@@ -571,12 +571,15 @@ const TYPE_COLORS: Record<string, string> = {
   string: 'gray',
   'string[]': 'gray',
   'json[]': 'yellow',
-  'series-mapping[]': 'yellow',
+  'series-mapping[]': 'amber',
   'subject[]': 'green',
   'bids-dir': 'teal',
   boolean: 'gray',
   number: 'gray',
+  'number[]': 'gray',
   'dicom-folder': 'orange',
+  'dicom-series[]': 'crimson',
+  directory: 'brown',
   object: 'gray'
 }
 
@@ -591,8 +594,12 @@ const TYPE_LABELS: Record<string, string> = {
   'subject[]': 'Subjects',
   'bids-dir': 'BIDS dataset',
   'dicom-folder': 'DICOM folder',
+  'dicom-series[]': 'DICOM series',
+  directory: 'Directory',
   number: 'Number',
-  boolean: 'Flag'
+  'number[]': 'Numbers',
+  boolean: 'Flag',
+  object: 'Object'
 }
 
 export { TYPE_COLORS, TYPE_LABELS }

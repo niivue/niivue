@@ -38,9 +38,9 @@
     }
   },
   "block": {
-    "id": "register-template",
-    "label": "Register to Template",
-    "description": "Align volumes to MNI152 standard space using allineate",
+    "id": "skull-strip-allineate",
+    "label": "Skull-strip (MNI152)",
+    "description": "Strip skull by registering to the MNI152 template and applying its brain mask",
     "category": "Processing",
     "icon": "TransformIcon",
     "defaults": {

@@ -39,6 +39,7 @@ import {
   type StepDraft,
   type WorkflowDraft
 } from '../../../common/workflowBlocks.js'
+import { isTypeCompatible } from '../../../common/typeCompatibility.js'
 import { getBlockIcon } from './BlockPalette.js'
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -64,6 +65,7 @@ interface StepNodeData extends Record<string, unknown> {
   blockIcon: React.ReactNode
   selected: boolean
   hasError: boolean
+  hasWarning: boolean
   /** input name → 'wf-input' | 'context' | null (drawn as a badge on the handle) */
   inputAnnotations: Record<string, 'wf-input' | 'context' | null>
   onSelect: () => void
@@ -81,6 +83,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
     blockIcon,
     selected,
     hasError,
+    hasWarning,
     inputAnnotations,
     onSelect,
     onRemove,
@@ -90,7 +93,13 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
   const inputs = tool ? Object.entries(tool.inputs) : []
   const outputs = tool ? Object.entries(tool.outputs) : []
 
-  const ringColor = hasError ? 'var(--red-7)' : selected ? 'var(--accent-8)' : 'var(--gray-6)'
+  const ringColor = hasError
+    ? 'var(--red-7)'
+    : hasWarning
+      ? 'var(--amber-8)'
+      : selected
+        ? 'var(--accent-8)'
+        : 'var(--gray-6)'
 
   return (
     <div
@@ -310,6 +319,12 @@ const nodeTypes = { step: StepNode }
 
 interface DeletableEdgeData extends Record<string, unknown> {
   onDelete: () => void
+  /** Source output type, used for the on-edge type badge. */
+  sourceType?: string
+  /** Target input type — when it differs from sourceType the edge is a coercion. */
+  targetType?: string
+  /** Hex/CSS color string used for the badge border to match the edge stroke. */
+  edgeColor?: string
 }
 
 function DeletableEdge({
@@ -339,6 +354,12 @@ function DeletableEdge({
     data?.onDelete()
   }
 
+  const sourceType = data?.sourceType
+  const targetType = data?.targetType
+  const isCoercion = !!sourceType && !!targetType && sourceType !== targetType
+  const typeLabel = sourceType ? TYPE_LABELS[sourceType] || sourceType : null
+  const badgeBorder = data?.edgeColor || 'var(--gray-7)'
+
   return (
     <>
       <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} />
@@ -349,9 +370,35 @@ function DeletableEdge({
             position: 'absolute',
             transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
             pointerEvents: 'all',
-            opacity: selected ? 1 : undefined
+            opacity: selected ? 1 : undefined,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 4
           }}
         >
+          {typeLabel && (
+            <span
+              title={
+                isCoercion
+                  ? `${sourceType} → ${targetType} (coerced)`
+                  : `${sourceType}`
+              }
+              style={{
+                fontSize: 10,
+                lineHeight: 1,
+                padding: '2px 6px',
+                borderRadius: 999,
+                border: `1px solid ${badgeBorder}`,
+                background: 'var(--color-panel-solid)',
+                color: 'var(--gray-12)',
+                fontStyle: isCoercion ? 'italic' : 'normal',
+                whiteSpace: 'nowrap',
+                boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+              }}
+            >
+              {isCoercion ? `${typeLabel} ⇢` : typeLabel}
+            </span>
+          )}
           <button
             onClick={handleDelete}
             title="Delete connection"
@@ -395,6 +442,8 @@ interface WorkflowDiagramViewProps {
   onMoveStep: (index: number, direction: -1 | 1) => void
   /** Marked-error step indices, derived from validation. */
   errorSteps: Set<number>
+  /** Steps with non-fatal validation warnings (e.g. type-mismatch coercion). */
+  warnSteps?: Set<number>
 }
 
 // ── Component ────────────────────────────────────────────────────────
@@ -407,7 +456,8 @@ export function WorkflowDiagramView({
   onSelectStep,
   onRemoveStep,
   onMoveStep,
-  errorSteps
+  errorSteps,
+  warnSteps
 }: WorkflowDiagramViewProps): React.ReactElement {
   // Build nodes: one per step, laid out left-to-right.
   const nodes = useMemo<Node<StepNodeData>[]>(() => {
@@ -443,6 +493,7 @@ export function WorkflowDiagramView({
           blockIcon: block ? getBlockIcon(block.icon || '') : null,
           selected: selectedStep === i,
           hasError: errorSteps.has(i),
+          hasWarning: warnSteps?.has(i) ?? false,
           inputAnnotations,
           onSelect: (): void => onSelectStep(selectedStep === i ? null : i),
           onRemove: (): void => onRemoveStep(i),
@@ -453,7 +504,16 @@ export function WorkflowDiagramView({
         draggable: true
       }
     })
-  }, [draft.steps, tools, selectedStep, errorSteps, onSelectStep, onRemoveStep, onMoveStep])
+  }, [
+    draft.steps,
+    tools,
+    selectedStep,
+    errorSteps,
+    warnSteps,
+    onSelectStep,
+    onRemoveStep,
+    onMoveStep
+  ])
 
   // Clear the input binding for a target step. Used by both the inline
   // edge × button and React Flow's keyboard-delete path.
@@ -493,7 +553,21 @@ export function WorkflowDiagramView({
 
         const srcTool = tools.get(draft.steps[srcIdx].tool)
         const outDef = srcTool?.outputs[srcOut]
-        const color = outDef ? typeColorVar(outDef.type) : 'var(--gray-9)'
+        const tgtTool = tools.get(draft.steps[targetIdx].tool)
+        const inDef = tgtTool?.inputs[inputName]
+        const sourceType = outDef?.type
+        const targetType = inDef?.type
+        const isArray = !!sourceType && sourceType.endsWith('[]')
+        const compatible =
+          !sourceType || !targetType ? true : isTypeCompatible(sourceType, targetType)
+        const isCoercion =
+          !!sourceType && !!targetType && sourceType !== targetType && compatible
+
+        const color = compatible
+          ? outDef
+            ? typeColorVar(outDef.type)
+            : 'var(--gray-9)'
+          : 'var(--red-9)'
 
         out.push({
           id: `e-${srcIdx}-${srcOut}-${targetIdx}-${inputName}`,
@@ -502,8 +576,17 @@ export function WorkflowDiagramView({
           target: `step-${targetIdx}`,
           targetHandle: `in:${inputName}`,
           type: 'deletable',
-          data: { onDelete: (): void => clearInputBinding(targetIdx, inputName) },
-          style: { stroke: color, strokeWidth: 2 },
+          data: {
+            onDelete: (): void => clearInputBinding(targetIdx, inputName),
+            sourceType,
+            targetType,
+            edgeColor: color
+          },
+          style: {
+            stroke: color,
+            strokeWidth: isArray ? 3 : 2,
+            strokeDasharray: isCoercion ? '6 4' : !compatible ? '2 3' : undefined
+          },
           markerEnd: { type: MarkerType.ArrowClosed, color },
           animated: false
         })
@@ -514,6 +597,31 @@ export function WorkflowDiagramView({
   }, [draft.steps, tools, clearInputBinding])
 
   // ── Edge mutations ─────────────────────────────────────────────────
+
+  // Reject incompatible drag-drops before they become edges. Returns true
+  // when the source output type can flow into the target input type
+  // (exact match or registered coercion).
+  const isValidConnection = useCallback(
+    (conn: Connection | Edge): boolean => {
+      if (!conn.source || !conn.target || !conn.sourceHandle || !conn.targetHandle) return false
+      const srcIdx = parseInt(conn.source.replace('step-', ''), 10)
+      const tgtIdx = parseInt(conn.target.replace('step-', ''), 10)
+      if (Number.isNaN(srcIdx) || Number.isNaN(tgtIdx)) return false
+      // Self-loops aren't meaningful here.
+      if (srcIdx === tgtIdx) return false
+      const srcOut = conn.sourceHandle.replace(/^out:/, '')
+      const tgtIn = conn.targetHandle.replace(/^in:/, '')
+      const srcTool = tools.get(draft.steps[srcIdx]?.tool ?? '')
+      const tgtTool = tools.get(draft.steps[tgtIdx]?.tool ?? '')
+      const outType = srcTool?.outputs[srcOut]?.type
+      const inType = tgtTool?.inputs[tgtIn]?.type
+      // If either side's type is unknown, fall back to permissive behavior
+      // rather than blocking — unknown-type tools shouldn't become unwireable.
+      if (!outType || !inType) return true
+      return isTypeCompatible(outType, inType)
+    },
+    [draft.steps, tools]
+  )
 
   const onConnect = useCallback(
     (conn: Connection) => {
@@ -589,6 +697,7 @@ export function WorkflowDiagramView({
         edgeTypes={edgeTypes}
         onConnect={onConnect}
         onEdgesChange={onEdgesChange}
+        isValidConnection={isValidConnection}
         deleteKeyCode={['Delete', 'Backspace']}
         edgesFocusable
         fitView
