@@ -405,12 +405,18 @@ function createWindow(): void {
   }
 }
 
+import * as os from 'node:os'
 import { resolveSafeHeadlessOutput as resolveSafeHeadlessOutputBase } from './utils/headlessOutputGuard.js'
 
 function resolveSafeHeadlessOutput(outputPath: string): string {
   return resolveSafeHeadlessOutputBase(outputPath, {
     cliOutput: cliOptions.output,
-    fallbackRoot: app.getPath('userData')
+    fallbackRoot: app.getPath('userData'),
+    // In interactive desktop mode, workflow steps stage intermediate files
+    // (e.g. dcm2niix output, skull-strip results) inside per-run dirs under
+    // os.tmpdir(). Those need to be writable so downstream wizard steps can
+    // read them. The headless CLI keeps the strict cliOutput-only root.
+    additionalRoots: isHeadless ? undefined : [os.tmpdir()]
   })
 }
 

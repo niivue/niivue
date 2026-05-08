@@ -18,6 +18,7 @@ import {
 } from './workflowEngine.js'
 import { getHeuristicNames, registerHeuristic } from './heuristicRegistry.js'
 import { createDeclarativeHeuristic } from './declarativeHeuristic.js'
+import { listRegisteredToolExecutors } from './toolRegistry.js'
 import type { WorkflowListItem, WorkflowDefinition, HeuristicDefinition } from '../../common/workflowTypes.js'
 
 export function registerWorkflowIpcHandlers(): void {
@@ -141,6 +142,15 @@ export function registerWorkflowIpcHandlers(): void {
   ipcMain.handle('workflow:list-tools', async () => {
     const tools = getToolDefinitions()
     return Array.from(tools.values())
+  })
+
+  // Returns the union of tool names that are actually runnable: those with a
+  // declarative `exec` block (auto-registered at load time) plus those that
+  // a code-registered ToolExecutor supplies. The designer uses this to mark
+  // "config-only" blocks and to warn before authors save a pipeline that
+  // can't run.
+  ipcMain.handle('workflow:list-runnable-tools', async () => {
+    return listRegisteredToolExecutors()
   })
 
   ipcMain.handle('workflow:list-heuristics', async () => {

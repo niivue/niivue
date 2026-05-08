@@ -51,7 +51,21 @@
     },
     "exposedFields": [],
     "hiddenFields": ["nifti_paths", "nifti_path", "model", "dilation", "output_path"],
-    "requiredContextFields": ["series_list"],
+    "requiredContextFields": ["series_list", "subjects"],
+    "contextFields": {
+      "series_list": {
+        "type": "series-mapping[]",
+        "label": "Series Classification",
+        "description": "BIDS-classified series mappings (drives the skull-strip editor's per-image table)",
+        "heuristic": "bids-classify"
+      },
+      "subjects": {
+        "type": "subject[]",
+        "label": "Subjects",
+        "description": "Detected subjects and sessions grouped by PatientID and AcquisitionDate",
+        "heuristic": "detect-subjects"
+      }
+    },
     "formComponent": "skull-strip-editor"
   }
 }

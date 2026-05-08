@@ -521,6 +521,65 @@ function repairContextFieldDependsOn(
 }
 
 /**
+ * Upgrade existing context fields with the inline declarations from any
+ * step's matching block. Heals workflows whose `series_list` (or similar
+ * shared field) was first created via the generic `type: 'object'` fallback
+ * in `blockToContextFields` — that fallback runs when no producer block had
+ * yet declared inline `contextFields`. If a block now declares the field
+ * with a real type/heuristic (e.g. `series-mapping[]` + `bids-classify`),
+ * adopt that here so the wizard fires the heuristic when the user reaches
+ * the section, and AutoField/custom components see the right type.
+ *
+ * Conservative: only overwrites fields whose existing type is the generic
+ * `'object'` placeholder, or whose `heuristic` is missing. Anything an
+ * author has hand-edited (real type already, explicit heuristic already)
+ * is left alone.
+ */
+function repairBlockContextFieldDeclarations(
+  definition: WorkflowDefinition,
+  tools: Map<string, ToolDefinition>
+): WorkflowDefinition {
+  if (!definition.context?.fields || !definition.steps) return definition
+
+  const inlineByName = new Map<string, NonNullable<BlockDef['contextFields']>[string]>()
+  for (const [stepName, step] of Object.entries(definition.steps)) {
+    const block = findBlockForStep(stepName, step.tool, tools)
+    if (!block?.contextFields) continue
+    for (const [fieldName, inline] of Object.entries(block.contextFields)) {
+      if (!inlineByName.has(fieldName)) inlineByName.set(fieldName, inline)
+    }
+  }
+  if (inlineByName.size === 0) return definition
+
+  let changed = false
+  const newFields = { ...definition.context.fields }
+  for (const [name, inline] of inlineByName) {
+    const existing = newFields[name]
+    if (!existing) continue
+    const wantsType = existing.type === 'object' && inline.type !== 'object'
+    const wantsHeuristic = !existing.heuristic && !!inline.heuristic
+    if (!wantsType && !wantsHeuristic) continue
+    newFields[name] = {
+      ...existing,
+      ...(wantsType ? { type: inline.type } : {}),
+      ...(wantsHeuristic ? { heuristic: inline.heuristic } : {}),
+      ...(wantsType && inline.label ? { label: inline.label } : {}),
+      ...(wantsType && inline.description ? { description: inline.description } : {}),
+      ...(wantsType && inline.dependsOn && !existing.dependsOn
+        ? { dependsOn: inline.dependsOn }
+        : {})
+    }
+    changed = true
+  }
+  if (!changed) return definition
+  console.log(`[workflow] Upgraded context-field declarations in '${definition.name}'`)
+  return {
+    ...definition,
+    context: { ...definition.context, fields: newFields }
+  }
+}
+
+/**
  * Backfill `context.fields` with entries for any block-exposed field that
  * has no existing context definition. Heals saved workflows that pre-date
  * a tool input rename (e.g. atlas-parcellate's nifti_path → nifti_paths)
@@ -610,7 +669,8 @@ export function finalizeWorkflow(
   const sectionsRepaired = repairMissingFormSections(exposedRepaired, tools)
   const orphanRepaired = repairOrphanedFormFields(sectionsRepaired, tools)
   const ctxRepaired = repairMissingContextFields(orphanRepaired, tools)
-  const enumsRepaired = repairContextFieldEnums(ctxRepaired, tools)
+  const ctxUpgraded = repairBlockContextFieldDeclarations(ctxRepaired, tools)
+  const enumsRepaired = repairContextFieldEnums(ctxUpgraded, tools)
   const repaired = repairContextFieldDependsOn(enumsRepaired, tools)
 
   if (repaired.form) {

@@ -594,12 +594,12 @@ export function StepSkullStrip({
       )}
 
       {/* Side-by-side preview (hidden after BIDS write) */}
-      {onLoadVolume && completed.size > 1 && preview && (
+      {completed.size > 1 && preview && (
         <Text size="1" color="gray">
           Click a completed row above to preview a different series.
         </Text>
       )}
-      {onLoadVolume && preview && (() => {
+      {preview && (() => {
         const previewMapping = mappings.find((m) => m.index === preview.seriesIndex)
         const bidsPath = previewMapping ? generateBidsPath(previewMapping) : `Series ${preview.seriesIndex}`
         return (

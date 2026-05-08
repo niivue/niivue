@@ -238,11 +238,9 @@ function SubjectSessionAdapter({
 
 function SkullStripAdapter({
   context,
-  onFieldChange
-}: {
-  context: Record<string, unknown>
-  onFieldChange: (fieldName: string, value: unknown) => void
-}): React.ReactElement {
+  onFieldChange,
+  onLoadFile
+}: CustomComponentProps): React.ReactElement {
   const mappings = (context.series_list as BidsSeriesMapping[]) || []
   const canvasRef = useRef<HTMLCanvasElement | null>(null)
   const [nvInstance, setNvInstance] = useState<Niivue | null>(null)
@@ -336,6 +334,7 @@ function SkullStripAdapter({
       mappings={mappings}
       onMappingsUpdate={handleMappingsUpdate}
       nv={nvInstance}
+      onLoadVolume={onLoadFile}
       completed={completed}
       onCompletedChange={handleCompletedChange}
       originalPaths={originalPaths}

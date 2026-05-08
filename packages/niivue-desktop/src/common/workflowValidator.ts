@@ -96,6 +96,17 @@ export function resolveRefType(
 
 // ── Main validator ──────────────────────────────────────────────────
 
+/** Optional inputs that influence validation behaviour. */
+export interface ValidationOptions {
+  /**
+   * Names of tools known to have an executor (declarative `exec` block or
+   * code-registered ToolExecutor). When provided, the validator emits a
+   * warning for any step whose tool isn't runnable, so authors don't ship
+   * a pipeline that produces a step the engine can't execute.
+   */
+  runnableTools?: Set<string>
+}
+
 /**
  * Validate a workflow draft against available tool definitions.
  *
@@ -105,10 +116,12 @@ export function resolveRefType(
  */
 export function validateWorkflowDraft(
   draft: WorkflowDraft,
-  tools: Map<string, ToolDefinition>
+  tools: Map<string, ToolDefinition>,
+  options: ValidationOptions = {}
 ): ValidationResult {
   const errors: ValidationIssue[] = []
   const warnings: ValidationIssue[] = []
+  const { runnableTools } = options
 
   const seenNames = new Set<string>()
 
@@ -140,6 +153,18 @@ export function validateWorkflowDraft(
         message: `Step '${step.name}' references unknown tool '${step.tool}'`
       })
       continue
+    }
+
+    // ── Executor presence ────────────────────────────────────────
+    // When the caller has supplied the runnable-tools set, surface a
+    // warning for any step whose tool has no executor. We deliberately
+    // emit a warning (not an error) so authors can still draft and save
+    // a workflow whose missing executor is added later in code.
+    if (runnableTools && !tool.exec && !runnableTools.has(tool.name)) {
+      warnings.push({
+        stepName: step.name,
+        message: `Step '${step.name}' uses tool '${tool.name}' which has no executor — this step will fail at runtime.`
+      })
     }
 
     // ── Input binding checks ──────────────────────────────────────

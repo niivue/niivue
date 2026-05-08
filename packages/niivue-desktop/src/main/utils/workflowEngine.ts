@@ -409,6 +409,17 @@ export async function executeAllSteps(runId: string): Promise<ExecuteAllResult> 
     const stepNames = Object.keys(definition.steps)
     for (const stepName of stepNames) {
       if (state.stepOutputs[stepName]) continue // already executed
+      const step = definition.steps[stepName]
+      // Steps whose tool has no main-process executor (e.g. browser-only
+      // tools like `brainchop` whose work happens inside a wizard
+      // formComponent) are fulfilled in the renderer. Treat them as
+      // completed with empty outputs so downstream binding-resolution
+      // produces a clear "missing field" error rather than the cryptic
+      // "No executor for tool" thrown from executeStep.
+      if (!getToolExecutor(step.tool)) {
+        state.stepOutputs[stepName] = {}
+        continue
+      }
       try {
         await executeStep(runId, stepName)
       } catch (err) {

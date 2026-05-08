@@ -66,4 +66,26 @@ describe('headlessOutputGuard - resolveSafeHeadlessOutput', () => {
     // @ts-expect-error: testing runtime guard
     expect(() => resolveSafeHeadlessOutput(undefined, opts)).toThrow(/required/)
   })
+
+  it('accepts paths inside an additionalRoots entry', () => {
+    const altRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'headless-guard-alt-'))
+    const candidate = path.join(altRoot, 'wf-run', 'volume.nii.gz')
+    const safe = resolveSafeHeadlessOutput(candidate, {
+      cliOutput: '/elsewhere/run.png',
+      fallbackRoot: fallback,
+      additionalRoots: [altRoot]
+    })
+    expect(safe).toBe(path.resolve(candidate))
+  })
+
+  it('still rejects paths outside both the primary and additional roots', () => {
+    const altRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'headless-guard-alt-'))
+    expect(() =>
+      resolveSafeHeadlessOutput('/etc/passwd', {
+        cliOutput: '/elsewhere/run.png',
+        fallbackRoot: fallback,
+        additionalRoots: [altRoot]
+      })
+    ).toThrow(/escapes allowed root/)
+  })
 })

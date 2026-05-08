@@ -604,6 +604,31 @@ const TYPE_LABELS: Record<string, string> = {
 
 export { TYPE_COLORS, TYPE_LABELS }
 
+// ── Runnability ──────────────────────────────────────────────────────
+
+/**
+ * Decide whether a tool can actually execute in a workflow.
+ *
+ * Two paths exist:
+ *   1) Declarative: the tool JSON has an `exec` block (auto-registered at load).
+ *   2) Code-registered: a TypeScript executor was added to toolRegistry by name.
+ *
+ * For (1) the renderer can answer locally from the loaded ToolDefinition. For
+ * (2) the main process owns the ground truth, so the renderer fetches the
+ * registered names via the `workflow:list-runnable-tools` IPC and passes them
+ * in here. When the set is undefined we fall back to "declarative only" — the
+ * caller hasn't supplied the IPC result yet, so we lean conservative.
+ */
+export function isToolRunnable(
+  tool: ToolDefinition | undefined,
+  registeredToolNames?: Set<string>
+): boolean {
+  if (!tool) return false
+  if (tool.exec) return true
+  if (registeredToolNames && registeredToolNames.has(tool.name)) return true
+  return false
+}
+
 // ── Context slot utilities ───────────────────────────────────────────
 
 /** A context slot derived from a tool's output. */

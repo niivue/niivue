@@ -226,6 +226,11 @@ export function WorkflowDesignerDialog({
 }: WorkflowDesignerDialogProps): React.ReactElement | null {
   const [draft, setDraft] = useState<WorkflowDraft>({ ...DEFAULT_DRAFT })
   const [tools, setTools] = useState<ToolDefinition[]>([])
+  // Names of tools that have an executor (declarative `exec` block or
+  // code-registered). The designer marks non-runnable blocks so authors
+  // see at design time which tools can actually run end-to-end.
+  const [runnableTools, setRunnableTools] = useState<Set<string>>(new Set())
+  const [heuristicNames, setHeuristicNames] = useState<string[]>([])
   const [validation, setValidation] = useState<ValidationResult>({ errors: [], warnings: [] })
   const [saveError, setSaveError] = useState<string | null>(null)
   const [view, setView] = useState<'list' | 'diagram'>('list')
@@ -263,6 +268,14 @@ export function WorkflowDesignerDialog({
     }
 
     electron.ipcRenderer.invoke('workflow:list-tools').then((t: ToolDefinition[]) => setTools(t))
+    electron.ipcRenderer
+      .invoke('workflow:list-runnable-tools')
+      .then((names: string[]) => setRunnableTools(new Set(names)))
+      .catch(() => setRunnableTools(new Set()))
+    electron.ipcRenderer
+      .invoke('workflow:list-heuristics')
+      .then((names: string[]) => setHeuristicNames(names))
+      .catch(() => setHeuristicNames([]))
 
     if (initialDefinition) {
       setDraft(definitionToDraft(initialDefinition))
@@ -284,10 +297,10 @@ export function WorkflowDesignerDialog({
   useEffect(() => {
     if (tools.length === 0) return
     const timer = setTimeout(() => {
-      setValidation(validateWorkflowDraft(draft, toolsMap))
+      setValidation(validateWorkflowDraft(draft, toolsMap, { runnableTools }))
     }, 300)
     return (): void => clearTimeout(timer)
-  }, [draft, toolsMap, tools.length])
+  }, [draft, toolsMap, tools.length, runnableTools])
 
   // ── Block CRUD ──────────────────────────────────────────────────────
 
@@ -483,6 +496,8 @@ export function WorkflowDesignerDialog({
               setDraft={setDraft}
               tools={toolsMap}
               validation={validation}
+              runnableTools={runnableTools}
+              heuristicNames={heuristicNames}
               onAddBlock={handleAddBlock}
               onRemoveStep={handleRemoveStep}
               onMoveStep={handleMoveStep}
@@ -505,6 +520,7 @@ export function WorkflowDesignerDialog({
                 <BlockPalette
                   onAddBlock={handleAddBlock}
                   tools={toolsMap}
+                  runnableTools={runnableTools}
                   lastStepTool={
                     draft.steps.length > 0 ? draft.steps[draft.steps.length - 1].tool : undefined
                   }

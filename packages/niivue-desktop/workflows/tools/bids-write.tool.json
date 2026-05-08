@@ -6,7 +6,8 @@
   "inputs": {
     "volumes": {
       "type": "volume[]",
-      "description": "NIfTI volume files to include in the dataset"
+      "description": "NIfTI volume files to include in the dataset (vestigial — bids-write derives paths from each mapping's niftiPath)",
+      "optional": true
     },
     "mappings": {
       "type": "series-mapping[]",
@@ -45,12 +46,27 @@
     "hiddenFields": ["volumes", "mappings", "config"],
     "requiredContextFields": [
       "series_list",
+      "subjects",
       "dataset_name",
       "dataset_version",
       "license",
       "authors",
       "readme"
     ],
+    "contextFields": {
+      "series_list": {
+        "type": "series-mapping[]",
+        "label": "Series Classification",
+        "description": "Classified series mappings with BIDS datatype, suffix, and metadata",
+        "heuristic": "bids-classify"
+      },
+      "subjects": {
+        "type": "subject[]",
+        "label": "Subjects",
+        "description": "Detected subjects and sessions grouped by PatientID and AcquisitionDate",
+        "heuristic": "detect-subjects"
+      }
+    },
     "formComponent": "bids-preview"
   }
 }

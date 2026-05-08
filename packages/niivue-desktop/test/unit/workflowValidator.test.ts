@@ -247,6 +247,47 @@ describe('validateWorkflowDraft', () => {
     expect(result.warnings.some((w) => w.message.includes('has no inputs configured'))).toBe(true)
   })
 
+  it('step with non-runnable tool → warning when runnableTools provided', () => {
+    const draft = baseDraft()
+    draft.steps = [{
+      name: 'convert',
+      tool: 'dcm2niix',
+      inputs: { dicom_dir: { mode: 'ref' as const, value: 'inputs.dicom_dir' } },
+      outputMappings: {},
+      condition: ''
+    }]
+    // Empty runnable set → dcm2niix is treated as ghost (no exec, not in set)
+    const result = validateWorkflowDraft(draft, tools, { runnableTools: new Set() })
+    expect(result.warnings.some((w) => w.message.includes("has no executor"))).toBe(true)
+  })
+
+  it('step with non-runnable tool → no warning when runnableTools omitted', () => {
+    const draft = baseDraft()
+    draft.steps = [{
+      name: 'convert',
+      tool: 'dcm2niix',
+      inputs: { dicom_dir: { mode: 'ref' as const, value: 'inputs.dicom_dir' } },
+      outputMappings: {},
+      condition: ''
+    }]
+    // Without the option, the validator can't know — so don't warn (back-compat)
+    const result = validateWorkflowDraft(draft, tools)
+    expect(result.warnings.some((w) => w.message.includes('has no executor'))).toBe(false)
+  })
+
+  it('runnableTools set including the tool name → no ghost warning', () => {
+    const draft = baseDraft()
+    draft.steps = [{
+      name: 'convert',
+      tool: 'dcm2niix',
+      inputs: { dicom_dir: { mode: 'ref' as const, value: 'inputs.dicom_dir' } },
+      outputMappings: {},
+      condition: ''
+    }]
+    const result = validateWorkflowDraft(draft, tools, { runnableTools: new Set(['dcm2niix']) })
+    expect(result.warnings.some((w) => w.message.includes('has no executor'))).toBe(false)
+  })
+
   it('compatible type (volume → string) does not produce warning', () => {
     const draft = baseDraft()
     draft.steps = [

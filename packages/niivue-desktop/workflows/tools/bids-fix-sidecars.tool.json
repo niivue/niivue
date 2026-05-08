@@ -40,6 +40,14 @@
     "exposedFields": [],
     "hiddenFields": ["bids_dir"],
     "requiredContextFields": ["bids_dir", "series_list"],
+    "contextFields": {
+      "series_list": {
+        "type": "series-mapping[]",
+        "label": "Series Classification",
+        "description": "Classified series mappings used to locate sidecar files for repair",
+        "heuristic": "bids-classify"
+      }
+    },
     "formComponent": "bids-sidecar-fix"
   }
 }

@@ -632,5 +632,49 @@ describe('workflowEngine', () => {
       expect(stateBefore!.error).toBeDefined()
       expect(stateBefore!.error).toContain('boom from middle step')
     })
+
+    it('skips steps whose tool has no main-process executor', async () => {
+      // Browser-only tools (e.g. brainchop) are fulfilled inside a wizard
+      // formComponent and never execute server-side. executeAllSteps must
+      // not throw "No executor for tool" for those — the form has already
+      // run, and the engine should treat the step as a no-op.
+      const def: WorkflowDefinition = {
+        name: 'wf-with-browser-only-step',
+        version: '1.0.0',
+        description: '',
+        menu: 'Test',
+        inputs: { in: { type: 'string', description: '' } },
+        steps: {
+          first: {
+            tool: 'tool_a',
+            inputs: { in: { ref: 'inputs.in' } }
+          },
+          middle_browser_only: {
+            tool: 'tool_browser',
+            inputs: { src: { ref: 'steps.first.outputs.out' } }
+          },
+          last: {
+            tool: 'tool_c',
+            inputs: { in: { ref: 'inputs.in' } }
+          }
+        },
+        outputs: { result: { type: 'string', ref: 'steps.last.outputs.out' } }
+      }
+      mockDefinitions.set('wf-with-browser-only-step', def)
+      mockToolDefinitions.set('tool_a', { name: 'tool_a', inputs: { in: {} } })
+      mockToolDefinitions.set('tool_browser', { name: 'tool_browser', inputs: { src: {} } })
+      mockToolDefinitions.set('tool_c', { name: 'tool_c', inputs: { in: {} } })
+      mockToolExecutors.set('tool_a', async () => ({ out: 'a-out' }))
+      // tool_browser intentionally has no executor registered
+      mockToolExecutors.set('tool_c', async () => ({ out: 'c-out' }))
+
+      const { runId } = startWorkflow('wf-with-browser-only-step', { in: 'x' })
+      const result = await executeAllSteps(runId)
+
+      expect(result.stepOutputs.first).toEqual({ out: 'a-out' })
+      expect(result.stepOutputs.middle_browser_only).toEqual({})
+      expect(result.stepOutputs.last).toEqual({ out: 'c-out' })
+      expect(result.outputs.result).toBe('c-out')
+    })
   })
 })

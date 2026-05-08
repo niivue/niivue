@@ -23,14 +23,18 @@ interface ValidationResult {
   warnings: BidsValidationIssue[]
 }
 
-/** Render a single NIfTI file to a static thumbnail, releasing the GL context immediately */
+/** Render a single NIfTI file to a static thumbnail, releasing the GL context immediately.
+ * Uses readPixels + 2D canvas because Niivue's WebGL context is created without
+ * preserveDrawingBuffer, so canvas.toDataURL() on the WebGL canvas returns blank. */
 async function renderPreviewImage(niftiPath: string): Promise<string | null> {
-  const canvas = document.createElement('canvas')
-  canvas.width = 120
-  canvas.height = 120
-  canvas.style.position = 'absolute'
-  canvas.style.left = '-9999px'
-  document.body.appendChild(canvas)
+  const W = 120
+  const H = 120
+  const glCanvas = document.createElement('canvas')
+  glCanvas.width = W
+  glCanvas.height = H
+  glCanvas.style.position = 'absolute'
+  glCanvas.style.left = '-9999px'
+  document.body.appendChild(glCanvas)
 
   const nv = new Niivue({
     isResizeCanvas: false,
@@ -40,22 +44,45 @@ async function renderPreviewImage(niftiPath: string): Promise<string | null> {
   })
 
   try {
-    await nv.attachToCanvas(canvas)
+    await nv.attachToCanvas(glCanvas)
     const base64: string = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
-    if (!base64) return null
+    if (!base64) {
+      console.warn('[bids-preview] loadFromFile returned empty for', niftiPath)
+      return null
+    }
     const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
     nv.addVolume(vol)
     nv.setSliceType(SLICE_TYPE.RENDER)
     nv.updateGLVolume()
     nv.drawScene()
-    return canvas.toDataURL('image/png')
-  } catch {
+
+    const gl = nv.gl
+    if (!gl) return null
+    const pixels = new Uint8Array(W * H * 4)
+    gl.readPixels(0, 0, W, H, gl.RGBA, gl.UNSIGNED_BYTE, pixels)
+
+    // WebGL pixel rows are bottom-up; ImageData expects top-down — flip Y.
+    const flipped = new Uint8ClampedArray(W * H * 4)
+    const rowBytes = W * 4
+    for (let y = 0; y < H; y++) {
+      const srcStart = (H - 1 - y) * rowBytes
+      flipped.set(pixels.subarray(srcStart, srcStart + rowBytes), y * rowBytes)
+    }
+    const out = document.createElement('canvas')
+    out.width = W
+    out.height = H
+    const ctx = out.getContext('2d')
+    if (!ctx) return null
+    ctx.putImageData(new ImageData(flipped, W, H), 0, 0)
+    return out.toDataURL('image/png')
+  } catch (err) {
+    console.warn('[bids-preview] renderPreviewImage failed for', niftiPath, err)
     return null
   } finally {
     nv.volumes = []
     const ext = nv.gl?.getExtension('WEBGL_lose_context')
     if (ext) ext.loseContext()
-    document.body.removeChild(canvas)
+    document.body.removeChild(glCanvas)
   }
 }
 
@@ -104,15 +131,27 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
   const included = mappings.filter((m) => !m.excluded)
   const excluded = mappings.filter((m) => m.excluded)
 
+  // If skull-stripping ran for this series, the stripped file lives at the
+  // conventional `_brain.nii.gz` location next to the original. We derive it
+  // from `_originalPaths` instead of trusting `m.niftiPath`, because heuristics
+  // that re-fire on section entry (bids-classify) may reset niftiPath back to
+  // the sidecar-derived original even though the stripped file still exists.
+  const strippedPathFor = (m: BidsSeriesMapping): string => {
+    const orig = originalPaths[m.index]
+    if (!orig) return m.niftiPath
+    return orig.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
+  }
+
   // Collect all unique NIfTI paths that need previews
   const previewPaths = React.useMemo(() => {
     const paths: string[] = []
     for (const m of included) {
-      paths.push(m.niftiPath)
+      paths.push(strippedPathFor(m))
       const orig = originalPaths[m.index]
       if (orig) paths.push(orig)
     }
     return paths
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [included, originalPaths])
 
   // Render all thumbnails sequentially (one GL context at a time)
@@ -210,6 +249,7 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
               const bidsPath = generateBidsPath(m)
               const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
               const origPath = originalPaths[m.index]
+              const mainPath = strippedPathFor(m)
               const rows: React.ReactElement[] = []
 
               // Skull-stripped version (or regular if no skull stripping)
@@ -218,8 +258,8 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                   key={`${m.index}-main`}
                   className="flex items-center gap-3 px-3 py-1.5 bg-[var(--gray-2)] rounded hover:bg-[var(--gray-3)]"
                 >
-                  {previewImages.has(m.niftiPath)
-                    ? <img src={previewImages.get(m.niftiPath)} width={60} height={60} className="rounded flex-shrink-0" />
+                  {previewImages.has(mainPath)
+                    ? <img src={previewImages.get(mainPath)} width={60} height={60} className="rounded flex-shrink-0" />
                     : <div className="rounded bg-black flex-shrink-0 flex items-center justify-center" style={{ width: 60, height: 60 }}>
                         <div className="animate-spin w-3 h-3 border border-[var(--gray-9)] border-t-transparent rounded-full" />
                       </div>
@@ -236,15 +276,15 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                   {onLoadFile && (
                     <Button
                       size="1"
-                      variant={loadedPaths.has(m.niftiPath) ? 'outline' : 'soft'}
-                      color={loadedPaths.has(m.niftiPath) ? 'green' : undefined}
+                      variant={loadedPaths.has(mainPath) ? 'outline' : 'soft'}
+                      color={loadedPaths.has(mainPath) ? 'green' : undefined}
                       className="flex-shrink-0"
                       onClick={(e) => {
                         e.stopPropagation()
-                        void handleOpenInViewer(m.niftiPath)
+                        void handleOpenInViewer(mainPath)
                       }}
                     >
-                      {loadedPaths.has(m.niftiPath) ? (
+                      {loadedPaths.has(mainPath) ? (
                         <><CheckIcon /> Loaded</>
                       ) : (
                         'Open in Viewer'

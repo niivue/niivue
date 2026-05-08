@@ -28,6 +28,7 @@ import {
 import {
   getWorkflowBlocks,
   BLOCK_CATEGORIES,
+  isToolRunnable,
   type WorkflowBlock,
   type BlockCategory
 } from '../../../common/workflowBlocks.js'
@@ -73,6 +74,12 @@ interface BlockPaletteProps {
   tools: Map<string, ToolDefinition>
   /** The last step's tool name, used to highlight compatible next blocks */
   lastStepTool?: string
+  /**
+   * Names of tools known to have an executor (declarative `exec` block or
+   * code-registered). Tools not in this set render as "config-only" so authors
+   * don't waste effort wiring a step that can't run.
+   */
+  runnableTools?: Set<string>
 }
 
 // ── Component ─────────────────────────────────────────────────────────
@@ -80,7 +87,8 @@ interface BlockPaletteProps {
 export function BlockPalette({
   onAddBlock,
   tools,
-  lastStepTool
+  lastStepTool,
+  runnableTools
 }: BlockPaletteProps): React.ReactElement {
   const [search, setSearch] = useState('')
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
@@ -179,14 +187,18 @@ export function BlockPalette({
                 <div className="flex flex-col gap-0.5 mt-0.5">
                   {blocks.map((block) => {
                     const isCompatible = compatibleBlockIds.has(block.id)
+                    const runnable = isToolRunnable(tools.get(block.tool), runnableTools)
+                    const tooltip = runnable
+                      ? block.description
+                      : `${block.description}\n\nThis tool has no executor. Adding it produces a config-only step that won't run; built-in workflows pair it with a custom backend.`
                     return (
-                      <Tooltip key={block.id} content={block.description}>
+                      <Tooltip key={block.id} content={tooltip}>
                         <button
                           className={`flex items-center gap-2 w-full px-3 py-1.5 rounded text-left transition-colors cursor-pointer ${
                             isCompatible
                               ? 'bg-[var(--accent-3)] hover:bg-[var(--accent-4)] border border-[var(--accent-6)]'
                               : 'hover:bg-[var(--gray-3)]'
-                          }`}
+                          } ${runnable ? '' : 'opacity-60'}`}
                           onClick={() => onAddBlock(block)}
                         >
                           <span className={isCompatible ? 'text-[var(--accent-9)]' : 'text-neutral-9'}>
@@ -197,6 +209,11 @@ export function BlockPalette({
                               {block.label}
                             </Text>
                           </div>
+                          {!runnable && (
+                            <Badge variant="outline" size="1" color="gray" className="shrink-0">
+                              config-only
+                            </Badge>
+                          )}
                           {isCompatible && (
                             <Badge variant="soft" size="1" color="green" className="shrink-0">
                               fit

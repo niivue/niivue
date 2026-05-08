@@ -1622,6 +1622,11 @@ function MainApp(): JSX.Element {
             const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
             if (!base64) return
             const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+            // "Open in Viewer" replaces the document's volumes — otherwise an
+            // earlier loaded volume (e.g. the original from the SkullStrip step)
+            // sits underneath the new one and visually dominates, making the
+            // user believe they're still seeing the original.
+            while (nv.volumes.length > 0) nv.removeVolumeByIndex(0)
             nv.addVolume(vol)
             target.setVolumes([...nv.volumes])
             nv.drawScene()

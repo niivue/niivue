@@ -6,6 +6,8 @@ export interface HeadlessOutputGuardOptions {
   cliOutput?: string | null
   /** Fallback root when --output is missing or stdout. */
   fallbackRoot: string
+  /** Extra roots that are also permitted (e.g. os.tmpdir() for workflow run dirs). */
+  additionalRoots?: string[]
 }
 
 /**
@@ -41,13 +43,16 @@ export function resolveSafeHeadlessOutput(
   if (typeof outputPath !== 'string' || outputPath.length === 0) {
     throw new Error('outputPath is required')
   }
-  const root = path.resolve(getHeadlessOutputRoot(opts))
+  const primaryRoot = path.resolve(getHeadlessOutputRoot(opts))
   const resolved = path.isAbsolute(outputPath)
     ? path.resolve(outputPath)
-    : path.resolve(root, outputPath)
-  const rel = path.relative(root, resolved)
-  if (rel.startsWith('..') || path.isAbsolute(rel)) {
-    throw new Error(`outputPath escapes allowed root: ${outputPath}`)
+    : path.resolve(primaryRoot, outputPath)
+  const allowedRoots = [primaryRoot, ...(opts.additionalRoots ?? []).map((r) => path.resolve(r))]
+  for (const root of allowedRoots) {
+    const rel = path.relative(root, resolved)
+    if (!rel.startsWith('..') && !path.isAbsolute(rel)) {
+      return resolved
+    }
   }
-  return resolved
+  throw new Error(`outputPath escapes allowed root: ${outputPath}`)
 }

@@ -5,7 +5,10 @@ import {
   Tooltip,
   Select,
   TextField,
-  Card
+  Card,
+  Popover,
+  Flex,
+  IconButton
 } from '@radix-ui/themes'
 import {
   PlusIcon,
@@ -13,13 +16,16 @@ import {
   ChevronDownIcon,
   ChevronRightIcon,
   DragHandleDots2Icon,
-  PersonIcon
+  PersonIcon,
+  InfoCircledIcon,
+  MagicWandIcon
 } from '@radix-ui/react-icons'
 import type { ToolDefinition, ToolParameterDef } from '../../../common/workflowTypes.js'
 import type { ValidationResult } from '../../../common/workflowValidator.js'
 import {
   computeContextSlots,
   detectBlockForStep,
+  isToolRunnable,
   TYPE_COLORS,
   TYPE_LABELS,
   type WorkflowBlock,
@@ -43,6 +49,15 @@ interface ContextSpineDesignerProps {
   setDraft: React.Dispatch<React.SetStateAction<WorkflowDraft>>
   tools: Map<string, ToolDefinition>
   validation: ValidationResult
+  /**
+   * Names of tools that actually have an executor wired (declarative `exec`
+   * block or code-registered). Used to mark "config-only" steps so authors
+   * understand which blocks can run end-to-end in a custom pipeline.
+   */
+  runnableTools?: Set<string>
+  /** Names of registered heuristics (declarative + code), shown in the
+   * heuristic dropdown for user-form context fields. */
+  heuristicNames?: string[]
   onAddBlock: (block: WorkflowBlock) => void
   onRemoveStep: (index: number) => void
   onMoveStep: (index: number, direction: -1 | 1) => void
@@ -171,6 +186,8 @@ export function ContextSpineDesigner({
   setDraft,
   tools,
   validation,
+  runnableTools,
+  heuristicNames = [],
   onAddBlock,
   onRemoveStep,
   onMoveStep
@@ -211,6 +228,25 @@ export function ContextSpineDesigner({
       step.inputs[inputName] = { mode, value }
       steps[stepIndex] = step
       return { ...prev, steps }
+    })
+  }, [setDraft])
+
+  /**
+   * Patch a single context field. Used by the user-form attach popover so
+   * authors can pick a heuristic to pre-fill the value, edit the label
+   * shown to the runtime user, etc., without opening the JSON file.
+   */
+  const updateContextField = useCallback((fieldName: string, patch: Partial<{ heuristic: string; label: string; description: string }>) => {
+    setDraft((prev) => {
+      const existing = prev.contextFields[fieldName]
+      if (!existing) return prev
+      return {
+        ...prev,
+        contextFields: {
+          ...prev.contextFields,
+          [fieldName]: { ...existing, ...patch }
+        }
+      }
     })
   }, [setDraft])
 
@@ -482,6 +518,7 @@ export function ContextSpineDesigner({
               const visibleInputs = inputInfos.filter((inp) => !inp.hidden)
               const hiddenInputs = inputInfos.filter((inp) => inp.hidden)
               const hasMissingRequired = visibleInputs.some((inp) => inp.source === 'unset' && !inp.paramDef.optional)
+              const runnable = isToolRunnable(tool, runnableTools)
 
               const outputTypes = tool
                 ? Object.entries(tool.outputs).map(([name, def]) => ({
@@ -539,6 +576,80 @@ export function ContextSpineDesigner({
                         </Text>
                       </div>
                     </button>
+                    {!runnable && (
+                      <Tooltip content="This tool has no executor — the step will fail at runtime. Built-in workflows pair it with a custom backend.">
+                        <Badge variant="outline" size="1" color="gray" className="shrink-0">
+                          config-only
+                        </Badge>
+                      </Tooltip>
+                    )}
+                    {tool && (
+                      <Popover.Root>
+                        <Popover.Trigger>
+                          <IconButton
+                            variant="ghost"
+                            color="gray"
+                            size="1"
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label={`About ${tool.name}`}
+                          >
+                            <InfoCircledIcon />
+                          </IconButton>
+                        </Popover.Trigger>
+                        <Popover.Content size="1" maxWidth="420px">
+                          <Flex direction="column" gap="2">
+                            <Flex gap="2" align="center">
+                              <Text size="2" weight="bold">{tool.name}</Text>
+                              <Text size="1" color="gray">v{tool.version}</Text>
+                            </Flex>
+                            <Text size="1">{tool.description}</Text>
+                            {Object.keys(tool.inputs).length > 0 && (
+                              <Flex direction="column" gap="1">
+                                <Text size="1" weight="bold" className="text-neutral-11 uppercase tracking-wider">
+                                  Inputs
+                                </Text>
+                                {Object.entries(tool.inputs).map(([name, def]) => (
+                                  <Flex key={name} gap="2" align="start">
+                                    <Badge variant="soft" size="1" color={(TYPE_COLORS[def.type] || 'gray') as 'gray'}>
+                                      {def.type}
+                                    </Badge>
+                                    <Flex direction="column" className="min-w-0 flex-1">
+                                      <Text size="1" weight="medium" className="font-mono">
+                                        {name}{def.optional ? '?' : ''}
+                                      </Text>
+                                      <Text size="1" className="text-neutral-10">{def.description}</Text>
+                                    </Flex>
+                                  </Flex>
+                                ))}
+                              </Flex>
+                            )}
+                            {Object.keys(tool.outputs).length > 0 && (
+                              <Flex direction="column" gap="1">
+                                <Text size="1" weight="bold" className="text-neutral-11 uppercase tracking-wider">
+                                  Outputs
+                                </Text>
+                                {Object.entries(tool.outputs).map(([name, def]) => (
+                                  <Flex key={name} gap="2" align="start">
+                                    <Badge variant="soft" size="1" color={(TYPE_COLORS[def.type] || 'gray') as 'gray'}>
+                                      {def.type}
+                                    </Badge>
+                                    <Flex direction="column" className="min-w-0 flex-1">
+                                      <Text size="1" weight="medium" className="font-mono">{name}</Text>
+                                      <Text size="1" className="text-neutral-10">{def.description}</Text>
+                                    </Flex>
+                                  </Flex>
+                                ))}
+                              </Flex>
+                            )}
+                            {!runnable && (
+                              <Text size="1" color="amber">
+                                No executor registered — this tool needs a backend before it can run in a workflow.
+                              </Text>
+                            )}
+                          </Flex>
+                        </Popover.Content>
+                      </Popover.Root>
+                    )}
                     <Badge variant="soft" size="1" color={hasError || hasMissingRequired ? 'red' : 'gray'}>
                       {i + 1}
                     </Badge>
@@ -666,12 +777,97 @@ export function ContextSpineDesigner({
                                 </Select.Content>
                               </Select.Root>
 
-                              {/* Show user form indicator */}
-                              {inp.isUserForm && (
-                                <Badge variant="soft" size="1" color="orange">
-                                  form
-                                </Badge>
-                              )}
+                              {/* User-form indicator + attach-heuristic popover.
+                                  Authors can wire a registered heuristic to the
+                                  underlying context field so the runtime form
+                                  comes pre-filled (e.g. list-dicom-series). */}
+                              {inp.isUserForm && (() => {
+                                const ctxFieldName = inp.value.startsWith('context.')
+                                  ? inp.value.slice('context.'.length)
+                                  : ''
+                                const ctxField = ctxFieldName ? draft.contextFields[ctxFieldName] : undefined
+                                const heuristic = ctxField?.heuristic || ''
+                                return (
+                                  <Popover.Root>
+                                    <Popover.Trigger>
+                                      <button
+                                        type="button"
+                                        className="cursor-pointer"
+                                        title="Edit form field"
+                                      >
+                                        <Badge
+                                          variant={heuristic ? 'solid' : 'soft'}
+                                          size="1"
+                                          color={heuristic ? 'violet' : 'orange'}
+                                        >
+                                          {heuristic ? (
+                                            <>
+                                              <MagicWandIcon /> {heuristic}
+                                            </>
+                                          ) : (
+                                            'form'
+                                          )}
+                                        </Badge>
+                                      </button>
+                                    </Popover.Trigger>
+                                    {ctxFieldName && ctxField && (
+                                      <Popover.Content size="1" maxWidth="380px">
+                                        <Flex direction="column" gap="2">
+                                          <Text size="1" weight="bold">User-provided field</Text>
+                                          <Text size="1" color="gray" className="font-mono">
+                                            context.{ctxFieldName}
+                                          </Text>
+                                          <Flex direction="column" gap="1">
+                                            <Text size="1" weight="medium">Pre-fill heuristic</Text>
+                                            <Select.Root
+                                              value={heuristic || '__none__'}
+                                              onValueChange={(v) =>
+                                                updateContextField(ctxFieldName, {
+                                                  heuristic: v === '__none__' ? '' : v
+                                                })
+                                              }
+                                              size="1"
+                                            >
+                                              <Select.Trigger />
+                                              <Select.Content>
+                                                <Select.Item value="__none__">None — empty until user fills it</Select.Item>
+                                                {heuristicNames.map((n) => (
+                                                  <Select.Item key={n} value={n}>{n}</Select.Item>
+                                                ))}
+                                              </Select.Content>
+                                            </Select.Root>
+                                            <Text size="1" color="gray">
+                                              Runs before the form opens; the user can edit the result.
+                                            </Text>
+                                          </Flex>
+                                          <Flex direction="column" gap="1">
+                                            <Text size="1" weight="medium">Label</Text>
+                                            <TextField.Root
+                                              size="1"
+                                              value={ctxField.label}
+                                              onChange={(e) =>
+                                                updateContextField(ctxFieldName, { label: e.target.value })
+                                              }
+                                              placeholder={ctxFieldName}
+                                            />
+                                          </Flex>
+                                          <Flex direction="column" gap="1">
+                                            <Text size="1" weight="medium">Help text</Text>
+                                            <TextField.Root
+                                              size="1"
+                                              value={ctxField.description}
+                                              onChange={(e) =>
+                                                updateContextField(ctxFieldName, { description: e.target.value })
+                                              }
+                                              placeholder="Shown under the field at runtime"
+                                            />
+                                          </Flex>
+                                        </Flex>
+                                      </Popover.Content>
+                                    )}
+                                  </Popover.Root>
+                                )
+                              })()}
                             </div>
                           )
                         })}
@@ -736,6 +932,7 @@ export function ContextSpineDesigner({
               <BlockPalette
                 onAddBlock={handleAddBlockWrapped}
                 tools={tools}
+                runnableTools={runnableTools}
                 lastStepTool={lastStepTool}
               />
             </div>
