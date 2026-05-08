@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { DicomSeries } from '../../../common/dcm2niixTypes.js'
 
 const UNKNOWN = '—'
@@ -117,6 +117,26 @@ export function BidsSeriesFilter({
       return true
     })
   }, [series, selectedModalities, selectedSubjects, selectedSessions])
+
+  // Narrowing facets also trims the export selection. Without this, applying
+  // a facet only narrows the visible table — `selected_series` keeps every
+  // hidden row, so dcm2niix downstream still converts everything. Series
+  // that fall outside the facet get dropped from selection; if the user
+  // later relaxes the facet, those series stay deselected (the user can
+  // re-check them explicitly or use "Check all").
+  useEffect(() => {
+    const visibleNumbers = new Set<number>()
+    for (const s of filtered) {
+      if (typeof s.seriesNumber === 'number') visibleNumbers.add(s.seriesNumber)
+    }
+    const next = new Set<number>()
+    let changed = false
+    for (const n of selectedSeriesNumbers) {
+      if (visibleNumbers.has(n)) next.add(n)
+      else changed = true
+    }
+    if (changed) onSelectionChange(next)
+  }, [filtered, selectedSeriesNumbers, onSelectionChange])
 
   const activeSeries = useMemo<DicomSeries | null>(
     () => filtered.find((s) => s.seriesNumber === activeCrc) ?? null,

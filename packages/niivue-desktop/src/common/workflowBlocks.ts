@@ -165,6 +165,13 @@ export function blockToStepDraft(
   // For remaining tool inputs, try auto-wiring from previous steps
   if (tool) {
     const exposed = new Set(block.exposedFields)
+    // The tool's working-directory input (if declared in exec.outputDir.input)
+    // must never be auto-wired to an upstream step's output. The executor
+    // creates its own tempdir when this input is absent; pointing it at a
+    // previous step's outDir makes the two steps share a temp directory, so
+    // glob-collected outputs accumulate across runs (e.g. two dcm2niix steps
+    // both writing into one tempdir → filtered re-runs see leftover files).
+    const workdirInput = tool.exec?.outputDir?.input
     for (const [inputName, paramDef] of Object.entries(tool.inputs)) {
       if (inputs[inputName]) continue // already set by defaults
 
@@ -174,6 +181,11 @@ export function blockToStepDraft(
       // dcm2niix's temp outDir).
       if (exposed.has(inputName)) {
         inputs[inputName] = { mode: 'ref', value: `context.${inputName}` }
+        continue
+      }
+
+      if (inputName === workdirInput) {
+        inputs[inputName] = { mode: 'ref', value: '' }
         continue
       }
 

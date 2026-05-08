@@ -375,6 +375,56 @@ function repairStepInputs(
 }
 
 /**
+ * Drop step input bindings that wire a tool's working-directory input
+ * (declared via `tool.exec.outputDir.input`) to an upstream step's output.
+ * Heals workflows saved before `blockToStepDraft` learned to skip auto-wiring
+ * this input — the designer's type-based matcher would happily bind e.g.
+ * dcm2niix's `out_dir: string` to a previous dcm2niix step's `outDir: string`
+ * output, making the two steps share a single tempdir. Glob-based output
+ * collection then accumulates files across re-runs (every filter toggle
+ * invalidates the step), so downstream sees more volumes than the user
+ * selected. Dropping the binding lets the executor mkdtemp a fresh dir
+ * per step.
+ */
+function repairOutputDirSelfRefs(
+  definition: WorkflowDefinition,
+  tools: Map<string, ToolDefinition>
+): WorkflowDefinition {
+  if (!definition.steps) return definition
+  let changed = false
+  const repairedSteps: Record<string, typeof definition.steps[string]> = {}
+
+  for (const [stepName, step] of Object.entries(definition.steps)) {
+    const tool = tools.get(step.tool)
+    const workdirInput = tool?.exec?.outputDir?.input
+    if (!workdirInput || !step.inputs || !(workdirInput in step.inputs)) {
+      repairedSteps[stepName] = step
+      continue
+    }
+    const binding = step.inputs[workdirInput]
+    if (
+      binding &&
+      'ref' in binding &&
+      typeof binding.ref === 'string' &&
+      binding.ref.startsWith('steps.')
+    ) {
+      const newInputs = { ...step.inputs }
+      delete newInputs[workdirInput]
+      repairedSteps[stepName] = { ...step, inputs: newInputs }
+      changed = true
+    } else {
+      repairedSteps[stepName] = step
+    }
+  }
+
+  if (!changed) return definition
+  console.log(
+    `[workflow] Dropped self-referencing outputDir bindings in '${definition.name}'`
+  )
+  return { ...definition, steps: repairedSteps }
+}
+
+/**
  * Backfill enum/min/max metadata on context fields whose name matches a tool
  * input declared by some step's tool. Heals workflows saved by the designer
  * before `blockToContextFields` forwarded enum on the param path — without
@@ -549,12 +599,13 @@ function repairMissingContextFields(
  * mutated at runtime. Run once per workflow when loaded or saved — not on
  * every run.
  */
-function finalizeWorkflow(
+export function finalizeWorkflow(
   definition: WorkflowDefinition,
   tools: Map<string, ToolDefinition>
 ): WorkflowDefinition {
   const inputsRepaired = repairStepInputs(definition, tools)
-  const hiddenRepaired = repairHiddenContextRefs(inputsRepaired, tools)
+  const workdirRepaired = repairOutputDirSelfRefs(inputsRepaired, tools)
+  const hiddenRepaired = repairHiddenContextRefs(workdirRepaired, tools)
   const exposedRepaired = repairExposedFieldRefs(hiddenRepaired, tools)
   const sectionsRepaired = repairMissingFormSections(exposedRepaired, tools)
   const orphanRepaired = repairOrphanedFormFields(sectionsRepaired, tools)
@@ -601,12 +652,31 @@ export function loadAllDefinitions(): void {
     builtInWorkflowNames.add(wf.name)
   }
 
-  // Load user workflows from app data directory
+  // Load user workflows from app data directory. If a repair pass changes
+  // the definition (e.g. drops a stale `out_dir` self-ref), rewrite the
+  // file so the heal is durable — otherwise the bad shape sits on disk
+  // and any code path that reads the raw JSON (manual editing, future
+  // tooling) would still see it.
   const userDir = getUserWorkflowsDir()
   if (fs.existsSync(userDir)) {
-    const userWorkflows = loadJsonFiles<WorkflowDefinition>(userDir)
-    for (const wf of userWorkflows) {
-      workflowDefinitions.set(wf.name, finalizeWorkflow(wf, toolDefinitions))
+    for (const file of fs.readdirSync(userDir).filter((f) => f.endsWith('.json'))) {
+      const filePath = path.join(userDir, file)
+      const raw = fs.readFileSync(filePath, 'utf-8')
+      const wf = JSON.parse(raw) as WorkflowDefinition
+      const finalized = finalizeWorkflow(wf, toolDefinitions)
+      workflowDefinitions.set(wf.name, finalized)
+      // Write back if the repair changed anything. Strip the frozen
+      // wrapper before serialization (JSON.stringify ignores Object.freeze
+      // anyway, but the readability is the same).
+      const normalized = JSON.stringify(finalized, null, 2)
+      if (normalized !== JSON.stringify(wf, null, 2)) {
+        try {
+          fs.writeFileSync(filePath, normalized)
+          console.log(`[workflow] Persisted repairs to ${filePath}`)
+        } catch (err) {
+          console.warn(`[workflow] Could not write repaired definition: ${err}`)
+        }
+      }
     }
   }
 
@@ -669,8 +739,15 @@ export function saveUserWorkflow(definition: WorkflowDefinition): string {
     fs.mkdirSync(dir, { recursive: true })
   }
   const filePath = path.join(dir, `${definition.name}.workflow.json`)
-  fs.writeFileSync(filePath, JSON.stringify(definition, null, 2))
-  workflowDefinitions.set(definition.name, finalizeWorkflow(definition, toolDefinitions))
+  // Run the repair passes BEFORE writing, not after. The designer can hand
+  // us bindings the repair logic would have stripped (stale undeclared
+  // inputs, self-referencing outDir, exposed-field auto-wires that point at
+  // the wrong source). Writing the raw draft persists those bugs to disk;
+  // finalizing first means the saved file matches what the engine actually
+  // executes.
+  const finalized = finalizeWorkflow(definition, toolDefinitions)
+  fs.writeFileSync(filePath, JSON.stringify(finalized, null, 2))
+  workflowDefinitions.set(definition.name, finalized)
   return filePath
 }
 

@@ -57,13 +57,28 @@ export function VolumePickerField({
     | string[]
     | undefined
 
-  // Default to "all upstream volumes" the first time the section renders so
-  // running without changing anything still parcellates everything.
+  // Reconcile the user's current selection against the latest upstream paths
+  // every time upstream changes:
+  //  - first render with no value → seed to "all upstream" so the step has
+  //    work without forcing a click;
+  //  - subsequent renders → drop selected paths that are no longer produced
+  //    upstream (e.g. user tightened the DICOM filter, so the previous run's
+  //    paths are gone). If the resulting set is empty, fall back to "all
+  //    upstream" rather than passing nothing downstream.
+  // Without this, context.nifti_paths sticks across upstream re-runs and
+  // atlas-parcellate keeps processing the old (broader) volume set.
   useEffect(() => {
     if (!volumeFieldName) return
-    if (currentValue !== undefined) return
     if (upstream.length === 0) return
-    onFieldChange(volumeFieldName, upstream.map((v) => v.path))
+    const upstreamPaths = upstream.map((v) => v.path)
+    if (currentValue === undefined) {
+      onFieldChange(volumeFieldName, upstreamPaths)
+      return
+    }
+    const upstreamSet = new Set(upstreamPaths)
+    const reconciled = currentValue.filter((p) => upstreamSet.has(p))
+    if (reconciled.length === currentValue.length) return // nothing stale
+    onFieldChange(volumeFieldName, reconciled.length > 0 ? reconciled : upstreamPaths)
   }, [volumeFieldName, currentValue, upstream, onFieldChange])
 
   if (!volumeFieldName) {

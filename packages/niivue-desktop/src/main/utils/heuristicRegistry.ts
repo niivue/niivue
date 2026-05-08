@@ -40,19 +40,35 @@ function findStepOutput<T>(
 }
 
 /**
- * Classify series into BIDS entities. Starts from whatever is already in
- * context.series_list (to preserve user edits), falls back to classifying
- * from whichever step produced `sidecars`. Always re-applies exclusions from
- * context.subjects so toggling a subject's excluded flag propagates to the
- * per-series view.
+ * Classify series into BIDS entities. Re-classifies from the current
+ * `sidecars` step output whenever the cached `context.series_list` no
+ * longer matches that source set (e.g. the user changed the DICOM series
+ * filter, so dcm2niix produced a different temp dir of sidecars). When
+ * the source set hasn't changed, preserves `context.series_list` so user
+ * edits (rename, exclusions) survive section navigation. Always
+ * re-applies exclusions from context.subjects.
  */
-const bidsClassifyHeuristic: HeuristicFn = async (_inputs, context, stepOutputs) => {
+export const bidsClassifyHeuristic: HeuristicFn = async (_inputs, context, stepOutputs) => {
   let mappings = context.series_list as BidsSeriesMapping[] | undefined
+  const sidecars = findStepOutput<string[]>(stepOutputs, 'sidecars')
 
-  if (!mappings || mappings.length === 0) {
-    const sidecars = findStepOutput<string[]>(stepOutputs, 'sidecars')
+  // Detect stale cache: cached mappings reference sidecar paths that no
+  // longer exist in the upstream step's output (or the count differs).
+  // When upstream is empty we can't say either way — leave cache alone.
+  const cacheIsStale = (() => {
+    if (!mappings || mappings.length === 0) return true
+    if (!sidecars || sidecars.length === 0) return false
+    if (mappings.length !== sidecars.length) return true
+    const upstream = new Set(sidecars)
+    return mappings.some((m) => !upstream.has(m.sidecarPath))
+  })()
+
+  if (cacheIsStale) {
     if (!sidecars || sidecars.length === 0) return []
     mappings = classifyAll(sidecars).mappings
+    // Drop subject cache too — its series indices reference the old
+    // series_list. detect-subjects will rebuild on next firing.
+    context.subjects = undefined
   }
 
   const subjects = context.subjects as DetectedSubject[] | undefined
