@@ -5,12 +5,18 @@ import { AutoField } from './AutoField.js'
 
 interface CustomComponentProps {
   context: Record<string, unknown>
+  stepOutputs?: Record<string, Record<string, unknown>>
   onFieldChange: (fieldName: string, value: unknown) => void
   onLoadFile?: (niftiPath: string) => Promise<void>
+  fields?: string[]
+  fieldDefs?: Record<string, import('../../../../common/workflowTypes.js').ContextFieldDef>
 }
 
-/** Field types that AutoField renders as a meaningful editable input. Array
- *  and opaque object types are handled by the section's custom component. */
+/** Field types that AutoField renders above a section's custom component.
+ *  Arrays and opaque object types are handed off to the custom component to
+ *  avoid double-rendering — when no custom component is configured, the
+ *  no-custom-component branch below routes arrays through AutoField on its
+ *  own. */
 function isSimpleInputType(type: string): boolean {
   if (type.endsWith('[]')) return false
   return type !== 'volume' && type !== 'mask' && type !== 'object'
@@ -20,6 +26,7 @@ interface FormSectionProps {
   section: FormSectionDef
   definition: WorkflowDefinition
   context: Record<string, unknown>
+  stepOutputs?: Record<string, Record<string, unknown>>
   onFieldChange: (fieldName: string, value: unknown) => void
   heuristicLoading: Set<string>
   onLoadFile?: (niftiPath: string) => Promise<void>
@@ -30,6 +37,7 @@ export function FormSection({
   section,
   definition,
   context,
+  stepOutputs,
   onFieldChange,
   heuristicLoading,
   onLoadFile,
@@ -46,8 +54,7 @@ export function FormSection({
       // populated must not unmount the custom component — that would reset
       // its internal state (scroll, focus, in-progress lasso/click) and lose
       // user interactions mid-edit.
-      const hasValue = (v: unknown): boolean =>
-        v != null && !(Array.isArray(v) && v.length === 0)
+      const hasValue = (v: unknown): boolean => v != null && !(Array.isArray(v) && v.length === 0)
       const isInitialLoading = section.fields.some(
         (f) => heuristicLoading.has(f) && !hasValue(context[f])
       )
@@ -55,7 +62,9 @@ export function FormSection({
         return (
           <div className="py-12 text-center">
             <div className="animate-spin w-6 h-6 border-2 border-accent-9 border-t-transparent rounded-full mx-auto mb-3" />
-            <Text size="2" className="text-neutral-9">Preparing data...</Text>
+            <Text size="2" className="text-neutral-9">
+              Preparing data...
+            </Text>
           </div>
         )
       }
@@ -88,11 +97,20 @@ export function FormSection({
                   onChange={(v) => onFieldChange(name, v)}
                   loading={heuristicLoading.has(name)}
                   datasetName={context.dataset_name as string | undefined}
+                  stepOutputs={stepOutputs}
+                  context={context}
                 />
               ))}
             </div>
           )}
-          <CustomComponent context={context} onFieldChange={onFieldChange} onLoadFile={onLoadFile} />
+          <CustomComponent
+            context={context}
+            stepOutputs={stepOutputs}
+            onFieldChange={onFieldChange}
+            onLoadFile={onLoadFile}
+            fields={section.fields}
+            fieldDefs={fields}
+          />
         </div>
       )
     }
@@ -125,6 +143,8 @@ export function FormSection({
               onChange={(v) => onFieldChange(fieldName, v)}
               loading={heuristicLoading.has(fieldName)}
               datasetName={context.dataset_name as string | undefined}
+              stepOutputs={stepOutputs}
+              context={context}
             />
           )
         })}

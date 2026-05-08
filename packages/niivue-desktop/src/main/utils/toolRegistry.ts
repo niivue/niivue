@@ -1,10 +1,12 @@
 import fs from 'node:fs'
+import path from 'node:path'
 import type { ToolExecutor } from '../../common/workflowTypes.js'
 import { classifyAll, extractDemographics } from './bidsEngine.js'
 import { validateProposedDataset } from './bidsValidator.js'
 import { writeDataset } from './bidsWriter.js'
 import { autoFixUnambiguous } from './bidsSidecarFixer.js'
 import { validateBidsDirectory } from './bidsExternalValidator.js'
+import { invokeRenderer } from './rendererBridge.js'
 import type {
   BidsDatasetConfig,
   BidsSeriesMapping,
@@ -213,13 +215,55 @@ const bidsFixSidecarsExecutor: ToolExecutor = async (inputs) => {
   }
 }
 
+/**
+ * atlas-parcellate runs in the renderer because brainchop needs WebGL/tfjs,
+ * but the renderer bundle has no `node:fs` / `node:path`. So main owns disk
+ * I/O: it sends input paths to the renderer, the renderer runs brainchop
+ * and returns the parcellation bytes per input, and main derives output
+ * paths and writes them.
+ */
+function deriveParcellationOutputPath(niftiPath: string, atlasId: string): string {
+  const dir = path.dirname(niftiPath)
+  const base = path.basename(niftiPath).replace(/\.nii(\.gz)?$/i, '')
+  return path.join(dir, `${base}_parc-${atlasId}.nii.gz`)
+}
+
+const atlasParcellateExecutor: ToolExecutor = async (inputs) => {
+  const niftiPaths: string[] = Array.isArray(inputs.nifti_paths)
+    ? (inputs.nifti_paths as unknown[]).map((p) => String(p))
+    : inputs.nifti_path
+      ? [String(inputs.nifti_path)]
+      : []
+  if (niftiPaths.length === 0) {
+    throw new Error('atlas-parcellate: nifti_paths or nifti_path is required')
+  }
+  const atlas = String(inputs.atlas ?? 'parcellation-104')
+
+  const result = await invokeRenderer<{
+    results: { inputPath: string; bytes: Uint8Array }[]
+    labelJson: string
+  }>('atlas-parcellate', { niftiPaths, atlas })
+
+  const outPaths: string[] = []
+  for (const entry of result.results) {
+    const outPath = deriveParcellationOutputPath(entry.inputPath, atlas)
+    fs.writeFileSync(outPath, Buffer.from(entry.bytes))
+    outPaths.push(outPath)
+  }
+  return {
+    parcellation_paths: outPaths,
+    label_json: result.labelJson
+  }
+}
+
 // ── Tool executor registry ──────────────────────────────────────────
 
 const toolExecutors = new Map<string, ToolExecutor>([
   ['bids-classify', bidsClassifyExecutor],
   ['bids-validate', bidsValidateExecutor],
   ['bids-write', bidsWriteExecutor],
-  ['bids-fix-sidecars', bidsFixSidecarsExecutor]
+  ['bids-fix-sidecars', bidsFixSidecarsExecutor],
+  ['atlas-parcellate', atlasParcellateExecutor]
 ])
 
 export function getToolExecutor(name: string): ToolExecutor | undefined {
@@ -228,4 +272,9 @@ export function getToolExecutor(name: string): ToolExecutor | undefined {
 
 export function registerToolExecutor(name: string, executor: ToolExecutor): void {
   toolExecutors.set(name, executor)
+}
+
+/** Test/audit helper: snapshot of every tool name with a code-side executor. */
+export function listRegisteredToolExecutors(): string[] {
+  return [...toolExecutors.keys()]
 }

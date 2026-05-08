@@ -66,6 +66,15 @@ export async function runWorkflowHeadless(opts: HeadlessWorkflowOptions): Promis
     }
   }
 
+  // Re-run ready steps now that heuristics have populated context fields.
+  // Without this, a step like `bids-write` (which reads `context.series_list`,
+  // produced by the `bids-classify` heuristic) never runs before the pre-flight
+  // validator, leaving downstream steps with unresolvable refs.
+  opts.onProgress?.('ready-steps-post-heuristic', 'running')
+  do {
+    readySteps = await runReadySteps(runId)
+  } while (readySteps.length > 0)
+
   // Validate that all required inputs are satisfied
   const state = getRunState(runId)
   if (state) {
@@ -85,13 +94,16 @@ export async function runWorkflowHeadless(opts: HeadlessWorkflowOptions): Promis
     }
   }
 
-  // Execute all remaining steps
+  // Execute all remaining steps. Snapshot the run state's context *before*
+  // executeAllSteps because it deletes the run record from activeRuns when
+  // it finishes — without this snapshot, callers see an empty context even
+  // on a successful run.
   opts.onProgress?.('steps', 'executing')
-  const outputs = await executeAllSteps(runId)
+  const preExecuteState = getRunState(runId)
+  const result = await executeAllSteps(runId)
 
-  const finalState = getRunState(runId)
   return {
-    outputs,
-    context: finalState?.context ?? {}
+    outputs: result.outputs,
+    context: preExecuteState?.context ?? {}
   }
 }

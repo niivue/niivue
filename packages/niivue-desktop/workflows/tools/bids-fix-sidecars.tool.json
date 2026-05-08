@@ -39,6 +39,7 @@
     "icon": "MagicWandIcon",
     "exposedFields": [],
     "hiddenFields": ["bids_dir"],
+    "requiredContextFields": ["bids_dir", "series_list"],
     "formComponent": "bids-sidecar-fix"
   }
 }

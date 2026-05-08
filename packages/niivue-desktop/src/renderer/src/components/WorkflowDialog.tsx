@@ -22,6 +22,7 @@ import { StepSkullStrip } from './BidsWizard/StepSkullStrip.js'
 import { StepBidsPreview } from './BidsWizard/StepBidsPreview.js'
 import { BidsSidecarFixForm } from './BidsWizard/BidsSidecarFixForm.js'
 import { BidsSeriesFilter } from './BidsSeriesFilter.js'
+import { VolumePickerField } from './Wizard/fields/VolumePickerField.js'
 import type { DicomSeries } from '../../../common/dcm2niixTypes.js'
 
 // ── Classification table adapter ─────────────────────────────────────
@@ -458,8 +459,11 @@ function SubjectSelectAdapter({
 
 interface CustomComponentProps {
   context: Record<string, unknown>
+  stepOutputs?: Record<string, Record<string, unknown>>
   onFieldChange: (fieldName: string, value: unknown) => void
   onLoadFile?: (niftiPath: string) => Promise<void>
+  fields?: string[]
+  fieldDefs?: Record<string, import('../../../common/workflowTypes.js').ContextFieldDef>
 }
 
 /**
@@ -602,7 +606,8 @@ const COMPONENT_REGISTRY: Record<string, React.FC<CustomComponentProps>> = {
   'subject-session-editor': SubjectSessionAdapter,
   'skull-strip-editor': SkullStripAdapter,
   'bids-preview': StepBidsPreview,
-  'bids-sidecar-fix': BidsSidecarFixAdapter
+  'bids-sidecar-fix': BidsSidecarFixAdapter,
+  'volume-picker': VolumePickerField
 }
 
 // ── Main WorkflowDialog ──────────────────────────────────────────────
@@ -704,6 +709,7 @@ export function WorkflowDialog({
           section={sections[engine.currentSection]}
           definition={engine.definition}
           context={engine.context}
+          stepOutputs={engine.stepOutputs}
           onFieldChange={engine.handleFieldChange}
           heuristicLoading={engine.heuristicLoading}
           onLoadFile={handleLoadFile}
@@ -805,6 +811,7 @@ export function WorkflowDialog({
         <CompletionScreen
           context={engine.context}
           outputs={engine.completedOutputs}
+          stepOutputs={engine.completedStepOutputs}
           onClose={engine.handleClose}
           onLoadFile={handleLoadFile}
           onEditWorkflow={onEditWorkflow ? () => {

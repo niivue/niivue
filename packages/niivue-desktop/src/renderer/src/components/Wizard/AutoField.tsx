@@ -6,6 +6,8 @@ import { CheckboxField } from './fields/CheckboxField.js'
 import { DirectoryField } from './fields/DirectoryField.js'
 import { MarkdownField } from './fields/MarkdownField.js'
 import { SeriesListField } from './fields/SeriesListField.js'
+import { ArraySelectField } from './fields/ArraySelectField.js'
+import { VolumePickerField } from './fields/VolumePickerField.js'
 
 interface AutoFieldProps {
   fieldName: string
@@ -14,6 +16,8 @@ interface AutoFieldProps {
   onChange: (value: unknown) => void
   loading?: boolean
   datasetName?: string
+  stepOutputs?: Record<string, Record<string, unknown>>
+  context?: Record<string, unknown>
 }
 
 export function AutoField({
@@ -22,7 +26,9 @@ export function AutoField({
   value,
   onChange,
   loading,
-  datasetName
+  datasetName,
+  stepOutputs,
+  context
 }: AutoFieldProps): React.ReactElement {
   const label = fieldDef.label || fieldDef.description || fieldName
   const tooltip = fieldDef.label ? fieldDef.description : undefined
@@ -31,6 +37,38 @@ export function AutoField({
   if (fieldDef.heuristic === 'list-dicom-series') {
     return (
       <SeriesListField
+        label={label}
+        tooltip={tooltip}
+        value={value}
+        onChange={onChange}
+        loading={loading}
+      />
+    )
+  }
+
+  // volume[] — picker that pulls candidate volumes from upstream step outputs
+  // and lets the user toggle which to pass downstream. Falls through to the
+  // generic array handler if no upstream volumes are available yet.
+  if (fieldDef.type === 'volume[]') {
+    return (
+      <VolumePickerField
+        context={context ?? {}}
+        stepOutputs={stepOutputs}
+        fields={[fieldName]}
+        fieldDefs={{ [fieldName]: fieldDef }}
+        onFieldChange={(_n, v) => onChange(v)}
+      />
+    )
+  }
+
+  // Generic array — render a checkbox list. For object items, toggling the
+  // checkbox flips an `excluded` flag in place (matching the convention used
+  // by DetectedSubject[] and BidsSeriesMapping[]). Primitive items are shown
+  // read-only — exclusion of primitives requires runtime support that doesn't
+  // exist yet.
+  if (fieldDef.type.endsWith('[]')) {
+    return (
+      <ArraySelectField
         label={label}
         tooltip={tooltip}
         value={value}
@@ -54,11 +92,18 @@ export function AutoField({
   }
 
   // Directory picker
-  if (fieldName === 'output_dir' || fieldDef.type === 'directory' || fieldDef.type === 'dicom-folder') {
+  if (
+    fieldName === 'output_dir' ||
+    fieldDef.type === 'directory' ||
+    fieldDef.type === 'dicom-folder'
+  ) {
     return (
       <DirectoryField
         label={label}
-        tooltip={tooltip || 'New folders will be created automatically. Leave empty to use a temporary directory.'}
+        tooltip={
+          tooltip ||
+          'New folders will be created automatically. Leave empty to use a temporary directory.'
+        }
         value={String(value ?? '')}
         onChange={(v) => onChange(v)}
       />
@@ -77,7 +122,9 @@ export function AutoField({
     )
   }
 
-  // Enum select
+  // Enum select. Entries may be plain values or `{value, label}` objects so
+  // tools can show friendly names (e.g. "Parcellation (104 regions)") without
+  // exposing the raw model id to the user.
   if (fieldDef.type === 'string' && fieldDef.enum) {
     return (
       <SelectField
@@ -85,10 +132,16 @@ export function AutoField({
         tooltip={tooltip}
         value={String(value ?? '')}
         onChange={(v) => onChange(v)}
-        options={fieldDef.enum.map((opt) => ({
-          value: String(opt),
-          label: String(opt)
-        }))}
+        options={fieldDef.enum.map((opt) => {
+          if (opt && typeof opt === 'object' && 'value' in opt) {
+            const entry = opt as { value: unknown; label?: unknown }
+            return {
+              value: String(entry.value),
+              label: String(entry.label ?? entry.value)
+            }
+          }
+          return { value: String(opt), label: String(opt) }
+        })}
       />
     )
   }

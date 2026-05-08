@@ -388,7 +388,12 @@ export async function executeStep(
   }
 }
 
-export async function executeAllSteps(runId: string): Promise<Record<string, unknown>> {
+export interface ExecuteAllResult {
+  outputs: Record<string, unknown>
+  stepOutputs: Record<string, Record<string, unknown>>
+}
+
+export async function executeAllSteps(runId: string): Promise<ExecuteAllResult> {
   const state = activeRuns.get(runId)
   if (!state) throw new Error(`No active run: ${runId}`)
 
@@ -416,13 +421,20 @@ export async function executeAllSteps(runId: string): Promise<Record<string, unk
 
     state.status = 'completed'
 
-    // Resolve workflow outputs
     const outputs: Record<string, unknown> = {}
     for (const [key, outputDef] of Object.entries(definition.outputs)) {
       outputs[key] = resolveBinding({ ref: outputDef.ref }, state)
     }
 
-    return outputs
+    // Snapshot step outputs before activeRuns is cleared so the caller (UI
+    // completion screen) can scan all step results, not just the workflow's
+    // declared top-level outputs.
+    const stepOutputs: Record<string, Record<string, unknown>> = {}
+    for (const [name, val] of Object.entries(state.stepOutputs)) {
+      stepOutputs[name] = val
+    }
+
+    return { outputs, stepOutputs }
   } finally {
     clearRunCache(runId)
     activeRuns.delete(runId)

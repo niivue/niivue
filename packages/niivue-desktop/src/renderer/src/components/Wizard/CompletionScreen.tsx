@@ -117,14 +117,46 @@ function useSeriesPreviews(paths: string[]): Map<string, string> {
 interface CompletionScreenProps {
   context: Record<string, unknown>
   outputs: Record<string, unknown> | null
+  stepOutputs?: Record<string, Record<string, unknown>> | null
   onClose: () => void
   onLoadFile?: (niftiPath: string) => Promise<void>
   onEditWorkflow?: () => void
 }
 
+interface ParcellationOutput {
+  key: string
+  label: string
+  tag: string
+  bidsPath: string
+  sourcePath: string
+}
+
+function collectParcellationOutputs(
+  stepOutputs: Record<string, Record<string, unknown>> | null | undefined
+): ParcellationOutput[] {
+  if (!stepOutputs) return []
+  const out: ParcellationOutput[] = []
+  for (const [stepName, stepOut] of Object.entries(stepOutputs)) {
+    const paths = stepOut.parcellation_paths
+    if (!Array.isArray(paths)) continue
+    for (let i = 0; i < paths.length; i++) {
+      const p = String(paths[i])
+      out.push({
+        key: `${stepName}-parc-${i}`,
+        label: p.split(/[\\/]/).pop() ?? p,
+        tag: 'parcellation',
+        bidsPath: p,
+        sourcePath: p
+      })
+    }
+  }
+  return out
+}
+
 export function CompletionScreen({
   context,
   outputs,
+  stepOutputs,
   onClose,
   onLoadFile,
   onEditWorkflow
@@ -134,19 +166,26 @@ export function CompletionScreen({
   const outDir = (outputs?.outDir as string) || ''
   const originalPaths = (context._originalPaths as Record<number, string>) || {}
   const plainVolumes = (outputs?.volumes as string[]) || []
+  const parcellationOutputs = useMemo(
+    () => collectParcellationOutputs(stepOutputs),
+    [stepOutputs]
+  )
   const isBidsWorkflow = mappings.length > 0
 
   const previewPaths = useMemo(() => {
-    if (isBidsWorkflow) {
-      return buildWrittenFileList(mappings, bidsDir, originalPaths).map((f) => f.sourcePath)
-    }
-    return plainVolumes
-  }, [mappings, bidsDir, originalPaths, isBidsWorkflow, plainVolumes])
+    const base = isBidsWorkflow
+      ? buildWrittenFileList(mappings, bidsDir, originalPaths).map((f) => f.sourcePath)
+      : plainVolumes
+    return [...base, ...parcellationOutputs.map((p) => p.sourcePath)]
+  }, [mappings, bidsDir, originalPaths, isBidsWorkflow, plainVolumes, parcellationOutputs])
   const previewImages = useSeriesPreviews(previewPaths)
 
   const writtenFiles = useMemo(
-    () => isBidsWorkflow ? buildWrittenFileList(mappings, bidsDir, originalPaths) : [],
-    [mappings, bidsDir, originalPaths, isBidsWorkflow]
+    () => {
+      const base = isBidsWorkflow ? buildWrittenFileList(mappings, bidsDir, originalPaths) : []
+      return [...base, ...parcellationOutputs]
+    },
+    [mappings, bidsDir, originalPaths, isBidsWorkflow, parcellationOutputs]
   )
 
   const [loadedKeys, setLoadedKeys] = useState<Set<string>>(new Set())
@@ -190,12 +229,17 @@ export function CompletionScreen({
   )
 
   const displayDir = bidsDir || outDir
-  const fileList = isBidsWorkflow ? writtenFiles : plainVolumes.map((vol, i) => ({
-    key: String(i),
-    label: vol.split(/[\\/]/).pop() ?? vol,
-    sourcePath: vol,
-    bidsPath: vol
-  }))
+  const fileList = isBidsWorkflow
+    ? writtenFiles
+    : [
+        ...plainVolumes.map((vol, i) => ({
+          key: String(i),
+          label: vol.split(/[\\/]/).pop() ?? vol,
+          sourcePath: vol,
+          bidsPath: vol
+        })),
+        ...parcellationOutputs
+      ]
 
   return (
     <div className="flex flex-col gap-6">
@@ -249,7 +293,13 @@ export function CompletionScreen({
                     {file.tag && (
                       <Badge
                         size="1"
-                        color={file.tag === 'skull stripped' ? 'blue' : 'gray'}
+                        color={
+                          file.tag === 'skull stripped'
+                            ? 'blue'
+                            : file.tag === 'parcellation'
+                              ? 'violet'
+                              : 'gray'
+                        }
                         variant="soft"
                         className="mt-1 w-fit"
                       >

@@ -25,10 +25,6 @@
         "description": "Classified series with BIDS datatype, suffix, and metadata",
         "heuristic": "bids-classify"
       },
-      "quality_metrics": {
-        "type": "json[]",
-        "description": "Per-volume quality metrics"
-      },
       "skull_strip_config": {
         "type": "object",
         "description": "Skull stripping configuration (engine, scope, selections)",
@@ -92,12 +88,6 @@
         "component": "bids-classification-table"
       },
       {
-        "title": "Quality Check",
-        "description": "Review quality metrics for each volume",
-        "fields": ["quality_metrics"],
-        "component": "quality-review"
-      },
-      {
         "title": "Preprocessing",
         "description": "Configure optional preprocessing steps",
         "fields": ["skull_strip_config", "deface_enabled", "tissue_segment_enabled", "atlas_parcellate_enabled"],
@@ -125,16 +115,6 @@
         "bids": { "constant": "y" },
         "compress": { "constant": "y" },
         "bids_anon": { "constant": "n" }
-      }
-    },
-    "quality_check": {
-      "tool": "quality-check",
-      "inputs": {
-        "volumes": { "ref": "steps.convert.outputs.volumes" },
-        "series_list": { "ref": "context.series_list" }
-      },
-      "outputMappings": {
-        "metrics": "quality_metrics"
       }
     },
     "classify": {

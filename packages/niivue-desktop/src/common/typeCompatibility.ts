@@ -11,6 +11,7 @@ const COERCION_RULES: Record<string, string[]> = {
   'volume[]': ['string[]'],
   'json[]': ['string[]'],
   string: ['directory'],
+  directory: ['string'],
   mask: ['volume', 'string'],
 }
 

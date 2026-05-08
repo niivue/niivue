@@ -13,7 +13,7 @@ import { registerHeuristic } from './heuristicRegistry.js'
 import { createDeclarativeHeuristic } from './declarativeHeuristic.js'
 import { registerToolExecutor } from './toolRegistry.js'
 import { createDeclarativeToolExecutor } from './declarativeToolExecutor.js'
-import { inferFormSections } from '../../common/bindingAnalyzer.js'
+import { inferFormSections, generateContextFieldFromParam } from '../../common/bindingAnalyzer.js'
 
 const isDev = !app.isPackaged
 
@@ -166,14 +166,33 @@ function repairExposedFieldRefs(
       continue
     }
     const newInputs: Record<string, Binding> = { ...step.inputs }
+    const wfInputs = definition.inputs ?? {}
+    const tool = tools.get(step.tool)
+    const declaredInputs = new Set(Object.keys(tool?.inputs ?? {}))
     let stepChanged = false
     for (const inputName of block.exposedFields) {
+      // exposedFields can name tool inputs *or* context-only fields the form
+      // component reads (e.g. bids-classify's `subjects`, which is a context
+      // field, not an input on the tool). Only repair bindings for fields
+      // that are actually tool inputs — otherwise we'd add nonsense bindings
+      // that pass undeclared keys to the executor.
+      if (!declaredInputs.has(inputName)) continue
       // Skip inputs that the block explicitly defaults — the block author
       // chose that wiring intentionally.
       if (block.defaults && inputName in block.defaults) continue
       const expectedRef = `context.${inputName}`
       const existing = newInputs[inputName]
       if (existing && 'ref' in existing && existing.ref === expectedRef) continue
+      // Honor an intentional binding to a workflow-level input of the same
+      // name — built-in workflows often wire e.g. dcm2niix's `dicom_dir`
+      // directly from `inputs.dicom_dir` rather than going through context.
+      if (
+        existing &&
+        'ref' in existing &&
+        existing.ref === `inputs.${inputName}` &&
+        inputName in wfInputs
+      )
+        continue
       newInputs[inputName] = { ref: expectedRef }
       stepChanged = true
     }
@@ -219,14 +238,31 @@ function repairMissingFormSections(
     const uncovered = block.exposedFields.filter((f) => !exposedInForm.has(f))
     if (uncovered.length === 0) continue
 
-    const section: FormSectionDef = {
-      title: block.label,
-      description: block.description,
-      fields: uncovered,
-      ...(block.formComponent ? { component: block.formComponent } : {})
+    // If a section already carries the block's title, fold the missing
+    // fields into it rather than spawning a duplicate section. This handles
+    // the case where a tool's exposedFields evolved (e.g. nifti_path →
+    // nifti_paths) and the saved form lost coverage of the new field but
+    // still has its original title.
+    const existingIdx = newSections.findIndex((s) => s.title === block.label)
+    if (existingIdx >= 0) {
+      const existing = newSections[existingIdx]
+      newSections[existingIdx] = {
+        ...existing,
+        fields: [...existing.fields, ...uncovered],
+        ...(block.formComponent && !existing.component
+          ? { component: block.formComponent }
+          : {})
+      }
+    } else {
+      const section: FormSectionDef = {
+        title: block.label,
+        description: block.description,
+        fields: uncovered,
+        ...(block.formComponent ? { component: block.formComponent } : {})
+      }
+      const insertAt = Math.min(stepIdx, newSections.length)
+      newSections.splice(insertAt, 0, section)
     }
-    const insertAt = Math.min(stepIdx, newSections.length)
-    newSections.splice(insertAt, 0, section)
     for (const f of uncovered) exposedInForm.add(f)
     inserted = true
   }
@@ -236,6 +272,161 @@ function repairMissingFormSections(
     `[workflow] Synthesized missing form sections in '${definition.name}'`
   )
   return { ...definition, form: { ...definition.form, sections: newSections } }
+}
+
+/**
+ * Prune form-section fields that no longer correspond to any exposed field
+ * of a step's block. Heals workflows saved before a tool input was renamed
+ * or moved into hiddenFields — without this the wizard surfaces a stale
+ * field (e.g. atlas-parcellate's `nifti_path` after rename to `nifti_paths`)
+ * that has nowhere to be read from, asking the user to fill in a path that
+ * the workflow ignores.
+ *
+ * Limited to auto-generated sections (no custom `component`). Custom-
+ * component sections often surface context fields the component reads by
+ * convention (e.g. skull-strip-editor reads `skull_strip_config` even
+ * though brainchop's block declares `exposedFields: []`), so pruning there
+ * would mistakenly drop fields the section needs.
+ */
+function repairOrphanedFormFields(
+  definition: WorkflowDefinition,
+  tools: Map<string, ToolDefinition>
+): WorkflowDefinition {
+  if (!definition.form?.sections || !definition.steps) return definition
+
+  const stepBlocks: BlockDef[] = []
+  for (const [stepName, step] of Object.entries(definition.steps)) {
+    const block = findBlockForStep(stepName, step.tool, tools)
+    if (block) stepBlocks.push(block)
+  }
+  if (stepBlocks.length === 0) return definition
+
+  let changed = false
+  const newSections = definition.form.sections.map((section) => {
+    if (section.component) return section
+    if (!section.title) return section
+    const matched = stepBlocks.find((b) => b.label === section.title)
+    if (!matched) return section
+
+    const allowed = new Set<string>([
+      ...matched.exposedFields,
+      ...(matched.requiredContextFields ?? [])
+    ])
+    const filtered = section.fields.filter((f) => allowed.has(f))
+    if (filtered.length === section.fields.length) return section
+    changed = true
+    return { ...section, fields: filtered }
+  })
+
+  if (!changed) return definition
+  console.log(
+    `[workflow] Pruned orphaned form fields in '${definition.name}'`
+  )
+  return { ...definition, form: { ...definition.form, sections: newSections } }
+}
+
+/**
+ * Drop step input bindings whose key isn't declared on the tool. Heals
+ * workflows saved before a tool input was renamed or removed (e.g. an old
+ * step still referencing `dicom_series`/`selected_series` on dcm2niix when
+ * those moved to context-only fields), where the stale binding would either
+ * be silently ignored or — worse — collide with a same-named tool input
+ * that's since taken on a different meaning. The forEach companion is
+ * honored automatically: the companion key (e.g. `nifti_path` alongside
+ * `nifti_paths`) is itself a declared tool input.
+ */
+function repairStepInputs(
+  definition: WorkflowDefinition,
+  tools: Map<string, ToolDefinition>
+): WorkflowDefinition {
+  if (!definition.steps) return definition
+  let changed = false
+  const repairedSteps: Record<string, typeof definition.steps[string]> = {}
+
+  for (const [stepName, step] of Object.entries(definition.steps)) {
+    const tool = tools.get(step.tool)
+    if (!tool || !step.inputs) {
+      repairedSteps[stepName] = step
+      continue
+    }
+    const declaredInputs = new Set(Object.keys(tool.inputs ?? {}))
+    const newInputs: Record<string, Binding> = {}
+    let stepChanged = false
+    for (const [inputName, binding] of Object.entries(step.inputs)) {
+      if (declaredInputs.has(inputName)) {
+        newInputs[inputName] = binding
+      } else {
+        stepChanged = true
+      }
+    }
+    if (stepChanged) {
+      changed = true
+      repairedSteps[stepName] = { ...step, inputs: newInputs }
+    } else {
+      repairedSteps[stepName] = step
+    }
+  }
+
+  if (!changed) return definition
+  console.log(
+    `[workflow] Pruned undeclared step input bindings in '${definition.name}'`
+  )
+  return { ...definition, steps: repairedSteps }
+}
+
+/**
+ * Backfill enum/min/max metadata on context fields whose name matches a tool
+ * input declared by some step's tool. Heals workflows saved by the designer
+ * before `blockToContextFields` forwarded enum on the param path — without
+ * this, fields like `atlas` (an enum tool input on atlas-parcellate) lose
+ * their dropdown options and render as a freeform text box, forcing the user
+ * to type the model id by hand.
+ */
+function repairContextFieldEnums(
+  definition: WorkflowDefinition,
+  tools: Map<string, ToolDefinition>
+): WorkflowDefinition {
+  if (!definition.context?.fields || !definition.steps) return definition
+
+  const paramByField = new Map<string, { enum?: unknown[]; min?: number; max?: number }>()
+  for (const step of Object.values(definition.steps)) {
+    const tool = tools.get(step.tool)
+    if (!tool?.inputs) continue
+    for (const [inputName, param] of Object.entries(tool.inputs)) {
+      if (paramByField.has(inputName)) continue
+      if (param.enum === undefined && param.min === undefined && param.max === undefined) continue
+      paramByField.set(inputName, {
+        ...(param.enum !== undefined && { enum: param.enum }),
+        ...(param.min !== undefined && { min: param.min }),
+        ...(param.max !== undefined && { max: param.max })
+      })
+    }
+  }
+  if (paramByField.size === 0) return definition
+
+  let changed = false
+  const newFields = { ...definition.context.fields }
+  for (const [name, existing] of Object.entries(newFields)) {
+    const meta = paramByField.get(name)
+    if (!meta) continue
+    const wantsEnum = meta.enum !== undefined && existing.enum === undefined
+    const wantsMin = meta.min !== undefined && existing.min === undefined
+    const wantsMax = meta.max !== undefined && existing.max === undefined
+    if (!wantsEnum && !wantsMin && !wantsMax) continue
+    newFields[name] = {
+      ...existing,
+      ...(wantsEnum && { enum: meta.enum }),
+      ...(wantsMin && { min: meta.min }),
+      ...(wantsMax && { max: meta.max })
+    }
+    changed = true
+  }
+  if (!changed) return definition
+  console.log(`[workflow] Backfilled context-field enum/min/max in '${definition.name}'`)
+  return {
+    ...definition,
+    context: { ...definition.context, fields: newFields }
+  }
 }
 
 /**
@@ -280,6 +471,79 @@ function repairContextFieldDependsOn(
 }
 
 /**
+ * Backfill `context.fields` with entries for any block-exposed field that
+ * has no existing context definition. Heals saved workflows that pre-date
+ * a tool input rename (e.g. atlas-parcellate's nifti_path → nifti_paths)
+ * — without this, the form section references a field with no type, and
+ * AutoField receives undefined and falls back to a plain text input,
+ * which (for `volume[]`) causes the volume picker to claim no eligible
+ * field exists.
+ */
+function repairMissingContextFields(
+  definition: WorkflowDefinition,
+  tools: Map<string, ToolDefinition>
+): WorkflowDefinition {
+  if (!definition.steps) return definition
+  const existingFields = definition.context?.fields ?? {}
+  const newFields = { ...existingFields }
+  let changed = false
+
+  for (const [stepName, step] of Object.entries(definition.steps)) {
+    const block = findBlockForStep(stepName, step.tool, tools)
+    if (!block) continue
+    const tool = tools.get(step.tool)
+    if (!tool) continue
+
+    const candidates = [
+      ...(block.exposedFields ?? []),
+      ...(block.requiredContextFields ?? [])
+    ]
+    for (const fieldName of candidates) {
+      if (newFields[fieldName]) continue
+      // Inline contextFields wins.
+      const inline = block.contextFields?.[fieldName]
+      if (inline) {
+        newFields[fieldName] = {
+          type: inline.type,
+          label: inline.label || fieldName,
+          description: inline.description || '',
+          ...(inline.default !== undefined ? { default: inline.default } : {}),
+          ...(inline.enum ? { enum: inline.enum } : {}),
+          ...(inline.heuristic ? { heuristic: inline.heuristic } : {}),
+          ...(inline.optional !== undefined ? { optional: inline.optional } : {}),
+          ...(inline.min !== undefined ? { min: inline.min } : {}),
+          ...(inline.max !== undefined ? { max: inline.max } : {}),
+          ...(inline.dependsOn ? { dependsOn: inline.dependsOn } : {})
+        }
+        changed = true
+        continue
+      }
+      const param = tool.inputs[fieldName] || tool.outputs[fieldName]
+      if (!param) continue
+      const generated = generateContextFieldFromParam(fieldName, param)
+      newFields[fieldName] = {
+        type: generated.type,
+        label: generated.label,
+        description: generated.description,
+        ...(generated.default !== undefined ? { default: generated.default } : {}),
+        ...(generated.enum !== undefined ? { enum: generated.enum } : {}),
+        ...(generated.min !== undefined ? { min: generated.min } : {}),
+        ...(generated.max !== undefined ? { max: generated.max } : {}),
+        ...(block.heuristics?.[fieldName] ? { heuristic: block.heuristics[fieldName] } : {})
+      }
+      changed = true
+    }
+  }
+
+  if (!changed) return definition
+  console.log(`[workflow] Backfilled context fields in '${definition.name}'`)
+  return {
+    ...definition,
+    context: { ...(definition.context ?? { description: '', fields: {} }), fields: newFields }
+  }
+}
+
+/**
  * Apply form inference (if the workflow has no explicit form), repair any
  * stale block-default bindings, and freeze the definition so it can't be
  * mutated at runtime. Run once per workflow when loaded or saved — not on
@@ -289,10 +553,14 @@ function finalizeWorkflow(
   definition: WorkflowDefinition,
   tools: Map<string, ToolDefinition>
 ): WorkflowDefinition {
-  const hiddenRepaired = repairHiddenContextRefs(definition, tools)
+  const inputsRepaired = repairStepInputs(definition, tools)
+  const hiddenRepaired = repairHiddenContextRefs(inputsRepaired, tools)
   const exposedRepaired = repairExposedFieldRefs(hiddenRepaired, tools)
   const sectionsRepaired = repairMissingFormSections(exposedRepaired, tools)
-  const repaired = repairContextFieldDependsOn(sectionsRepaired, tools)
+  const orphanRepaired = repairOrphanedFormFields(sectionsRepaired, tools)
+  const ctxRepaired = repairMissingContextFields(orphanRepaired, tools)
+  const enumsRepaired = repairContextFieldEnums(ctxRepaired, tools)
+  const repaired = repairContextFieldDependsOn(enumsRepaired, tools)
 
   if (repaired.form) {
     return Object.freeze(repaired)

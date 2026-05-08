@@ -51,6 +51,7 @@
     },
     "exposedFields": [],
     "hiddenFields": ["nifti_paths", "nifti_path", "model", "dilation", "output_path"],
+    "requiredContextFields": ["series_list"],
     "formComponent": "skull-strip-editor"
   }
 }

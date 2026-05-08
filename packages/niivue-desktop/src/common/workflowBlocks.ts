@@ -447,7 +447,10 @@ export function blockToContextFields(
         label: generated.label,
         description: generated.description,
         heuristic: block.heuristics?.[fieldName] || '',
-        default: generated.default !== undefined ? JSON.stringify(generated.default) : ''
+        default: generated.default !== undefined ? JSON.stringify(generated.default) : '',
+        ...(generated.enum !== undefined && { enum: generated.enum }),
+        ...(generated.min !== undefined && { min: generated.min }),
+        ...(generated.max !== undefined && { max: generated.max })
       }
       continue
     }

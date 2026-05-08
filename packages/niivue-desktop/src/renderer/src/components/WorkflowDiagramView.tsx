@@ -17,11 +17,15 @@ import {
   Controls,
   Handle,
   Position,
+  BaseEdge,
+  EdgeLabelRenderer,
+  getBezierPath,
   type Node,
   type Edge,
   type Connection,
   type NodeProps,
   type EdgeChange,
+  type EdgeProps,
   MarkerType
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
@@ -296,6 +300,89 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
 
 const nodeTypes = { step: StepNode }
 
+// ── Deletable edge ───────────────────────────────────────────────────
+//
+// Renders the standard bezier path plus a small × button at the midpoint.
+// The button is hidden until the edge or its container is hovered, then
+// fades in. Clicking dispatches an edge `remove` change through React
+// Flow's normal channel so the existing onEdgesChange handler clears
+// the corresponding step input binding.
+
+interface DeletableEdgeData extends Record<string, unknown> {
+  onDelete: () => void
+}
+
+function DeletableEdge({
+  id,
+  sourceX,
+  sourceY,
+  targetX,
+  targetY,
+  sourcePosition,
+  targetPosition,
+  style,
+  markerEnd,
+  selected,
+  data
+}: EdgeProps<Edge<DeletableEdgeData>>): React.ReactElement {
+  const [edgePath, labelX, labelY] = getBezierPath({
+    sourceX,
+    sourceY,
+    sourcePosition,
+    targetX,
+    targetY,
+    targetPosition
+  })
+
+  const handleDelete = (e: React.MouseEvent): void => {
+    e.stopPropagation()
+    data?.onDelete()
+  }
+
+  return (
+    <>
+      <BaseEdge id={id} path={edgePath} style={style} markerEnd={markerEnd} />
+      <EdgeLabelRenderer>
+        <div
+          className="nodrag nopan"
+          style={{
+            position: 'absolute',
+            transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+            pointerEvents: 'all',
+            opacity: selected ? 1 : undefined
+          }}
+        >
+          <button
+            onClick={handleDelete}
+            title="Delete connection"
+            className="workflow-edge-delete"
+            style={{
+              width: 18,
+              height: 18,
+              borderRadius: '50%',
+              border: '1px solid var(--gray-7)',
+              background: 'var(--color-panel-solid)',
+              color: 'var(--gray-11)',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 12,
+              lineHeight: 1,
+              padding: 0,
+              boxShadow: '0 1px 2px rgba(0,0,0,0.15)'
+            }}
+          >
+            ×
+          </button>
+        </div>
+      </EdgeLabelRenderer>
+    </>
+  )
+}
+
+const edgeTypes = { deletable: DeletableEdge }
+
 // ── Props ────────────────────────────────────────────────────────────
 
 interface WorkflowDiagramViewProps {
@@ -368,6 +455,27 @@ export function WorkflowDiagramView({
     })
   }, [draft.steps, tools, selectedStep, errorSteps, onSelectStep, onRemoveStep, onMoveStep])
 
+  // Clear the input binding for a target step. Used by both the inline
+  // edge × button and React Flow's keyboard-delete path.
+  const clearInputBinding = useCallback(
+    (tgtIdx: number, tgtIn: string) => {
+      setDraft((prev) => {
+        const targetStep = prev.steps[tgtIdx]
+        if (!targetStep) return prev
+        const steps = [...prev.steps]
+        steps[tgtIdx] = {
+          ...targetStep,
+          inputs: {
+            ...targetStep.inputs,
+            [tgtIn]: { mode: 'ref', value: '' }
+          }
+        }
+        return { ...prev, steps }
+      })
+    },
+    [setDraft]
+  )
+
   // Build edges from step.X.outputs.Y refs.
   const edges = useMemo<Edge[]>(() => {
     const out: Edge[] = []
@@ -393,6 +501,8 @@ export function WorkflowDiagramView({
           sourceHandle: `out:${srcOut}`,
           target: `step-${targetIdx}`,
           targetHandle: `in:${inputName}`,
+          type: 'deletable',
+          data: { onDelete: (): void => clearInputBinding(targetIdx, inputName) },
           style: { stroke: color, strokeWidth: 2 },
           markerEnd: { type: MarkerType.ArrowClosed, color },
           animated: false
@@ -401,7 +511,7 @@ export function WorkflowDiagramView({
     })
 
     return out
-  }, [draft.steps, tools])
+  }, [draft.steps, tools, clearInputBinding])
 
   // ── Edge mutations ─────────────────────────────────────────────────
 
@@ -434,32 +544,18 @@ export function WorkflowDiagramView({
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
-      const removed = changes.filter((c) => c.type === 'remove')
-      if (removed.length === 0) return
-
-      setDraft((prev) => {
-        let steps = prev.steps
-        for (const change of removed) {
-          // Edge id encodes target step index and input name.
-          const m = change.id.match(/^e-\d+-.+-(\d+)-(.+)$/)
-          if (!m) continue
-          const tgtIdx = parseInt(m[1], 10)
-          const tgtIn = m[2]
-          if (Number.isNaN(tgtIdx) || !steps[tgtIdx]) continue
-          if (steps === prev.steps) steps = [...steps]
-          const targetStep = steps[tgtIdx]
-          steps[tgtIdx] = {
-            ...targetStep,
-            inputs: {
-              ...targetStep.inputs,
-              [tgtIn]: { mode: 'ref', value: '' }
-            }
-          }
-        }
-        return steps === prev.steps ? prev : { ...prev, steps }
-      })
+      for (const change of changes) {
+        if (change.type !== 'remove') continue
+        // Edge id encodes target step index and input name.
+        const m = change.id.match(/^e-\d+-.+-(\d+)-(.+)$/)
+        if (!m) continue
+        const tgtIdx = parseInt(m[1], 10)
+        const tgtIn = m[2]
+        if (Number.isNaN(tgtIdx)) continue
+        clearInputBinding(tgtIdx, tgtIn)
+      }
     },
-    [setDraft]
+    [clearInputBinding]
   )
 
   // ── Empty state ────────────────────────────────────────────────────
@@ -490,12 +586,15 @@ export function WorkflowDiagramView({
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
+        edgeTypes={edgeTypes}
         onConnect={onConnect}
         onEdgesChange={onEdgesChange}
+        deleteKeyCode={['Delete', 'Backspace']}
+        edgesFocusable
         fitView
         fitViewOptions={{ padding: 0.2, maxZoom: 1.0 }}
         proOptions={{ hideAttribution: true }}
-        defaultEdgeOptions={{ type: 'default' }}
+        defaultEdgeOptions={{ type: 'deletable' }}
       >
         <Background gap={16} />
         <Controls showInteractive={false} />

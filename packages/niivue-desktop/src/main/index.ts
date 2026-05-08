@@ -6,6 +6,7 @@ import icon from '../../resources/icons/app_icon.png?asset'
 import { createMenu } from './utils/menu.js'
 import { getPlatformIcon } from './utils/getPlatformIcon.js'
 import { loadAllDefinitions } from './utils/workflowLoader.js'
+import { setMainWindow } from './utils/mainWindow.js'
 import {
   type CLIOptions,
   getDefaultCLIOptions,
@@ -372,6 +373,11 @@ function createWindow(): void {
       contextIsolation: false,
       nodeIntegration: true
     }
+  })
+
+  setMainWindow(mainWindow)
+  mainWindow.on('closed', () => {
+    setMainWindow(null)
   })
 
   mainWindow.on('ready-to-show', () => {

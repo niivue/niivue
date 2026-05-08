@@ -57,7 +57,7 @@
         "overrides": { "ref": "context.series_list" }
       },
       "exposedFields": ["series_list"],
-      "requiredContextFields": ["subjects"],
+      "requiredContextFields": ["subjects", "dataset_name"],
       "hiddenFields": ["sidecars", "overrides"],
       "formComponent": "bids-classification-table",
       "heuristics": { "series_list": "bids-classify", "subjects": "detect-subjects" }

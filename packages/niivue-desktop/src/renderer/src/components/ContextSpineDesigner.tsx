@@ -590,11 +590,20 @@ export function ContextSpineDesigner({
                                 >
                                   <Select.Trigger className="flex-1" />
                                   <Select.Content>
-                                    {inp.paramDef.enum.map((opt) => (
-                                      <Select.Item key={String(opt)} value={String(opt)}>
-                                        {String(opt)}
-                                      </Select.Item>
-                                    ))}
+                                    {inp.paramDef.enum.map((opt) => {
+                                      const isObj = opt && typeof opt === 'object' && 'value' in opt
+                                      const entry = isObj
+                                        ? (opt as { value: unknown; label?: unknown })
+                                        : { value: opt, label: opt }
+                                      return (
+                                        <Select.Item
+                                          key={String(entry.value)}
+                                          value={String(entry.value)}
+                                        >
+                                          {String(entry.label ?? entry.value)}
+                                        </Select.Item>
+                                      )
+                                    })}
                                   </Select.Content>
                                 </Select.Root>
                               </div>

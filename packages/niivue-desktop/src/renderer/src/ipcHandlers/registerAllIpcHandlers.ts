@@ -19,6 +19,7 @@ import { registerLoadOverlayHandler } from './loadOverlay.js'
 import { registerDrawHandler } from './draw.js'
 import { registerAddMeshHandler } from './addMesh.js'
 import { registerSegmentationHandlers } from './segmentation.js'
+import { registerWorkflowToolBridge } from './workflowToolBridge.js'
 import type { BidsWizardState } from '../../../common/bidsTypes.js'
 
 const electron = window.electron
@@ -118,6 +119,10 @@ export const registerAllIpcHandlers = ({
     setVolumes,
     onTogglePanel: onToggleSegmentationPanel
   })
+
+  // 🌉 Workflow tool bridge: lets main-side executors call brainchop-backed
+  // tools (atlas-parcellate) that have to run in the renderer.
+  registerWorkflowToolBridge({ nv })
 
   // Right panel from menu
   electron.ipcRenderer.on('open-right-panel-tab', (_event: unknown, tab: string) => {

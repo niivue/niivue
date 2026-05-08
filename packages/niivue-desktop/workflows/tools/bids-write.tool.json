@@ -43,6 +43,14 @@
     },
     "exposedFields": ["output_dir"],
     "hiddenFields": ["volumes", "mappings", "config"],
+    "requiredContextFields": [
+      "series_list",
+      "dataset_name",
+      "dataset_version",
+      "license",
+      "authors",
+      "readme"
+    ],
     "formComponent": "bids-preview"
   }
 }

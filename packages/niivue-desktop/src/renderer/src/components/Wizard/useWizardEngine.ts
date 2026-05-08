@@ -8,9 +8,11 @@ export interface WizardEngineState {
   runId: string | null
   definition: WorkflowDefinition | null
   context: Record<string, unknown>
+  stepOutputs: Record<string, Record<string, unknown>>
   currentSection: number
   status: 'idle' | 'preparing' | 'form' | 'running' | 'completed' | 'error'
   completedOutputs: Record<string, unknown> | null
+  completedStepOutputs: Record<string, Record<string, unknown>> | null
   error: string | null
   heuristicLoading: Set<string>
   missingInputs: MissingInput[]
@@ -33,9 +35,14 @@ export function useWizardEngine(
   const [runId, setRunId] = useState<string | null>(null)
   const [definition, setDefinition] = useState<WorkflowDefinition | null>(null)
   const [context, setContext] = useState<Record<string, unknown>>({})
+  const [stepOutputs, setStepOutputs] = useState<Record<string, Record<string, unknown>>>({})
   const [currentSection, setCurrentSection] = useState(0)
   const [status, setStatus] = useState<WizardEngineState['status']>('idle')
   const [completedOutputs, setCompletedOutputs] = useState<Record<string, unknown> | null>(null)
+  const [completedStepOutputs, setCompletedStepOutputs] = useState<Record<
+    string,
+    Record<string, unknown>
+  > | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [heuristicLoading, setHeuristicLoading] = useState<Set<string>>(new Set())
   const [tools, setTools] = useState<ToolDefinition[]>([])
@@ -101,6 +108,9 @@ export function useWizardEngine(
           if (cancelled) return
           if (autoResult.runState?.context) {
             setContext(autoResult.runState.context)
+          }
+          if (autoResult.runState?.stepOutputs) {
+            setStepOutputs(autoResult.runState.stepOutputs)
           }
         }
 
@@ -232,6 +242,7 @@ export function useWizardEngine(
         const result = await electron.ipcRenderer.invoke('workflow:execute-all', { runId })
         setStatus('completed')
         setCompletedOutputs(result.outputs ?? null)
+        setCompletedStepOutputs(result.stepOutputs ?? null)
       } catch (err) {
         setStatus('error')
         setError(err instanceof Error ? err.message : String(err))
@@ -246,6 +257,9 @@ export function useWizardEngine(
       const readyResult = await electron.ipcRenderer.invoke('workflow:run-ready-steps', { runId, maxStepIndex: currentSection })
       if (readyResult.runState?.context) {
         setContext(readyResult.runState.context)
+      }
+      if (readyResult.runState?.stepOutputs) {
+        setStepOutputs(readyResult.runState.stepOutputs)
       }
     } catch (err) {
       // Non-fatal — some sections are form-only with no step to run
@@ -279,10 +293,12 @@ export function useWizardEngine(
     setRunId(null)
     setDefinition(null)
     setContext({})
+    setStepOutputs({})
     setCurrentSection(0)
     setStatus('idle')
     setError(null)
     setCompletedOutputs(null)
+    setCompletedStepOutputs(null)
     onClose()
     setTimeout(() => { closingRef.current = false }, 0)
   }, [onClose])
@@ -299,9 +315,11 @@ export function useWizardEngine(
     runId,
     definition,
     context,
+    stepOutputs,
     currentSection,
     status,
     completedOutputs,
+    completedStepOutputs,
     error,
     heuristicLoading,
     missingInputs,
