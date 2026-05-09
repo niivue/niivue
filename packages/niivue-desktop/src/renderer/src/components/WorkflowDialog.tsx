@@ -329,6 +329,14 @@ function SkullStripAdapter({
     [onFieldChange]
   )
 
+  const dilation = typeof context.dilation === 'number' ? (context.dilation as number) : 3
+  const handleDilationChange = useCallback(
+    (d: number) => {
+      onFieldChange('dilation', d)
+    },
+    [onFieldChange]
+  )
+
   return (
     <StepSkullStrip
       mappings={mappings}
@@ -341,6 +349,8 @@ function SkullStripAdapter({
       onOriginalPathsChange={handleOriginalPathsChange}
       useStripped={useStripped}
       onUseStrippedChange={handleUseStrippedChange}
+      dilation={dilation}
+      onDilationChange={handleDilationChange}
     />
   )
 }

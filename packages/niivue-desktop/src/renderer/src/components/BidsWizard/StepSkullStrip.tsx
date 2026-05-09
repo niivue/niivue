@@ -24,7 +24,16 @@ interface StepSkullStripProps {
   onOriginalPathsChange: (paths: Map<number, string>) => void
   useStripped: Map<number, boolean>
   onUseStrippedChange: (useStripped: Map<number, boolean>) => void
+  /** Brain-mask dilation in mm (the volume is conformed to 1mm isotropic
+   *  before dilation, so 1 mm = 1 voxel = 1 dilation pass).
+   *  Higher values keep more peripheral tissue; 0 uses the raw mask. */
+  dilation?: number
+  onDilationChange?: (dilation: number) => void
 }
+
+const DEFAULT_DILATION = 3
+const MIN_DILATION = 0
+const MAX_DILATION = 10
 
 interface PreviewState {
   seriesIndex: number
@@ -45,8 +54,20 @@ export function StepSkullStrip({
   originalPaths,
   onOriginalPathsChange,
   useStripped,
-  onUseStrippedChange
+  onUseStrippedChange,
+  dilation,
+  onDilationChange
 }: StepSkullStripProps): JSX.Element {
+  const [localDilation, setLocalDilation] = useState<number>(dilation ?? DEFAULT_DILATION)
+  useEffect(() => {
+    if (dilation != null && dilation !== localDilation) setLocalDilation(dilation)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dilation])
+  const effectiveDilation = dilation ?? localDilation
+  const setDilation = (val: number): void => {
+    setLocalDilation(val)
+    onDilationChange?.(val)
+  }
   const [engine, setEngine] = useState<Engine>(() => completed.size > 0 ? 'allineate' : 'none')
   const [scope, setScope] = useState<Scope>('anat')
   const [selectedIndices, setSelectedIndices] = useState<Set<number>>(() => {
@@ -171,12 +192,13 @@ export function StepSkullStrip({
       }
     })
 
-    // Apply brain mask with 3-voxel dilation
+    // Apply brain mask with user-configured dilation. 0 = raw mask.
     const brain = conformed.img!
     const mask = result.volume.img!
-    const dilatedMask = dilateMask3D(mask, 256, 256, 256, 3)
+    const finalMask =
+      effectiveDilation > 0 ? dilateMask3D(mask, 256, 256, 256, effectiveDilation) : mask
     for (let i = 0; i < brain.length; i++) {
-      if (dilatedMask[i] === 0) brain[i] = 0
+      if (finalMask[i] === 0) brain[i] = 0
     }
 
     // Save skull-stripped NIfTI
@@ -393,6 +415,43 @@ export function StepSkullStrip({
           ))}
         </div>
       </div>
+
+      {/* Brainchop dilation control */}
+      {engine === 'brainchop' && (
+        <div className="flex items-center gap-2">
+          <Text size="1" weight="medium">
+            Mask dilation:
+          </Text>
+          <input
+            type="range"
+            min={MIN_DILATION}
+            max={MAX_DILATION}
+            step={1}
+            value={effectiveDilation}
+            onChange={(e) => setDilation(Number(e.target.value))}
+            disabled={running}
+            className="w-32"
+          />
+          <input
+            type="number"
+            min={MIN_DILATION}
+            max={MAX_DILATION}
+            step={1}
+            value={effectiveDilation}
+            onChange={(e) => {
+              const n = Number(e.target.value)
+              if (Number.isFinite(n)) {
+                setDilation(Math.max(MIN_DILATION, Math.min(MAX_DILATION, n)))
+              }
+            }}
+            disabled={running}
+            className="w-14 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded bg-[var(--color-background)]"
+          />
+          <Text size="1" className="text-[var(--gray-9)]">
+            mm (0 = raw mask, higher keeps more tissue)
+          </Text>
+        </div>
+      )}
 
       {/* Scope selector */}
       {isActive && (

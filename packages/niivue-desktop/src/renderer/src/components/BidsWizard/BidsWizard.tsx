@@ -91,6 +91,7 @@ export function BidsWizard({
   const [skullStripCompleted, setSkullStripCompleted] = useState<Set<number>>(new Set())
   const [skullStripOriginalPaths, setSkullStripOriginalPaths] = useState<Map<number, string>>(new Map())
   const [skullStripUseStripped, setSkullStripUseStripped] = useState<Map<number, boolean>>(new Map())
+  const [skullStripDilation, setSkullStripDilation] = useState<number>(3)
 
   // Validation
   const [validationResult, setValidationResult] = useState<BidsValidationResult | null>(null)
@@ -445,6 +446,8 @@ export function BidsWizard({
           onOriginalPathsChange={setSkullStripOriginalPaths}
           useStripped={skullStripUseStripped}
           onUseStrippedChange={setSkullStripUseStripped}
+          dilation={skullStripDilation}
+          onDilationChange={setSkullStripDilation}
         />
       )}
       {step === 3 && (
