@@ -1,6 +1,6 @@
 import type { BidsSeriesMapping, BidsDatatype, BidsSuffix } from '../../../../common/bidsTypes.js'
 
-function generateBidsFilename(mapping: BidsSeriesMapping): string {
+function generateBidsFilename(mapping: BidsSeriesMapping, desc?: string): string {
   const parts: string[] = [`sub-${mapping.subject}`]
   if (mapping.session) parts.push(`ses-${mapping.session}`)
   if (mapping.task) parts.push(`task-${mapping.task}`)
@@ -10,19 +10,23 @@ function generateBidsFilename(mapping: BidsSeriesMapping): string {
   if (mapping.dir) parts.push(`dir-${mapping.dir}`)
   if (mapping.run > 0) parts.push(`run-${String(mapping.run).padStart(2, '0')}`)
   if (mapping.echo > 0) parts.push(`echo-${mapping.echo}`)
+  if (desc) parts.push(`desc-${desc}`)
   parts.push(mapping.suffix)
   return parts.join('_')
 }
 
-function generateBidsPath(mapping: BidsSeriesMapping): string {
+function generateBidsPath(mapping: BidsSeriesMapping, desc?: string): string {
   const parts: string[] = [`sub-${mapping.subject}`]
   if (mapping.session) parts.push(`ses-${mapping.session}`)
   const subDir = [...parts, mapping.datatype].join('/')
-  const filename = generateBidsFilename(mapping)
+  const filename = generateBidsFilename(mapping, desc)
   return `${subDir}/${filename}`
 }
 
-export function buildBidsTree(mappings: BidsSeriesMapping[]): string[] {
+export function buildBidsTree(
+  mappings: BidsSeriesMapping[],
+  originalPaths: Record<number, string> = {}
+): string[] {
   const included = mappings.filter((m) => !m.excluded)
   const paths: string[] = []
   for (const m of included) {
@@ -30,6 +34,11 @@ export function buildBidsTree(mappings: BidsSeriesMapping[]): string[] {
     const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
     paths.push(bidsBase + ext)
     paths.push(bidsBase + '.json')
+    if (originalPaths[m.index]) {
+      const stripBase = generateBidsPath(m, 'brain')
+      paths.push(stripBase + ext)
+      paths.push(stripBase + '.json')
+    }
   }
 
   // Add excluded series paths (stored in sourcedata/)

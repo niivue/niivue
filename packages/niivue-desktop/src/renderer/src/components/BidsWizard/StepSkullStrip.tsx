@@ -121,7 +121,7 @@ export function StepSkullStrip({
     if (!templatePath) throw new Error('MNI152 head template not found')
     if (!maskPath) throw new Error('MNI brain mask not found')
 
-    const outputPath = mapping.niftiPath.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
+    const outputPath = mapping.niftiPath.replace(/\.nii(\.gz)?$/, '.brain.nii.gz')
 
     // Use ls cost for T1 images (same-modality to MNI T1 template), hellinger for others (cross-modal)
     const cost = isBidsGuessT1(mapping) ? 'ls' : 'hel'
@@ -182,7 +182,7 @@ export function StepSkullStrip({
     // Save skull-stripped NIfTI
     const niftiBytes = await conformed.saveToUint8Array('brain.nii.gz')
     const b64out = uint8ArrayToBase64(niftiBytes)
-    const outputPath = mapping.niftiPath.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
+    const outputPath = mapping.niftiPath.replace(/\.nii(\.gz)?$/, '.brain.nii.gz')
     const saveResult = await electron.headlessSaveNifti(b64out, outputPath)
 
     if (!saveResult.success) {
@@ -221,6 +221,7 @@ export function StepSkullStrip({
     const updatedMappings = [...mappings]
     const newCompleted = new Set(completed)
     const newOriginalPaths = new Map(originalPaths)
+    const newUseStripped = new Map(useStripped)
     let processedCount = 0
 
     try {
@@ -246,8 +247,9 @@ export function StepSkullStrip({
           }
 
           newCompleted.add(mapping.index)
+          newUseStripped.set(mapping.index, true)
           setCompleted(new Set(newCompleted))
-          setUseStripped((prev) => new Map(prev).set(mapping.index, true))
+          setUseStripped(new Map(newUseStripped))
           processedCount++
           setProgress(Math.round((processedCount / toProcess.length) * 100))
           setStatus(`Skull stripping (allineate): ${processedCount}/${toProcess.length} complete`)
@@ -256,7 +258,7 @@ export function StepSkullStrip({
         // Load preview for the last processed series (only if user opted in)
         const lastMapping = toProcess[toProcess.length - 1]
         if (nv && generatePreviews && lastMapping) {
-          const lastOutputPath = lastMapping.niftiPath.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
+          const lastOutputPath = lastMapping.niftiPath.replace(/\.nii(\.gz)?$/, '.brain.nii.gz')
           try {
             const [origB64, strippedB64] = await Promise.all([
               electron.ipcRenderer.invoke('loadFromFile', lastMapping.niftiPath) as Promise<string>,
@@ -297,15 +299,17 @@ export function StepSkullStrip({
           }
 
           newCompleted.add(mapping.index)
+          newUseStripped.set(mapping.index, true)
           setCompleted(new Set(newCompleted))
-          setUseStripped((prev) => new Map(prev).set(mapping.index, true))
+          setUseStripped(new Map(newUseStripped))
           processedCount++
           setProgress(Math.round((processedCount / toProcess.length) * 100))
         }
       }
 
-      // Persist all original paths at once after the loop
+      // Persist all original paths and use-stripped flags at once after the loop
       setOriginalPaths(newOriginalPaths)
+      setUseStripped(newUseStripped)
 
       setStatus(`Skull stripping complete (${processedCount} series)`)
       onMappingsUpdate(updatedMappings)
@@ -324,7 +328,7 @@ export function StepSkullStrip({
   const handlePreviewSeries = async (mapping: BidsSeriesMapping): Promise<void> => {
     if (!nv) return
     try {
-      const origPath = mapping.niftiPath.replace(/_brain\.nii(\.gz)?$/, '.nii.gz')
+      const origPath = mapping.niftiPath.replace(/\.brain\.nii(\.gz)?$/, '.nii.gz')
       const strippedPath = mapping.niftiPath
 
       const [origB64, strippedB64] = await Promise.all([
@@ -431,7 +435,7 @@ export function StepSkullStrip({
                 <th className="py-1 px-2 text-left font-medium">Series</th>
                 <th className="py-1 px-2 text-left font-medium">Type</th>
                 <th className="py-1 px-2 text-left font-medium">Status</th>
-                <th className="py-1 px-2 text-left font-medium">Output</th>
+                <th className="py-1 px-2 text-left font-medium">Use</th>
                 {onLoadVolume && completed.size > 0 && <th className="py-1 px-2 text-left font-medium">Viewer</th>}
               </tr>
             </thead>
@@ -478,7 +482,7 @@ export function StepSkullStrip({
                           setUseStripped((prev) => new Map(prev).set(m.index, wantStripped))
                           const origPath = originalPaths.get(m.index)
                           if (origPath) {
-                            const strippedPath = origPath.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
+                            const strippedPath = origPath.replace(/\.nii(\.gz)?$/, '.brain.nii.gz')
                             onMappingsUpdate(
                               mappings.map((mp) =>
                                 mp.index === m.index

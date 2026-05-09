@@ -257,7 +257,9 @@ export function registerBidsIpcHandlers(): void {
         payload.mappings,
         payload.demographics,
         payload.allDemographics,
-        payload.fieldmapIntendedFor
+        payload.fieldmapIntendedFor,
+        undefined,
+        payload.originalPaths
       )
       // Allow the renderer to probe inside the dataset we just wrote
       registerAllowedRoot(result.outputDir)

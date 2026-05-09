@@ -72,7 +72,7 @@ const DEFAULT_OUTPUTS: Required<FixtureOutputs> = {
     ]
   },
   brainchop: {
-    output_paths: ['/tmp/fixture/sub-01_T1w_brain.nii.gz']
+    output_paths: ['/tmp/fixture/sub-01_T1w.brain.nii.gz']
   },
   'atlas-parcellate': {
     parcellation_paths: ['/tmp/fixture/sub-01_T1w_parcellation.nii.gz'],

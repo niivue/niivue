@@ -1615,27 +1615,67 @@ function MainApp(): JSX.Element {
         onClose={() => {
           setWorkflowOpen(false)
         }}
-        onLoadFile={async (niftiPath: string) => {
+        onLoadFile={async (niftiPath: string, options?: { append?: boolean }) => {
           try {
-            const target = await getTarget()
+            // Append mode skips the new/current prompt — the user clicked Open
+            // after already loading something here, so they want it stacked on
+            // the current doc, not deflected into a fresh tab.
+            const target = options?.append && selectedRef.current
+              ? selectedRef.current
+              : await getTarget()
             const nv = target.nvRef.current
             const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
             if (!base64) return
             const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
-            // "Open in Viewer" replaces the document's volumes — otherwise an
-            // earlier loaded volume (e.g. the original from the SkullStrip step)
-            // sits underneath the new one and visually dominates, making the
-            // user believe they're still seeing the original.
-            while (nv.volumes.length > 0) nv.removeVolumeByIndex(0)
+            // Default: replace the document's volumes — otherwise an earlier
+            // loaded volume (e.g. the original from the SkullStrip step) sits
+            // underneath the new one. With `append: true` (used by repeated
+            // per-row clicks on the completion screen) we stack instead.
+            if (!options?.append) {
+              while (nv.volumes.length > 0) nv.removeVolumeByIndex(0)
+            } else if (nv.volumes.length > 0) {
+              vol.opacity = 0.5
+            }
             nv.addVolume(vol)
             target.setVolumes([...nv.volumes])
             nv.drawScene()
-            const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
+            if (!options?.append) {
+              const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
+              const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
+              updateDocument(target.id, { title })
+            }
+          } catch (err) {
+            if (err instanceof Error && err.message.includes('cancelled')) return
+            console.error('Failed to load volume from workflow:', err)
+          }
+        }}
+        onLoadFiles={async (niftiPaths: string[]) => {
+          if (niftiPaths.length === 0) return
+          try {
+            // "Load All" is an explicit batch — replace whatever's in the
+            // current doc with the stack rather than prompting.
+            const target = selectedRef.current ?? (await getTarget())
+            const nv = target.nvRef.current
+            // Stack multiple files in one document — first as base, rest as overlays.
+            while (nv.volumes.length > 0) nv.removeVolumeByIndex(0)
+            for (let i = 0; i < niftiPaths.length; i++) {
+              const p = niftiPaths[i]
+              const base64 = await electron.ipcRenderer.invoke('loadFromFile', p)
+              if (!base64) continue
+              const vol = await NVImage.loadFromBase64({ base64, name: p })
+              if (i > 0) {
+                vol.opacity = 0.5
+              }
+              nv.addVolume(vol)
+            }
+            target.setVolumes([...nv.volumes])
+            nv.drawScene()
+            const fname = niftiPaths[0].split(/[\\/]/).pop() ?? niftiPaths[0]
             const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
             updateDocument(target.id, { title })
           } catch (err) {
             if (err instanceof Error && err.message.includes('cancelled')) return
-            console.error('Failed to load volume from workflow:', err)
+            console.error('Failed to load volumes from workflow:', err)
           }
         }}
         onBidsInit={(mappings) => {

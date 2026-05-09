@@ -258,6 +258,10 @@ export interface BidsWritePayload {
   demographics?: ParticipantDemographics
   allDemographics?: Record<string, ParticipantDemographics>
   fieldmapIntendedFor?: FieldmapIntendedFor[]
+  /** Per-series original (pre-skull-strip) NIfTI paths. When present for a
+   *  series, the writer emits both the raw original at the canonical BIDS path
+   *  and the stripped derivative with `_desc-brain` inserted before the suffix. */
+  originalPaths?: Record<number, string>
 }
 
 export interface BidsWriteResult {

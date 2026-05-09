@@ -181,7 +181,17 @@ const bidsWriteExecutor: ToolExecutor = async (inputs) => {
     | import('../../common/bidsTypes.js').FieldmapIntendedFor[]
     | undefined
 
-  const result = writeDataset(config, mappings, undefined, allDemographics, fieldmapIntendedFor)
+  const originalPaths = context._originalPaths as Record<number, string> | undefined
+
+  const result = writeDataset(
+    config,
+    mappings,
+    undefined,
+    allDemographics,
+    fieldmapIntendedFor,
+    undefined,
+    originalPaths
+  )
   return {
     bids_dir: result.outputDir,
     files_copied: result.filesCopied

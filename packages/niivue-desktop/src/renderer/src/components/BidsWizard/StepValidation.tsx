@@ -18,6 +18,7 @@ interface StepValidationProps {
   demographics?: ParticipantDemographics
   allDemographics?: Record<string, ParticipantDemographics>
   fieldmapIntendedFor?: FieldmapIntendedFor[]
+  originalPaths?: Map<number, string>
   validationResult?: BidsValidationResult | null
   onNavigateToIssue?: (issue: BidsValidationIssue) => void
   onRevalidate?: () => Promise<void>
@@ -30,6 +31,7 @@ export function StepValidation({
   demographics,
   allDemographics,
   fieldmapIntendedFor,
+  originalPaths,
   validationResult,
   onNavigateToIssue,
   onRevalidate,
@@ -46,12 +48,16 @@ export function StepValidation({
     setWriteError('')
     setPostWriteResult(null)
     try {
+      const originalPathsRecord = originalPaths
+        ? Object.fromEntries(originalPaths)
+        : undefined
       const result = await electron.bidsWrite({
         config,
         mappings,
         demographics,
         allDemographics,
-        fieldmapIntendedFor
+        fieldmapIntendedFor,
+        originalPaths: originalPathsRecord
       })
       if (!result.success) {
         setWriteError(result.error || 'Write failed')

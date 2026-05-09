@@ -22,7 +22,7 @@ export const INTERNAL_SIDECAR_FIELDS = new Set([
   'StudyInstanceUID'
 ])
 
-export function generateBidsFilename(mapping: BidsSeriesMapping): string {
+export function generateBidsFilename(mapping: BidsSeriesMapping, desc?: string): string {
   const parts: string[] = [`sub-${mapping.subject}`]
 
   if (mapping.session) {
@@ -58,12 +58,16 @@ export function generateBidsFilename(mapping: BidsSeriesMapping): string {
     parts.push(`echo-${mapping.echo}`)
   }
 
+  if (desc) {
+    parts.push(`desc-${desc}`)
+  }
+
   parts.push(mapping.suffix)
 
   return parts.join('_')
 }
 
-export function generateBidsPath(mapping: BidsSeriesMapping): string {
+export function generateBidsPath(mapping: BidsSeriesMapping, desc?: string): string {
   const parts: string[] = [`sub-${mapping.subject}`]
 
   if (mapping.session) {
@@ -71,7 +75,7 @@ export function generateBidsPath(mapping: BidsSeriesMapping): string {
   }
 
   const subDir = path.join(...parts, mapping.datatype)
-  const filename = generateBidsFilename(mapping)
+  const filename = generateBidsFilename(mapping, desc)
 
   return path.join(subDir, filename)
 }
@@ -227,7 +231,10 @@ function writeBidsIgnore(outputDir: string): void {
   )
 }
 
-export function buildBidsTree(mappings: BidsSeriesMapping[]): string[] {
+export function buildBidsTree(
+  mappings: BidsSeriesMapping[],
+  originalPaths: Record<number, string> = {}
+): string[] {
   const included = mappings.filter((m) => !m.excluded)
   const paths: string[] = []
   for (const m of included) {
@@ -237,6 +244,11 @@ export function buildBidsTree(mappings: BidsSeriesMapping[]): string[] {
     paths.push(bidsBase + '.json')
     if (m.datatype === 'func' && m.suffix === 'bold' && m.eventFile) {
       paths.push(bidsBase + '_events.tsv')
+    }
+    if (originalPaths[m.index]) {
+      const stripBase = generateBidsPath(m, 'brain')
+      paths.push(stripBase + ext)
+      paths.push(stripBase + '.json')
     }
   }
   paths.sort()
@@ -318,7 +330,8 @@ export function writeDataset(
   demographics?: ParticipantDemographics,
   allDemographics?: Record<string, ParticipantDemographics>,
   fieldmapIntendedFor?: FieldmapIntendedFor[],
-  skipExcluded?: boolean
+  skipExcluded?: boolean,
+  originalPaths?: Record<number, string>
 ): { outputDir: string; filesCopied: number } {
   // Create a subdirectory named after the dataset to avoid writing into a broad parent directory
   const sanitizedName = (config.name || 'bids-dataset').replace(/[^a-zA-Z0-9_-]/g, '_')
@@ -345,17 +358,22 @@ export function writeDataset(
   // Copy NIfTI files and write filtered sidecars
   const included = mappings.filter((m) => !m.excluded)
   for (const m of included) {
+    const origPath = originalPaths?.[m.index]
+    const hasStripped = !!origPath
+    // When skull-stripped: raw original always lands at canonical path,
+    // stripped derivative gets `_desc-brain` so the two coexist.
+    const rawSource = hasStripped ? origPath! : m.niftiPath
+    const ext = rawSource.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
     const bidsBase = generateBidsPath(m)
-    const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
     const destNifti = path.join(outputDir, bidsBase + ext)
     const destJson = path.join(outputDir, bidsBase + '.json')
 
     // Create subdirectory
     fs.mkdirSync(path.dirname(destNifti), { recursive: true })
 
-    // Copy NIfTI
-    if (fs.existsSync(m.niftiPath)) {
-      fs.copyFileSync(m.niftiPath, destNifti)
+    // Copy raw NIfTI
+    if (fs.existsSync(rawSource)) {
+      fs.copyFileSync(rawSource, destNifti)
       filesCopied++
     }
 
@@ -389,6 +407,21 @@ export function writeDataset(
       const evtDest = path.join(outputDir, bidsBase + '_events.tsv')
       writeEventFile(m.eventFile, evtDest)
       filesCopied++
+    }
+
+    // Write skull-stripped derivative alongside the raw original
+    if (hasStripped) {
+      const strippedSource = origPath!.replace(/\.nii(\.gz)?$/i, '.brain.nii.gz')
+      const stripBase = generateBidsPath(m, 'brain')
+      const destStripNifti = path.join(outputDir, stripBase + ext)
+      const destStripJson = path.join(outputDir, stripBase + '.json')
+      if (fs.existsSync(strippedSource)) {
+        fs.copyFileSync(strippedSource, destStripNifti)
+        filesCopied++
+        const stripSidecar = { ...sidecar, SkullStripped: true }
+        fs.writeFileSync(destStripJson, JSON.stringify(stripSidecar, null, 2) + '\n')
+        filesCopied++
+      }
     }
   }
 

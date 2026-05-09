@@ -132,14 +132,14 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
   const excluded = mappings.filter((m) => m.excluded)
 
   // If skull-stripping ran for this series, the stripped file lives at the
-  // conventional `_brain.nii.gz` location next to the original. We derive it
+  // conventional `.brain.nii.gz` location next to the original. We derive it
   // from `_originalPaths` instead of trusting `m.niftiPath`, because heuristics
   // that re-fire on section entry (bids-classify) may reset niftiPath back to
   // the sidecar-derived original even though the stripped file still exists.
   const strippedPathFor = (m: BidsSeriesMapping): string => {
     const orig = originalPaths[m.index]
     if (!orig) return m.niftiPath
-    return orig.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
+    return orig.replace(/\.nii(\.gz)?$/, '.brain.nii.gz')
   }
 
   // Collect all unique NIfTI paths that need previews
@@ -157,7 +157,7 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
   // Render all thumbnails sequentially (one GL context at a time)
   const previewImages = useSeriesPreviews(previewPaths)
   const includedSubjects = subjects.filter((s) => !s.excluded)
-  const tree = buildBidsTree(mappings)
+  const tree = buildBidsTree(mappings, originalPaths)
 
   // Count files by datatype
   const datatypeCounts: Record<string, number> = {}

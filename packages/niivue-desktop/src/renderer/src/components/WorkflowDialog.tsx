@@ -614,7 +614,8 @@ const COMPONENT_REGISTRY: Record<string, React.FC<CustomComponentProps>> = {
 interface WorkflowDialogProps {
   open: boolean
   onClose: () => void
-  onLoadFile?: (niftiPath: string) => Promise<void>
+  onLoadFile?: (niftiPath: string, options?: { append?: boolean }) => Promise<void>
+  onLoadFiles?: (niftiPaths: string[]) => Promise<void>
   onBidsInit?: (mappings: BidsSeriesMapping[]) => void
   onEditWorkflow?: (workflowName: string) => void
   workflowName: string
@@ -625,6 +626,7 @@ export function WorkflowDialog({
   open,
   onClose,
   onLoadFile,
+  onLoadFiles,
   onBidsInit,
   onEditWorkflow,
   workflowName,
@@ -633,8 +635,8 @@ export function WorkflowDialog({
   const engine = useWizardEngine(open, workflowName, inputs, onClose)
 
   const handleLoadFile = useCallback(
-    async (niftiPath: string) => {
-      if (onLoadFile) await onLoadFile(niftiPath)
+    async (niftiPath: string, options?: { append?: boolean }) => {
+      if (onLoadFile) await onLoadFile(niftiPath, options)
       const mappings = (engine.context.series_list as BidsSeriesMapping[]) || []
       if (onBidsInit && mappings.length > 0) onBidsInit(mappings)
     },
@@ -813,6 +815,7 @@ export function WorkflowDialog({
           stepOutputs={engine.completedStepOutputs}
           onClose={engine.handleClose}
           onLoadFile={handleLoadFile}
+          onLoadFiles={onLoadFiles}
           onEditWorkflow={onEditWorkflow ? () => {
             engine.handleClose()
             onEditWorkflow(workflowName)

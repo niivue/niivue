@@ -75,7 +75,7 @@
     "iterationVar": "nifti_path",
     "parallel": true,
     "outputFile": {
-      "template": "{{inputBasename}}_brain.nii.gz",
+      "template": "{{inputBasename}}.brain.nii.gz",
       "stripExtensions": [".nii.gz", ".nii"]
     },
     "args": [

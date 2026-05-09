@@ -488,6 +488,7 @@ export function BidsWizard({
           demographics={demographics}
           allDemographics={getAllDemographics()}
           fieldmapIntendedFor={fieldmapIntendedFor}
+          originalPaths={skullStripOriginalPaths}
           validationResult={validationResult}
           onNavigateToIssue={handleIssueClick}
           onRevalidate={runValidation}

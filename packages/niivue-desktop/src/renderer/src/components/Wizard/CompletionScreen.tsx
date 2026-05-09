@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Button, Heading, Text, Badge, Callout } from '@radix-ui/themes'
 import { CheckCircledIcon, CheckIcon } from '@radix-ui/react-icons'
 import { Niivue, NVImage, SLICE_TYPE } from '@niivue/niivue'
@@ -30,13 +30,17 @@ function buildWrittenFileList(
     const origPath = originalPaths[m.index]
 
     if (origPath) {
-      const strippedPath = origPath.replace(/\.nii(\.gz)?$/, '_brain.nii.gz')
+      const strippedSourcePath = origPath.replace(/\.nii(\.gz)?$/, '.brain.nii.gz')
+      const stripBidsRelPath = generateBidsPath(m, 'brain')
+      const stripBidsPath = bidsDir
+        ? `${bidsDir}/${stripBidsRelPath}${ext}`
+        : strippedSourcePath
       files.push({
         key: `${m.index}-stripped`,
-        label: `${bidsRelPath}${ext}`,
+        label: `${stripBidsRelPath}${ext}`,
         tag: 'skull stripped',
-        bidsPath,
-        sourcePath: strippedPath
+        bidsPath: stripBidsPath,
+        sourcePath: strippedSourcePath
       })
       files.push({
         key: `${m.index}-original`,
@@ -119,7 +123,13 @@ interface CompletionScreenProps {
   outputs: Record<string, unknown> | null
   stepOutputs?: Record<string, Record<string, unknown>> | null
   onClose: () => void
-  onLoadFile?: (niftiPath: string) => Promise<void>
+  /** Load a single file. With `append: true`, adds to the current document
+   *  instead of replacing — used so successive per-row clicks accumulate. */
+  onLoadFile?: (niftiPath: string, options?: { append?: boolean }) => Promise<void>
+  /** Optional batch loader — when provided, "Load All in Viewer" stacks
+   *  every file into a single document instead of opening them serially
+   *  (which clears each previous load). */
+  onLoadFiles?: (niftiPaths: string[]) => Promise<void>
   onEditWorkflow?: () => void
 }
 
@@ -159,6 +169,7 @@ export function CompletionScreen({
   stepOutputs,
   onClose,
   onLoadFile,
+  onLoadFiles,
   onEditWorkflow
 }: CompletionScreenProps): React.ReactElement {
   const mappings = (context.series_list as BidsSeriesMapping[]) || []
@@ -189,6 +200,8 @@ export function CompletionScreen({
   )
 
   const [loadedKeys, setLoadedKeys] = useState<Set<string>>(new Set())
+  const loadedKeysRef = useRef(loadedKeys)
+  loadedKeysRef.current = loadedKeys
   const markLoaded = useCallback((keys: string[]) => {
     setLoadedKeys((prev) => {
       const next = new Set(prev)
@@ -207,7 +220,8 @@ export function CompletionScreen({
         filePath = exists ? file.bidsPath : file.sourcePath
       }
       if (onLoadFile) {
-        await onLoadFile(filePath)
+        const append = loadedKeysRef.current.size > 0
+        await onLoadFile(filePath, { append })
         markLoaded([file.key])
       }
     },
@@ -216,16 +230,22 @@ export function CompletionScreen({
 
   const handleLoadAll = useCallback(
     async () => {
-      if (!onLoadFile) return
       const items: { key: string; path: string }[] = isBidsWorkflow
         ? writtenFiles.map((f) => ({ key: f.key, path: f.sourcePath }))
         : plainVolumes.map((vol, i) => ({ key: String(i), path: vol }))
+      if (items.length === 0) return
+      if (onLoadFiles) {
+        await onLoadFiles(items.map((i) => i.path))
+        markLoaded(items.map((i) => i.key))
+        return
+      }
+      if (!onLoadFile) return
       for (const item of items) {
         await onLoadFile(item.path)
         markLoaded([item.key])
       }
     },
-    [onLoadFile, isBidsWorkflow, writtenFiles, plainVolumes, markLoaded]
+    [onLoadFile, onLoadFiles, isBidsWorkflow, writtenFiles, plainVolumes, markLoaded]
   )
 
   const displayDir = bidsDir || outDir
@@ -261,7 +281,7 @@ export function CompletionScreen({
             <Heading size="3" className="text-neutral-12">
               {isBidsWorkflow ? 'Open in viewer' : `${plainVolumes.length} NIfTI file${plainVolumes.length !== 1 ? 's' : ''} created`}
             </Heading>
-            {onLoadFile && fileList.length > 1 && (
+            {(onLoadFile || onLoadFiles) && fileList.length > 1 && (
               <Button variant="soft" size="2" onClick={handleLoadAll}>
                 Load All in Viewer
               </Button>
@@ -319,7 +339,8 @@ export function CompletionScreen({
                           void handleOpenBidsFile(file)
                         } else if (onLoadFile) {
                           void (async () => {
-                            await onLoadFile(file.sourcePath)
+                            const append = loadedKeysRef.current.size > 0
+                            await onLoadFile(file.sourcePath, { append })
                             markLoaded([file.key])
                           })()
                         }
