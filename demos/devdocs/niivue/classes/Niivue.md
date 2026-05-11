@@ -562,7 +562,7 @@ addLabel(
    onClick?: (label: NVLabel3D) => void): NVLabel3D;
 ```
 
-Defined in: [niivue/index.ts:10481](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10481)
+Defined in: [niivue/index.ts:10486](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10486)
 
 Add a 3D Label
 
@@ -993,7 +993,7 @@ nv.clearAngles();
 clearBounds(mask: number, ltwh?: [number, number, number, number]): void;
 ```
 
-Defined in: [niivue/index.ts:11779](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11779)
+Defined in: [niivue/index.ts:11784](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11784)
 
 Clear a rectangular region of this instance's canvas.
 
@@ -1337,7 +1337,7 @@ a Uint8Array representing a complete NIfTI file
 createOnLocationChange(axCorSag: number): void;
 ```
 
-Defined in: [niivue/index.ts:10364](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10364)
+Defined in: [niivue/index.ts:10369](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L10369)
 
 Internal utility to generate human-readable location strings for the onLocationChange callback
 
@@ -1502,7 +1502,7 @@ Performs a 1-voxel binary dilation on a connected cluster within the drawing mas
 drawMosaic(mosaicStr: string): void;
 ```
 
-Defined in: [niivue/index.ts:11462](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11462)
+Defined in: [niivue/index.ts:11467](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11467)
 
 display a lightbox or montage view
 
@@ -1592,7 +1592,7 @@ niivue.drawUndo();
 eventInBounds(evt: MouseEvent | TouchEvent | Touch): boolean;
 ```
 
-Defined in: [niivue/index.ts:11654](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11654)
+Defined in: [niivue/index.ts:11659](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11659)
 
 Returns true if a mouse/touch event happened inside this instance's bounds.
 
@@ -1614,7 +1614,7 @@ Returns true if a mouse/touch event happened inside this instance's bounds.
 findDrawingBoundarySlices(sliceType: SLICE_TYPE): object;
 ```
 
-Defined in: [niivue/index.ts:12448](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12448)
+Defined in: [niivue/index.ts:12447](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12447)
 
 Find the first and last slices containing drawing data along a given axis
 
@@ -1632,8 +1632,8 @@ Object containing first and last slice indices, or null if no data found
 
 | Name    | Type     | Defined in                                                                                                     |
 | ------- | -------- | -------------------------------------------------------------------------------------------------------------- |
-| `first` | `number` | [niivue/index.ts:12448](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12448) |
-| `last`  | `number` | [niivue/index.ts:12448](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12448) |
+| `first` | `number` | [niivue/index.ts:12447](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12447) |
+| `last`  | `number` | [niivue/index.ts:12447](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12447) |
 
 ---
 
@@ -2088,7 +2088,7 @@ Defined in: [niivue/index.ts:8799](https://github.com/niivue/niivue/blob/main/pa
 inBounds(x: number, y: number): boolean;
 ```
 
-Defined in: [niivue/index.ts:11726](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11726)
+Defined in: [niivue/index.ts:11731](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11731)
 
 Return true if the given canvas pixel coordinates are inside this Niivue instance's bounds.
 
@@ -2155,7 +2155,7 @@ interpolateMaskSlices(
    options?: object): void;
 ```
 
-Defined in: [niivue/index.ts:12463](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12463)
+Defined in: [niivue/index.ts:12462](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12462)
 
 Interpolate between mask slices using geometric or intensity-guided methods
 
@@ -2636,7 +2636,7 @@ Automatically dispatches each item to either volume or mesh loader based on file
 loadMatCapTexture(bmpUrl: string): Promise<WebGLTexture>;
 ```
 
-Defined in: [niivue/index.ts:12420](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12420)
+Defined in: [niivue/index.ts:12419](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L12419)
 
 Load matcap for illumination model.
 
@@ -2775,7 +2775,7 @@ moveCrosshairInVox(
    z: number): void;
 ```
 
-Defined in: [niivue/index.ts:11049](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11049)
+Defined in: [niivue/index.ts:11054](https://github.com/niivue/niivue/blob/main/packages/niivue/src/niivue/index.ts#L11054)
 
 move crosshair a fixed number of voxels (not mm)
 

@@ -51935,7 +51935,8 @@ var Niivue = class extends EventTarget {
       imageWidthHeight[1] = scale6[3];
     }
     if (isNaN(imageWidthHeight[0])) {
-      this.draw2DMain(ltwh, axCorSag, customMM);
+      const wasZeroSized = leftTopWidthHeight[2] === 0 && leftTopWidthHeight[3] === 0;
+      this.draw2DMain(wasZeroSized ? [0, 0, 0, 0] : ltwh, axCorSag, customMM);
     } else {
       const padLeftTopX = [NaN, NaN];
       padLeftTopX[0] = Math.floor(0.5 * (ltwh[2] - imageWidthHeight[0]));
@@ -53764,10 +53765,7 @@ var Niivue = class extends EventTarget {
           }
         }
       } else if (this.opts.sliceType === 0 /* AXIAL */ || this.opts.sliceType === 1 /* CORONAL */ || this.opts.sliceType === 2 /* SAGITTAL */) {
-        const { volScale } = this.sliceScale();
-        const leftTopWidthHeight = [vpX, vpY, vpW, vpH];
-        const actualDimensions = this.calculateWidthHeight(this.opts.sliceType, volScale, leftTopWidthHeight[2], leftTopWidthHeight[3]);
-        this.draw2D([0, 0, 0, 0], this.opts.sliceType, NaN, actualDimensions);
+        this.draw2D([0, 0, 0, 0], this.opts.sliceType, NaN);
       } else {
         let padPixelsWH = function(cols, rows) {
           return [(cols - 1) * pad + cols * innerPad, (rows - 1) * pad + rows * innerPad];
