@@ -1,5 +1,4 @@
 import { useState, useCallback, useRef } from 'react'
-import { Dialog, VisuallyHidden } from '@radix-ui/themes'
 import { WizardProvider, type WizardStep } from './WizardContext.js'
 import { WizardHeader } from './WizardHeader.js'
 import { WizardStepIndicator } from './WizardStepIndicator.js'
@@ -25,6 +24,12 @@ interface WizardShellProps {
   hideFooter?: boolean
   /** Allow clicking completed steps to navigate back */
   allowStepClick?: boolean
+  /**
+   * When true, the Back-to-viewer / Cancel buttons prompt for confirmation
+   * before tearing down the wizard. Wire this to "a step is currently
+   * executing" so a misclick doesn't kill a multi-minute import.
+   */
+  requireConfirmOnClose?: boolean
   children: React.ReactNode
 }
 
@@ -43,6 +48,7 @@ export function WizardShell({
   onNext: onNextProp,
   hideFooter = false,
   allowStepClick = true,
+  requireConfirmOnClose = false,
   children
 }: WizardShellProps): React.ReactElement | null {
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
@@ -56,6 +62,18 @@ export function WizardShell({
 
   const isFirstStep = currentStep === 0
   const isLastStep = currentStep === steps.length - 1
+
+  const guardedClose = useCallback(() => {
+    if (
+      requireConfirmOnClose &&
+      !confirm(
+        'A workflow step is still running. Leaving now will cancel it and discard any in-progress work. Continue?'
+      )
+    ) {
+      return
+    }
+    onClose()
+  }, [requireConfirmOnClose, onClose])
 
   const goNext = useCallback(() => {
     if (isLastStep) {
@@ -84,91 +102,67 @@ export function WizardShell({
 
   if (!open) return null
 
-  const currentStepDef = steps[currentStep]
-  const accessibleDescription =
-    currentStepDef?.description || `Step ${currentStep + 1} of ${steps.length}.`
-
   return (
-    <Dialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
-      <Dialog.Content
-        maxWidth="95vw"
-        style={{
-          width: '95vw',
-          height: '90vh',
-          padding: 0,
-          display: 'flex',
-          flexDirection: 'column'
+    <div className="flex flex-col h-full w-full bg-surface" role="region" aria-label={title}>
+      <WizardProvider
+        value={{
+          currentStep,
+          totalSteps: steps.length,
+          steps,
+          goNext,
+          goBack,
+          canProceed,
+          isFirstStep,
+          isLastStep,
+          direction
         }}
-        // Long-running workflows (multi-minute imports) must not be dismissed by
-        // a stray click on the overlay — only the explicit X / Cancel close it.
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onInteractOutside={(e) => e.preventDefault()}
       >
-        <VisuallyHidden>
-          <Dialog.Title>{title}</Dialog.Title>
-          <Dialog.Description>{accessibleDescription}</Dialog.Description>
-        </VisuallyHidden>
+        {/* Header */}
+        <WizardHeader
+          title={title}
+          currentStep={currentStep}
+          totalSteps={steps.length}
+          onClose={guardedClose}
+        />
 
-        <WizardProvider
-          value={{
-            currentStep,
-            totalSteps: steps.length,
-            steps,
-            goNext,
-            goBack,
-            canProceed,
-            isFirstStep,
-            isLastStep,
-            direction
-          }}
-        >
-          {/* Header */}
-          <WizardHeader
-            title={title}
-            currentStep={currentStep}
-            totalSteps={steps.length}
-            onClose={onClose}
-          />
-
-          {/* Body: step rail + content */}
-          <div className="flex flex-1 min-h-0">
-            {/* Left step rail */}
-            {steps.length > 1 && (
-              <aside className="w-56 shrink-0 border-r border-neutral-5 bg-neutral-2 py-4 overflow-hidden">
-                <WizardStepIndicator
-                  steps={steps}
-                  currentStep={currentStep}
-                  onStepClick={allowStepClick ? handleStepClick : undefined}
-                />
-              </aside>
-            )}
-
-            {/* Main content area — single scroll context */}
-            <main className="flex-1 min-w-0 overflow-y-auto">
-              <div className="p-6 max-w-4xl mx-auto">
-                <WizardTransition stepIndex={currentStep} direction={direction}>
-                  {children}
-                </WizardTransition>
-              </div>
-            </main>
-          </div>
-
-          {/* Footer */}
-          {!hideFooter && (
-            <WizardFooter
-              isFirstStep={isFirstStep}
-              isLastStep={isLastStep}
-              canProceed={canProceed}
-              disabledReason={disabledReason}
-              loading={loading}
-              lastStepLabel={lastStepLabel}
-              onBack={goBack}
-              onNext={goNext}
-              onCancel={onClose}
-            />
+        {/* Body: step rail + content */}
+        <div className="flex flex-1 min-h-0">
+          {/* Left step rail */}
+          {steps.length > 1 && (
+            <aside className="w-56 shrink-0 border-r border-neutral-5 bg-neutral-2 py-4 overflow-hidden">
+              <WizardStepIndicator
+                steps={steps}
+                currentStep={currentStep}
+                onStepClick={allowStepClick ? handleStepClick : undefined}
+              />
+            </aside>
           )}
-        </WizardProvider>
-      </Dialog.Content>
-    </Dialog.Root>
+
+          {/* Main content area — single scroll context */}
+          <main className="flex-1 min-w-0 overflow-y-auto">
+            <div className="p-6 max-w-4xl mx-auto">
+              <WizardTransition stepIndex={currentStep} direction={direction}>
+                {children}
+              </WizardTransition>
+            </div>
+          </main>
+        </div>
+
+        {/* Footer */}
+        {!hideFooter && (
+          <WizardFooter
+            isFirstStep={isFirstStep}
+            isLastStep={isLastStep}
+            canProceed={canProceed}
+            disabledReason={disabledReason}
+            loading={loading}
+            lastStepLabel={lastStepLabel}
+            onBack={goBack}
+            onNext={goNext}
+            onCancel={guardedClose}
+          />
+        )}
+      </WizardProvider>
+    </div>
   )
 }

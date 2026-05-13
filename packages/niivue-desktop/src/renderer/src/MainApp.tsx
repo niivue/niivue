@@ -22,7 +22,10 @@ import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
 import { WorkflowDialog } from './components/WorkflowDialog.js'
 import { WorkflowDesignerDialog } from './components/WorkflowDesignerDialog.js'
-import { WorkflowTemplateGallery, type TemplateChoice } from './components/WorkflowTemplateGallery.js'
+import {
+  WorkflowTemplateGallery,
+  type TemplateChoice
+} from './components/WorkflowTemplateGallery.js'
 import { HeuristicDesigner } from './components/HeuristicDesigner.js'
 import { OpenTargetDialog } from './components/OpenTargetDialog.js'
 import { UnsavedChangesDialog } from './components/UnsavedChangesDialog.js'
@@ -114,10 +117,7 @@ function MainApp(): JSX.Element {
       }
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>({ kind: 'viewer' })
 
-  const openGalleryMode = useCallback(
-    () => setWorkspaceMode({ kind: 'gallery' }),
-    []
-  )
+  const openGalleryMode = useCallback(() => setWorkspaceMode({ kind: 'gallery' }), [])
   const openWizardMode = useCallback(
     (workflowName: string, inputs: Record<string, unknown>) =>
       setWorkspaceMode({ kind: 'wizard', workflowName, inputs }),
@@ -128,22 +128,17 @@ function MainApp(): JSX.Element {
   // button mid-wizard, which stacks the designer on top so closing returns
   // to the wizard the author was running.
   const openDesignerMode = useCallback(
-    (
-      initialDefinition: Record<string, unknown> | null,
-      options?: { fromWizard?: boolean }
-    ) =>
+    (initialDefinition: Record<string, unknown> | null, options?: { fromWizard?: boolean }) =>
       setWorkspaceMode((prev) => ({
         kind: 'designer',
         initialDefinition,
-        parent:
-          options?.fromWizard && prev.kind === 'wizard' ? prev : { kind: 'viewer' as const }
+        parent: options?.fromWizard && prev.kind === 'wizard' ? prev : { kind: 'viewer' as const }
       })),
     []
   )
   const closeWorkspaceMode = useCallback(() => setWorkspaceMode({ kind: 'viewer' }), [])
   const closeDesignerMode = useCallback(
-    () =>
-      setWorkspaceMode((prev) => (prev.kind === 'designer' ? prev.parent : prev)),
+    () => setWorkspaceMode((prev) => (prev.kind === 'designer' ? prev.parent : prev)),
     []
   )
 
@@ -158,10 +153,13 @@ function MainApp(): JSX.Element {
   const designerActive = workspaceMode.kind === 'designer'
   const designerInitialDefinition = designerActive ? workspaceMode.initialDefinition : null
   const galleryOpen = workspaceMode.kind === 'gallery'
+  const wizardActive = !!wizardParams
 
   // Heuristic designer state
   const [heuristicDesignerOpen, setHeuristicDesignerOpen] = useState(false)
-  const [heuristicInitialDefinition, setHeuristicInitialDefinition] = useState<import('../../common/workflowTypes.js').HeuristicDefinition | null>(null)
+  const [heuristicInitialDefinition, setHeuristicInitialDefinition] = useState<
+    import('../../common/workflowTypes.js').HeuristicDefinition | null
+  >(null)
 
   // Listen for workflow:open from menu
   useEffect(() => {
@@ -184,11 +182,11 @@ function MainApp(): JSX.Element {
     electron.ipcRenderer.on('workflow:open-designer-tutorial', handleOpenDesignerTutorial)
 
     const handleEditDesigner = (_evt: unknown, workflowName: string): void => {
-      electron.ipcRenderer.invoke('workflow:get-definition', workflowName).then(
-        (definition: Record<string, unknown>) => {
+      electron.ipcRenderer
+        .invoke('workflow:get-definition', workflowName)
+        .then((definition: Record<string, unknown>) => {
           openDesignerMode(definition)
-        }
-      )
+        })
     }
     electron.ipcRenderer.on('workflow:edit-designer', handleEditDesigner)
 
@@ -199,14 +197,14 @@ function MainApp(): JSX.Element {
     electron.ipcRenderer.on('heuristic:open-designer', handleOpenHeuristicDesigner)
 
     const handleEditHeuristicDesigner = (_evt: unknown, heuristicName: string): void => {
-      electron.ipcRenderer.invoke('workflow:get-heuristic-definition', heuristicName).then(
-        (definition: import('../../common/workflowTypes.js').HeuristicDefinition | null) => {
+      electron.ipcRenderer
+        .invoke('workflow:get-heuristic-definition', heuristicName)
+        .then((definition: import('../../common/workflowTypes.js').HeuristicDefinition | null) => {
           if (definition) {
             setHeuristicInitialDefinition(definition)
             setHeuristicDesignerOpen(true)
           }
-        }
-      )
+        })
     }
     electron.ipcRenderer.on('heuristic:edit-designer', handleEditHeuristicDesigner)
 
@@ -224,7 +222,9 @@ function MainApp(): JSX.Element {
 
   // Open target dialog state (new doc vs add to current)
   const [openTargetDialogOpen, setOpenTargetDialogOpen] = useState(false)
-  const openTargetResolverRef = useRef<((choice: 'new' | 'current' | 'cancel') => void) | null>(null)
+  const openTargetResolverRef = useRef<((choice: 'new' | 'current' | 'cancel') => void) | null>(
+    null
+  )
 
   // Unsaved-changes dialog (Save / Don't Save / Cancel) for close-tab and
   // any operation about to clobber dirty work.
@@ -233,9 +233,7 @@ function MainApp(): JSX.Element {
     ((choice: 'save' | 'discard' | 'cancel') => void) | null
   >(null)
 
-  const promptUnsavedChanges = (
-    title: string
-  ): Promise<'save' | 'discard' | 'cancel'> =>
+  const promptUnsavedChanges = (title: string): Promise<'save' | 'discard' | 'cancel'> =>
     new Promise((resolve) => {
       unsavedChangesResolverRef.current = resolve
       setUnsavedChangesTitle(title)
@@ -312,7 +310,6 @@ function MainApp(): JSX.Element {
     }
     return newDoc
   }
-
 
   // Create the first document on mount
   useEffect((): void => {
@@ -987,13 +984,21 @@ function MainApp(): JSX.Element {
 
       if (isStdout) {
         // Read the output file and write to stdout
-        const base64 = await window.electron.ipcRenderer.invoke('read-file-as-base64', outputPath) as string
+        const base64 = (await window.electron.ipcRenderer.invoke(
+          'read-file-as-base64',
+          outputPath
+        )) as string
         await window.electron.headlessWriteStdout(base64)
       }
     }
 
     // Helper: ensure a resolved input is available as a file path on disk
-    const ensureFilePath = async (resolved: { type: string; base64: string; filename: string; originalPath: string }): Promise<string> => {
+    const ensureFilePath = async (resolved: {
+      type: string
+      base64: string
+      filename: string
+      originalPath: string
+    }): Promise<string> => {
       if (resolved.type === 'local-file') {
         return resolved.originalPath
       }
@@ -1037,14 +1042,19 @@ function MainApp(): JSX.Element {
             break
           case 'workflow': {
             const workflowName = options.subcommandMode
-            if (!workflowName) throw new Error('workflow subcommand requires a workflow name. Usage: workflow <name> --inputs <json>')
+            if (!workflowName)
+              throw new Error(
+                'workflow subcommand requires a workflow name. Usage: workflow <name> --inputs <json>'
+              )
 
             let wfInputs: Record<string, unknown> = {}
             if (options.workflowInputs) {
               try {
                 wfInputs = JSON.parse(options.workflowInputs) as Record<string, unknown>
               } catch (e) {
-                throw new Error(`Invalid JSON in --inputs: ${e instanceof Error ? e.message : String(e)}`)
+                throw new Error(
+                  `Invalid JSON in --inputs: ${e instanceof Error ? e.message : String(e)}`
+                )
               }
             }
 
@@ -1056,10 +1066,14 @@ function MainApp(): JSX.Element {
               } catch {
                 // Not valid JSON — treat as a file path
                 try {
-                  const resolved = await window.electron.headlessResolveInput(options.workflowContext)
+                  const resolved = await window.electron.headlessResolveInput(
+                    options.workflowContext
+                  )
                   wfContext = JSON.parse(atob(resolved.base64)) as Record<string, unknown>
                 } catch (e) {
-                  throw new Error(`Failed to load --context from '${options.workflowContext}': ${e instanceof Error ? e.message : String(e)}`)
+                  throw new Error(
+                    `Failed to load --context from '${options.workflowContext}': ${e instanceof Error ? e.message : String(e)}`
+                  )
                 }
               }
             }
@@ -1518,21 +1532,25 @@ function MainApp(): JSX.Element {
 
       {/* 2) Main content: sidebar & viewer & right panel */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar (left) */}
-        <div className="flex-shrink-0 overflow-auto">
-          <Sidebar
-            onRemoveMesh={handleRemoveMesh}
-            onRemoveVolume={handleRemoveVolume}
-            onMoveVolumeUp={handleMoveVolumeUp}
-            onMoveVolumeDown={handleMoveVolumeDown}
-            onReplaceVolume={handleReplaceVolume}
-            activePanel={activeLeftPanel}
-            onSetActivePanel={setActiveLeftPanel}
-            availableModels={availableModels}
-            onRunSegmentation={handleRunSegmentation}
-            onModelsChanged={() => setModelsVersion((v) => v + 1)}
-          />
-        </div>
+        {/* Sidebar (left) — hidden while a workflow shell occupies the
+            center pane; the wizard has its own step rail and the gallery
+            has no use for the viewer-oriented sidebar. */}
+        {!galleryOpen && !wizardActive && (
+          <div className="flex-shrink-0 overflow-auto">
+            <Sidebar
+              onRemoveMesh={handleRemoveMesh}
+              onRemoveVolume={handleRemoveVolume}
+              onMoveVolumeUp={handleMoveVolumeUp}
+              onMoveVolumeDown={handleMoveVolumeDown}
+              onReplaceVolume={handleReplaceVolume}
+              activePanel={activeLeftPanel}
+              onSetActivePanel={setActiveLeftPanel}
+              availableModels={availableModels}
+              onRunSegmentation={handleRunSegmentation}
+              onModelsChanged={() => setModelsVersion((v) => v + 1)}
+            />
+          </div>
+        )}
         {/* Viewer (center) — workflow shells overlay the viewer in-place
             rather than mounting as modal dialogs, so they get the full
             available pane and resize with the window. The viewer DOM
@@ -1573,10 +1591,96 @@ function MainApp(): JSX.Element {
               />
             </div>
           )}
+          {wizardActive && (
+            <div className="absolute inset-0 z-10">
+              <WorkflowDialog
+                open={true}
+                onClose={closeWorkspaceMode}
+                onLoadFile={async (niftiPath: string, options?: { append?: boolean }) => {
+                  try {
+                    // Append mode skips the new/current prompt — the user clicked Open
+                    // after already loading something here, so they want it stacked on
+                    // the current doc, not deflected into a fresh tab.
+                    const target =
+                      options?.append && selectedRef.current
+                        ? selectedRef.current
+                        : await getTarget()
+                    const nv = target.nvRef.current
+                    const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+                    if (!base64) return
+                    const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+                    // Default: replace the document's volumes — otherwise an earlier
+                    // loaded volume (e.g. the original from the SkullStrip step) sits
+                    // underneath the new one. With `append: true` (used by repeated
+                    // per-row clicks on the completion screen) we stack instead.
+                    if (!options?.append) {
+                      while (nv.volumes.length > 0) nv.removeVolumeByIndex(0)
+                    } else if (nv.volumes.length > 0) {
+                      vol.opacity = 0.5
+                    }
+                    nv.addVolume(vol)
+                    target.setVolumes([...nv.volumes])
+                    nv.drawScene()
+                    if (!options?.append) {
+                      const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
+                      const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
+                      updateDocument(target.id, { title })
+                    }
+                  } catch (err) {
+                    if (err instanceof Error && err.message.includes('cancelled')) return
+                    console.error('Failed to load volume from workflow:', err)
+                  }
+                }}
+                onLoadFiles={async (niftiPaths: string[]) => {
+                  if (niftiPaths.length === 0) return
+                  try {
+                    // "Load All" is an explicit batch — replace whatever's in the
+                    // current doc with the stack rather than prompting.
+                    const target = selectedRef.current ?? (await getTarget())
+                    const nv = target.nvRef.current
+                    // Stack multiple files in one document — first as base, rest as overlays.
+                    while (nv.volumes.length > 0) nv.removeVolumeByIndex(0)
+                    for (let i = 0; i < niftiPaths.length; i++) {
+                      const p = niftiPaths[i]
+                      const base64 = await electron.ipcRenderer.invoke('loadFromFile', p)
+                      if (!base64) continue
+                      const vol = await NVImage.loadFromBase64({ base64, name: p })
+                      if (i > 0) {
+                        vol.opacity = 0.5
+                      }
+                      nv.addVolume(vol)
+                    }
+                    target.setVolumes([...nv.volumes])
+                    nv.drawScene()
+                    const fname = niftiPaths[0].split(/[\\/]/).pop() ?? niftiPaths[0]
+                    const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
+                    updateDocument(target.id, { title })
+                  } catch (err) {
+                    if (err instanceof Error && err.message.includes('cancelled')) return
+                    console.error('Failed to load volumes from workflow:', err)
+                  }
+                }}
+                onBidsInit={(mappings) => {
+                  setBidsMappings?.(mappings)
+                  setRightPanelTab('bids')
+                  setRightPanelOpen(true)
+                }}
+                workflowName={wizardParams?.workflowName ?? ''}
+                inputs={wizardParams?.inputs ?? {}}
+                onEditWorkflow={(name) => {
+                  electron.ipcRenderer
+                    .invoke('workflow:get-definition', name)
+                    .then((definition: Record<string, unknown>) => {
+                      openDesignerMode(definition, { fromWizard: true })
+                    })
+                }}
+              />
+            </div>
+          )}
         </div>
         {/* Right Panel (controls, volume, mesh, atlas, segmentation) —
             hidden while a workflow shell occupies the center pane. */}
-        {rightPanelOpen && !galleryOpen && (
+        {rightPanelOpen && !galleryOpen && !wizardActive && (
           <div className="flex-shrink-0 w-80 bg-white border-l border-gray-300 overflow-auto">
             <RightPanel
               activeTab={rightPanelTab}
@@ -1612,10 +1716,16 @@ function MainApp(): JSX.Element {
         onLoadVolume={async (niftiPath) => {
           try {
             const current = selectedRef.current
-            if (!current) { console.error('[onLoadVolume] no selected document'); return }
+            if (!current) {
+              console.error('[onLoadVolume] no selected document')
+              return
+            }
             const nv = current.nvRef.current
             const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
-            if (!base64) { console.error('[onLoadVolume] empty base64'); return }
+            if (!base64) {
+              console.error('[onLoadVolume] empty base64')
+              return
+            }
             const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
             nv.addVolume(vol)
             current.setVolumes([...nv.volumes])
@@ -1640,7 +1750,10 @@ function MainApp(): JSX.Element {
             const target = await getTarget()
             const nv = target.nvRef.current
             const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
-            if (!base64) { console.error('[onLoadVolume] empty base64'); return }
+            if (!base64) {
+              console.error('[onLoadVolume] empty base64')
+              return
+            }
             const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
             nv.addVolume(vol)
             target.setVolumes([...nv.volumes])
@@ -1659,7 +1772,10 @@ function MainApp(): JSX.Element {
               electron.ipcRenderer.invoke('loadFromFile', overlayPath) as Promise<string>
             ])
             const baseVol = await NVImage.loadFromBase64({ base64: baseB64, name: basePath })
-            const overlayVol = await NVImage.loadFromBase64({ base64: overlayB64, name: overlayPath })
+            const overlayVol = await NVImage.loadFromBase64({
+              base64: overlayB64,
+              name: overlayPath
+            })
             overlayVol.colormap = 'red'
             overlayVol.opacity = 0.5
             nv.addVolume(baseVol)
@@ -1680,87 +1796,6 @@ function MainApp(): JSX.Element {
         modelName={segmentationModelName}
         onCancel={handleCancelSegmentation}
         canCancel={true}
-      />
-      <WorkflowDialog
-        open={!!wizardParams}
-        onClose={closeWorkspaceMode}
-        onLoadFile={async (niftiPath: string, options?: { append?: boolean }) => {
-          try {
-            // Append mode skips the new/current prompt — the user clicked Open
-            // after already loading something here, so they want it stacked on
-            // the current doc, not deflected into a fresh tab.
-            const target = options?.append && selectedRef.current
-              ? selectedRef.current
-              : await getTarget()
-            const nv = target.nvRef.current
-            const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
-            if (!base64) return
-            const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
-            // Default: replace the document's volumes — otherwise an earlier
-            // loaded volume (e.g. the original from the SkullStrip step) sits
-            // underneath the new one. With `append: true` (used by repeated
-            // per-row clicks on the completion screen) we stack instead.
-            if (!options?.append) {
-              while (nv.volumes.length > 0) nv.removeVolumeByIndex(0)
-            } else if (nv.volumes.length > 0) {
-              vol.opacity = 0.5
-            }
-            nv.addVolume(vol)
-            target.setVolumes([...nv.volumes])
-            nv.drawScene()
-            if (!options?.append) {
-              const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
-              const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
-              updateDocument(target.id, { title })
-            }
-          } catch (err) {
-            if (err instanceof Error && err.message.includes('cancelled')) return
-            console.error('Failed to load volume from workflow:', err)
-          }
-        }}
-        onLoadFiles={async (niftiPaths: string[]) => {
-          if (niftiPaths.length === 0) return
-          try {
-            // "Load All" is an explicit batch — replace whatever's in the
-            // current doc with the stack rather than prompting.
-            const target = selectedRef.current ?? (await getTarget())
-            const nv = target.nvRef.current
-            // Stack multiple files in one document — first as base, rest as overlays.
-            while (nv.volumes.length > 0) nv.removeVolumeByIndex(0)
-            for (let i = 0; i < niftiPaths.length; i++) {
-              const p = niftiPaths[i]
-              const base64 = await electron.ipcRenderer.invoke('loadFromFile', p)
-              if (!base64) continue
-              const vol = await NVImage.loadFromBase64({ base64, name: p })
-              if (i > 0) {
-                vol.opacity = 0.5
-              }
-              nv.addVolume(vol)
-            }
-            target.setVolumes([...nv.volumes])
-            nv.drawScene()
-            const fname = niftiPaths[0].split(/[\\/]/).pop() ?? niftiPaths[0]
-            const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
-            updateDocument(target.id, { title })
-          } catch (err) {
-            if (err instanceof Error && err.message.includes('cancelled')) return
-            console.error('Failed to load volumes from workflow:', err)
-          }
-        }}
-        onBidsInit={(mappings) => {
-          setBidsMappings?.(mappings)
-          setRightPanelTab('bids')
-          setRightPanelOpen(true)
-        }}
-        workflowName={wizardParams?.workflowName ?? ''}
-        inputs={wizardParams?.inputs ?? {}}
-        onEditWorkflow={(name) => {
-          electron.ipcRenderer.invoke('workflow:get-definition', name).then(
-            (definition: Record<string, unknown>) => {
-              openDesignerMode(definition, { fromWizard: true })
-            }
-          )
-        }}
       />
       <WorkflowDesignerDialog
         open={designerActive}

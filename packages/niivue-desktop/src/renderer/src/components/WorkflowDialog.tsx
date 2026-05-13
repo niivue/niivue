@@ -580,6 +580,7 @@ export function WorkflowDialog({
       lastStepLabel={sections[engine.currentSection]?.buttonText || 'Run'}
       onComplete={inPostCompletionSection ? engine.handleClose : handleComplete}
       hideFooter={isCompleted && !inPostCompletionSection}
+      requireConfirmOnClose={isRunning}
     >
       {/* Preparing state */}
       {isPreparing && (
