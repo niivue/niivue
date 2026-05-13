@@ -23,6 +23,7 @@ import {
   buildSidecarFieldRows,
   groupRowsByStatus,
   issuesForFile,
+  normalizeIssuePath,
   type BidsMetadataDef,
   type SidecarFieldRow
 } from './bidsViewSidecarModel.js'
@@ -925,6 +926,10 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [staged, setStaged] = useState<Staged>(new Map())
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
+  // Focus mode is owned at this level so the dataset-wide errors panel and
+  // the per-file inspector can both drive it. The inspector auto-clears it
+  // when there are no remaining errors for the current selection.
+  const [focusedField, setFocusedField] = useState<string | null>(null)
   const [saveStatus, setSaveStatus] = useState<
     | { kind: 'idle' }
     | { kind: 'saving' }
@@ -1022,6 +1027,15 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
     })
   }, [])
 
+  const [pendingSimilarity, setPendingSimilarity] = useState<PendingSimilarity | null>(null)
+
+  // Drop a stale prompt the moment the user changes their tree selection —
+  // a banner pointing at the previous file's edit is more confusing than
+  // helpful once the focus has moved.
+  useEffect(() => {
+    setPendingSimilarity(null)
+  }, [selectedKeys])
+
   const handleApplyEdit = useCallback(
     (keys: string[], field: string, value: unknown) => {
       setStaged((prev) => {
@@ -1034,9 +1048,46 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
         return next
       })
       setSaveStatus({ kind: 'idle' })
+      // After committing the edit, offer to broadcast the same value to other
+      // files in the same (datatype + suffix) bucket whose current value
+      // differs. We skip clears (`value === undefined`) — propagating a
+      // delete is rarely what the user wants — and skip multi-group edits
+      // (when the selected files span multiple buckets, "similar" is
+      // ambiguous).
+      if (value === undefined) {
+        setPendingSimilarity(null)
+        return
+      }
+      const similar = findSimilarCandidates(files, keys, field, value)
+      setPendingSimilarity(similar ? { field, value, ...similar } : null)
     },
-    [sidecarByKey]
+    [sidecarByKey, files]
   )
+
+  const acceptSimilarity = useCallback(() => {
+    if (!pendingSimilarity) return
+    const { field, value, keys } = pendingSimilarity
+    handleApplyEdit(keys, field, value)
+    setPendingSimilarity(null)
+  }, [pendingSimilarity, handleApplyEdit])
+
+  const dismissSimilarity = useCallback(() => setPendingSimilarity(null), [])
+
+  // Drive the inspector from the dataset-wide errors panel: pick the file
+  // implicated by the issue, focus the offending field, and scroll the
+  // field row into view once the inspector has mounted/rerendered. Two
+  // animation frames give the new SchemaAwareInspector instance time to
+  // render its row tree before we ask the DOM for the row element.
+  const fixErrorFromPanel = useCallback((file: TreeFile, field: string): void => {
+    setSelectedKeys(new Set([file.key]))
+    setFocusedField(field)
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`bids-field-row-${field}`)
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+    })
+  }, [])
 
   const handleSave = useCallback(async () => {
     setSaveStatus({ kind: 'saving' })
@@ -1197,6 +1248,23 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
             }}
           />
           <SelectByChips files={files} onSelectMany={selectMany} />
+          <SelectionSummary
+            files={files}
+            selectedKeys={validSelected}
+            onClearSelection={() => setSelectedKeys(new Set())}
+          />
+          <DatasetErrorsPanel
+            errors={validation?.errors ?? []}
+            files={files}
+            onFix={fixErrorFromPanel}
+          />
+          {pendingSimilarity && (
+            <SimilarFilesPrompt
+              pending={pendingSimilarity}
+              onApply={acceptSimilarity}
+              onDismiss={dismissSimilarity}
+            />
+          )}
           <div className="grid grid-cols-2 gap-3">
             <FileTree
               files={files}
@@ -1209,6 +1277,8 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
               selectedKeys={validSelected}
               allIssues={allIssues}
               metadataDefs={metadataDefs}
+              focusedField={focusedField}
+              onFocusField={setFocusedField}
               onApplyEdit={handleApplyEdit}
             />
           </div>
@@ -1225,6 +1295,8 @@ interface SchemaAwareInspectorProps {
   selectedKeys: Set<string>
   allIssues: BidsValidationIssue[]
   metadataDefs: Record<string, BidsMetadataDef> | null
+  focusedField: string | null
+  onFocusField: (field: string | null) => void
   onApplyEdit: (keys: string[], field: string, value: unknown) => void
 }
 
@@ -1233,6 +1305,8 @@ function SchemaAwareInspector({
   selectedKeys,
   allIssues,
   metadataDefs,
+  focusedField,
+  onFocusField,
   onApplyEdit
 }: SchemaAwareInspectorProps): React.ReactElement {
   const selectedFiles = useMemo(
@@ -1254,6 +1328,31 @@ function SchemaAwareInspector({
     [selectedFiles, allIssues, metadataDefs]
   )
   const sections = useMemo(() => groupRowsByStatus(rows), [rows])
+
+  // Focus mode is owned by BidsViewEditor (so the top-level errors panel can
+  // open it cross-selection) but the auto-release condition lives here, where
+  // we know the issues for the CURRENT selection. The moment the selection
+  // has no remaining errors, drop focus so the inspector goes back to normal.
+  const errorCount = useMemo(
+    () => sharedIssues.filter((i) => i.severity === 'error').length,
+    [sharedIssues]
+  )
+  useEffect(() => {
+    if (focusedField && errorCount === 0) onFocusField(null)
+  }, [focusedField, errorCount, onFocusField])
+
+  const fixError = useCallback(
+    (field: string): void => {
+      onFocusField(field)
+      // Defer scroll to the next frame so the row is rendered (and any
+      // "dimmed" wrapper has settled) before we try to bring it into view.
+      requestAnimationFrame(() => {
+        const el = document.getElementById(`bids-field-row-${field}`)
+        el?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+      })
+    },
+    [onFocusField]
+  )
 
   if (selectedFiles.length === 0) {
     return (
@@ -1282,10 +1381,29 @@ function SchemaAwareInspector({
           selected
         </Text>
         <Text size="1" color="gray">
-          {sharedIssues.filter((i) => i.severity === 'error').length} errors ·{' '}
-          {sharedIssues.filter((i) => i.severity === 'warning').length} warnings
+          {errorCount} errors · {sharedIssues.filter((i) => i.severity === 'warning').length}{' '}
+          warnings
         </Text>
       </div>
+
+      {focusedField && (
+        <Callout.Root size="1" color="red">
+          <Callout.Icon>
+            <InfoCircledIcon />
+          </Callout.Icon>
+          <Callout.Text>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <span>
+                Fix the <span className="font-mono">{focusedField}</span> field — other rows are
+                dimmed until errors are resolved.
+              </span>
+              <Button size="1" variant="soft" onClick={() => onFocusField(null)}>
+                Exit focus
+              </Button>
+            </div>
+          </Callout.Text>
+        </Callout.Root>
+      )}
 
       {singleFile && <SidecarPathHints file={singleFile} />}
 
@@ -1295,6 +1413,7 @@ function SchemaAwareInspector({
             key={section.label}
             label={section.label}
             rows={section.rows}
+            focusedField={focusedField}
             onCommit={(field, value) => onApplyEdit(keys, field, value)}
             onClear={(field) => onApplyEdit(keys, field, undefined)}
           />
@@ -1305,7 +1424,7 @@ function SchemaAwareInspector({
         />
       </div>
 
-      <ValidatorMessagesPanel issues={sharedIssues} />
+      <ValidatorMessagesPanel issues={sharedIssues} onFixError={fixError} />
 
       {singleFile && <RawJsonView file={singleFile} />}
     </div>
@@ -1407,6 +1526,269 @@ function commonIssuesAcross(
   return out
 }
 
+/**
+ * Pending state for the "apply to similar files" prompt the View step
+ * surfaces after every edit. `keys` are the file keys (TreeFile.key) that
+ * would receive the broadcast — typically the not-yet-matching files in
+ * the same (datatype + suffix) bucket as the just-edited file(s).
+ */
+interface PendingSimilarity {
+  field: string
+  value: unknown
+  keys: string[]
+  datatype: string
+  suffix: string
+}
+
+/** Extract the BIDS suffix from a NIfTI filename (`sub-01_T1w.nii.gz` → `T1w`). */
+function suffixFromFilename(filename: string): string {
+  const stem = filename.replace(/\.(nii\.gz|nii|json|tsv)$/, '')
+  const parts = stem.split('_')
+  return parts[parts.length - 1] ?? ''
+}
+
+/** Loose equality used to decide whether a sibling file already matches the
+ *  value the user just committed. Strings/numbers/booleans use ===;
+ *  objects/arrays compare via JSON to avoid spurious "different" prompts
+ *  when arrays are deeply equal. */
+function valuesEqual(a: unknown, b: unknown): boolean {
+  if (a === b) return true
+  if (a === undefined || b === undefined) return false
+  if (a === null || b === null) return false
+  if (typeof a !== typeof b) return false
+  if (typeof a === 'object') {
+    try {
+      return JSON.stringify(a) === JSON.stringify(b)
+    } catch {
+      return false
+    }
+  }
+  return false
+}
+
+/**
+ * Given a committed edit, return the set of OTHER files in the same
+ * (datatype, suffix) bucket whose current value for that field differs.
+ * Returns `null` when:
+ *   - the just-edited files span multiple buckets (ambiguous similarity)
+ *   - or no remaining candidate has a differing value
+ * In both cases the caller skips the prompt rather than nag.
+ */
+function findSimilarCandidates(
+  files: TreeFile[],
+  affectedKeys: string[],
+  field: string,
+  value: unknown
+): { keys: string[]; datatype: string; suffix: string } | null {
+  const affected = new Set(affectedKeys)
+  const buckets = new Set<string>()
+  for (const f of files) {
+    if (!affected.has(f.key)) continue
+    buckets.add(`${f.datatype}|${suffixFromFilename(f.filename)}`)
+  }
+  if (buckets.size !== 1) return null
+  const [groupId] = [...buckets]
+  const [datatype, suffix] = groupId.split('|')
+  const keys: string[] = []
+  for (const f of files) {
+    if (affected.has(f.key)) continue
+    if (f.datatype !== datatype) continue
+    if (suffixFromFilename(f.filename) !== suffix) continue
+    if (valuesEqual(f.sidecar[field], value)) continue
+    keys.push(f.key)
+  }
+  if (keys.length === 0) return null
+  return { keys, datatype, suffix }
+}
+
+/**
+ * Find the TreeFile whose NIfTI path or paired sidecar path matches the
+ * dataset-relative file path attached to a validator issue. Used by the
+ * dataset-level errors panel to navigate the user to the right row.
+ */
+function findFileForIssuePath(files: TreeFile[], issueFile: string | undefined): TreeFile | null {
+  if (!issueFile) return null
+  const target = normalizeIssuePath(issueFile)
+  for (const f of files) {
+    const niftiP = normalizeIssuePath(f.bidsPath)
+    const sidecarP = normalizeIssuePath(f.bidsPath.replace(/\.(nii\.gz|nii)$/, '.json'))
+    if (target === niftiP || target === sidecarP) return f
+  }
+  return null
+}
+
+/**
+ * Dataset-wide errors panel rendered above the tree+inspector grid. Surfaces
+ * every error-severity issue from the validator with a "Fix error" button
+ * that selects the offending file and parks the inspector on the named
+ * field — so the user doesn't have to first guess which file to click on
+ * just to discover the actionable button is buried inside its inspector.
+ *
+ * Hidden entirely when there are zero errors to keep the View step quiet
+ * once the dataset validates cleanly.
+ */
+function DatasetErrorsPanel({
+  errors,
+  files,
+  onFix
+}: {
+  errors: BidsValidationIssue[]
+  files: TreeFile[]
+  onFix: (file: TreeFile, field: string) => void
+}): React.ReactElement | null {
+  const fixable = errors.filter((e) => !!e.subCode && !!e.file)
+  if (errors.length === 0) return null
+  return (
+    <Callout.Root color="red" size="1">
+      <Callout.Icon>
+        <InfoCircledIcon />
+      </Callout.Icon>
+      <Callout.Text>
+        <div className="flex flex-col gap-1.5">
+          <Text size="2" weight="medium">
+            {errors.length} validator error{errors.length !== 1 ? 's' : ''}
+          </Text>
+          <div className="flex flex-col gap-1">
+            {fixable.map((e, idx) => {
+              const file = findFileForIssuePath(files, e.file)
+              const shortPath = (e.file ?? '').replace(/^\//, '')
+              return (
+                <div
+                  key={`${e.code ?? 'err'}:${e.subCode ?? ''}:${idx}`}
+                  className="flex items-center justify-between gap-2 flex-wrap"
+                >
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <Text size="1">
+                      <span className="font-mono">{e.subCode}</span> — {e.message}
+                    </Text>
+                    <Text size="1" color="gray" className="font-mono truncate">
+                      {shortPath}
+                    </Text>
+                  </div>
+                  <Button
+                    size="1"
+                    color="red"
+                    disabled={!file}
+                    onClick={() => file && onFix(file, e.subCode!)}
+                  >
+                    Fix error
+                  </Button>
+                </div>
+              )
+            })}
+            {fixable.length < errors.length && (
+              <Text size="1" color="gray">
+                {errors.length - fixable.length} other error
+                {errors.length - fixable.length !== 1 ? 's' : ''} aren&apos;t tied to a single field
+                — see Validator messages below after selecting a file.
+              </Text>
+            )}
+          </div>
+        </div>
+      </Callout.Text>
+    </Callout.Root>
+  )
+}
+
+/**
+ * Always-on header above the tree+inspector grid. Makes the selection model
+ * legible: which files are currently being edited, and a one-click reset.
+ * Without this banner the only cue is the row highlight in the tree, which
+ * users have reported as easy to miss.
+ */
+function SelectionSummary({
+  files,
+  selectedKeys,
+  onClearSelection
+}: {
+  files: TreeFile[]
+  selectedKeys: Set<string>
+  onClearSelection: () => void
+}): React.ReactElement {
+  const selected = files.filter((f) => selectedKeys.has(f.key))
+  if (selected.length === 0) {
+    return (
+      <Callout.Root color="gray" size="1">
+        <Callout.Icon>
+          <InfoCircledIcon />
+        </Callout.Icon>
+        <Callout.Text>
+          Click a file in the tree to edit its sidecar. We&apos;ll offer to apply changes to similar
+          files (same datatype + suffix) when relevant.
+        </Callout.Text>
+      </Callout.Root>
+    )
+  }
+  const preview =
+    selected.length === 1
+      ? selected[0].filename
+      : `${selected[0].filename} + ${selected.length - 1} other${selected.length > 2 ? 's' : ''}`
+  return (
+    <div className="flex items-center justify-between border border-[var(--gray-5)] rounded px-3 py-1.5">
+      <div className="flex items-center gap-2 min-w-0">
+        <Badge size="1" color="blue">
+          Editing {selected.length}
+        </Badge>
+        <Text
+          size="1"
+          className="font-mono truncate"
+          title={selected.map((f) => f.filename).join('\n')}
+        >
+          {preview}
+        </Text>
+      </div>
+      <Button size="1" variant="soft" onClick={onClearSelection}>
+        Clear selection
+      </Button>
+    </div>
+  )
+}
+
+/**
+ * Inline prompt that fires after each edit: "Apply this same value to N
+ * other similar files?" Keeps the user from having to multi-select the
+ * tree manually when the same metadata applies across a whole acquisition
+ * type. Auto-dismissed when the user changes selection or commits another
+ * edit (handleApplyEdit recomputes).
+ */
+function SimilarFilesPrompt({
+  pending,
+  onApply,
+  onDismiss
+}: {
+  pending: PendingSimilarity
+  onApply: () => void
+  onDismiss: () => void
+}): React.ReactElement {
+  const valuePreview = stringifyForEditor(pending.value) || '(empty)'
+  return (
+    <Callout.Root color="blue" size="1">
+      <Callout.Icon>
+        <InfoCircledIcon />
+      </Callout.Icon>
+      <Callout.Text>
+        <div className="flex items-center justify-between gap-2 flex-wrap">
+          <span>
+            Apply <span className="font-mono">{pending.field}</span> ={' '}
+            <span className="font-mono">{valuePreview}</span> to {pending.keys.length} other{' '}
+            <span className="font-mono">{pending.suffix}</span> file
+            {pending.keys.length > 1 ? 's' : ''} in{' '}
+            <span className="font-mono">{pending.datatype}</span>?
+          </span>
+          <div className="flex gap-2">
+            <Button size="1" onClick={onApply}>
+              Apply to all
+            </Button>
+            <Button size="1" variant="soft" onClick={onDismiss}>
+              Dismiss
+            </Button>
+          </div>
+        </div>
+      </Callout.Text>
+    </Callout.Root>
+  )
+}
+
 function SidecarPathHints({ file }: { file: TreeFile }): React.ReactElement | null {
   if (!file.sidecarPath) return null
   return (
@@ -1426,11 +1808,22 @@ function SidecarPathHints({ file }: { file: TreeFile }): React.ReactElement | nu
 interface FieldSectionProps {
   label: string
   rows: (SidecarFieldRow & { varies: boolean })[]
+  focusedField: string | null
   onCommit: (field: string, value: unknown) => void
   onClear: (field: string) => void
 }
 
-function FieldSection({ label, rows, onCommit, onClear }: FieldSectionProps): React.ReactElement {
+function FieldSection({
+  label,
+  rows,
+  focusedField,
+  onCommit,
+  onClear
+}: FieldSectionProps): React.ReactElement {
+  // When focus mode is active, hide whole sections that don't contain the
+  // focused field. Keeps the screen short instead of forcing the user to
+  // scroll past pages of dimmed rows.
+  if (focusedField && !rows.some((r) => r.field === focusedField)) return <></>
   return (
     <div className="flex flex-col gap-2">
       <Text size="1" weight="medium" color="gray" className="uppercase tracking-wide">
@@ -1440,6 +1833,7 @@ function FieldSection({ label, rows, onCommit, onClear }: FieldSectionProps): Re
         <SchemaFieldRow
           key={row.field}
           row={row}
+          dimmed={focusedField !== null && focusedField !== row.field}
           onCommit={(v) => onCommit(row.field, v)}
           onClear={() => onClear(row.field)}
         />
@@ -1452,17 +1846,26 @@ function FieldSection({ label, rows, onCommit, onClear }: FieldSectionProps): Re
 
 interface SchemaFieldRowProps {
   row: SidecarFieldRow & { varies: boolean }
+  dimmed?: boolean
   onCommit: (value: unknown) => void
   onClear: () => void
 }
 
-function SchemaFieldRow({ row, onCommit, onClear }: SchemaFieldRowProps): React.ReactElement {
+function SchemaFieldRow({
+  row,
+  dimmed = false,
+  onCommit,
+  onClear
+}: SchemaFieldRowProps): React.ReactElement {
   const [whyOpen, setWhyOpen] = useState(false)
   const label = row.def?.display_name ?? row.field
   const description = row.def?.description?.trim()
 
   return (
-    <div className="flex flex-col gap-1">
+    <div
+      id={`bids-field-row-${row.field}`}
+      className={`flex flex-col gap-1${dimmed ? ' opacity-30 pointer-events-none' : ''}`}
+    >
       <div className="flex items-center gap-2 flex-wrap">
         <Text size="2" weight="medium">
           {label}
@@ -1572,13 +1975,19 @@ function FieldValueEditor({
         : 'Optional — click to add'
       : ''
 
-  if (def?.enum && def.enum.length > 0) {
-    const current = typeof row.value === 'string' ? (row.value as string) : ''
+  const enumOptions = extractEnumOptions(def)
+  if (enumOptions) {
+    const currentRaw = row.varies ? '' : stringifyForEditor(row.value)
+    const current = enumOptions.values.includes(currentRaw) ? currentRaw : ''
     return (
-      <Select.Root size="1" value={current || undefined} onValueChange={(v: string) => onCommit(v)}>
+      <Select.Root
+        size="1"
+        value={current || undefined}
+        onValueChange={(v: string): void => onCommit(enumOptions.parse(v))}
+      >
         <Select.Trigger placeholder={placeholder} className="w-full" />
         <Select.Content position="popper" style={{ zIndex: 9999 }}>
-          {def.enum.map((opt) => (
+          {enumOptions.values.map((opt) => (
             <Select.Item key={opt} value={opt}>
               {opt}
             </Select.Item>
@@ -1664,6 +2073,45 @@ function parseForField(raw: string, def?: BidsMetadataDef): unknown {
   return raw
 }
 
+/**
+ * Pull an enum-style option list off a schema definition. Returns the
+ * string-valued options the Select should render plus a `parse` function
+ * that converts the chosen string back to the value the sidecar should
+ * store (booleans/numbers/strings). Returns `null` when the field isn't
+ * enum-shaped — caller falls back to a free-text input.
+ *
+ * Shapes recognised:
+ *   - `def.enum`                — flat enum union
+ *   - `def.anyOf[i].enum`       — union of literal values inside an anyOf
+ *                                 (BIDS uses this for "value or 'n/a'")
+ *   - `def.type === 'boolean'`  — fabricated ["true", "false"] dropdown
+ */
+function extractEnumOptions(def?: BidsMetadataDef): {
+  values: string[]
+  parse: (v: string) => unknown
+} | null {
+  if (!def) return null
+  if (def.type === 'boolean' && !def.enum) {
+    return {
+      values: ['true', 'false'],
+      parse: (v) => v === 'true'
+    }
+  }
+  const collected = new Set<string>()
+  if (Array.isArray(def.enum)) for (const opt of def.enum) collected.add(String(opt))
+  if (Array.isArray(def.anyOf)) {
+    for (const branch of def.anyOf) {
+      const e = (branch as { enum?: unknown[] } | null)?.enum
+      if (Array.isArray(e)) for (const opt of e) collected.add(String(opt))
+    }
+  }
+  if (collected.size === 0) return null
+  return {
+    values: [...collected],
+    parse: (v) => parseForField(v, def)
+  }
+}
+
 // ── Free-form "add a key" row at the bottom of the inspector ──────────
 
 function NewFieldRowEditor({
@@ -1716,9 +2164,11 @@ function NewFieldRowEditor({
 // ── Validator messages summary panel ──────────────────────────────────
 
 function ValidatorMessagesPanel({
-  issues
+  issues,
+  onFixError
 }: {
   issues: BidsValidationIssue[]
+  onFixError: (field: string) => void
 }): React.ReactElement | null {
   const [open, setOpen] = useState(true)
   if (issues.length === 0) return null
@@ -1739,29 +2189,39 @@ function ValidatorMessagesPanel({
       </button>
       {open && (
         <div className="flex flex-col gap-1">
-          {issues.map((i, idx) => (
-            <div
-              key={`${i.code ?? 'issue'}:${i.subCode ?? ''}:${idx}`}
-              className="border border-[var(--gray-5)] rounded p-2 flex flex-col gap-0.5 bg-[var(--gray-2)]"
-            >
-              <div className="flex items-center justify-between gap-2">
-                <Badge size="1" variant="soft" color={i.severity === 'error' ? 'red' : 'amber'}>
-                  {i.severity}
-                </Badge>
-                {i.code && (
-                  <Text size="1" className="font-mono opacity-70">
-                    {i.code}
+          {issues.map((i, idx) => {
+            const fixable = i.severity === 'error' && !!i.subCode
+            return (
+              <div
+                key={`${i.code ?? 'issue'}:${i.subCode ?? ''}:${idx}`}
+                className="border border-[var(--gray-5)] rounded p-2 flex flex-col gap-0.5 bg-[var(--gray-2)]"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-2">
+                    <Badge size="1" variant="soft" color={i.severity === 'error' ? 'red' : 'amber'}>
+                      {i.severity}
+                    </Badge>
+                    {i.code && (
+                      <Text size="1" className="font-mono opacity-70">
+                        {i.code}
+                      </Text>
+                    )}
+                  </div>
+                  {fixable && (
+                    <Button size="1" color="red" onClick={() => onFixError(i.subCode!)}>
+                      Fix error
+                    </Button>
+                  )}
+                </div>
+                <Text size="1">{i.message}</Text>
+                {i.rule && (
+                  <Text size="1" className="font-mono opacity-60">
+                    RULE {i.rule}
                   </Text>
                 )}
               </div>
-              <Text size="1">{i.message}</Text>
-              {i.rule && (
-                <Text size="1" className="font-mono opacity-60">
-                  RULE {i.rule}
-                </Text>
-              )}
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
