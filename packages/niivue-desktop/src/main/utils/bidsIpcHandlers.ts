@@ -1,4 +1,4 @@
-import { dialog, ipcMain } from 'electron'
+import { dialog, ipcMain, shell } from 'electron'
 import fs from 'node:fs'
 import path from 'node:path'
 import os from 'node:os'
@@ -345,6 +345,30 @@ export function registerBidsIpcHandlers(): void {
       return { success: false, error: err instanceof Error ? err.message : String(err) }
     }
   })
+
+  /**
+   * Open a file (typically a TSV the inspector can't edit inline) in the
+   * user's default OS handler, or reveal it in their file manager.
+   * `shell.openPath` returns an error string on failure; non-empty means
+   * something went wrong (e.g. file missing).
+   */
+  ipcMain.handle(
+    'bids:open-file-external',
+    async (_evt, payload: { path: string; reveal?: boolean }) => {
+      try {
+        if (!payload?.path) return { success: false, error: 'No path provided' }
+        if (payload.reveal) {
+          shell.showItemInFolder(payload.path)
+          return { success: true }
+        }
+        const err = await shell.openPath(payload.path)
+        if (err) return { success: false, error: err }
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    }
+  )
 
   /**
    * Validate a BIDS directory on disk using the in-process @bids/validator.

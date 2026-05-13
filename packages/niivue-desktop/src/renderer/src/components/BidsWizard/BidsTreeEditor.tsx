@@ -1089,10 +1089,28 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
   // file so its read-only inspector surfaces the validator messages.
   const fixErrorFromPanel = useCallback((file: TreeFile, field: string): void => {
     setSelectedKeys(new Set([file.key]))
-    // No field to focus (TSV row, or a NIfTI-level issue without a subCode)
-    // — just land on the file; its inspector will show the validator
-    // messages.
-    if (file.kind === 'tsv' || !field) {
+    // TSV rows have no inline editor — open the file in the user's default
+    // OS handler so they can actually fix it. If openPath fails (no
+    // registered handler for .tsv), fall back to revealing it in the OS
+    // file manager. Fire-and-forget; success of the IPC call doesn't
+    // influence the in-app selection.
+    if (file.kind === 'tsv') {
+      setFocusedField(null)
+      void (async (): Promise<void> => {
+        const res = (await electron.ipcRenderer.invoke('bids:open-file-external', {
+          path: file.key
+        })) as { success: boolean; error?: string }
+        if (!res?.success) {
+          await electron.ipcRenderer.invoke('bids:open-file-external', {
+            path: file.key,
+            reveal: true
+          })
+        }
+      })()
+      return
+    }
+    // NIfTI row but no field to focus — just land on the file.
+    if (!field) {
       setFocusedField(null)
       return
     }
@@ -1387,15 +1405,27 @@ function SchemaAwareInspector({
   // user to them) but we don't have an in-app editor for tabular data yet —
   // show the validator messages and point the user at the on-disk file.
   if (selectedFiles.every((f) => f.kind === 'tsv')) {
+    const singleTsv = selectedFiles.length === 1 ? selectedFiles[0] : null
+    const openTsv = async (reveal: boolean): Promise<void> => {
+      if (!singleTsv) return
+      const res = (await electron.ipcRenderer.invoke('bids:open-file-external', {
+        path: singleTsv.key,
+        reveal
+      })) as { success: boolean; error?: string }
+      if (!reveal && !res?.success) {
+        await electron.ipcRenderer.invoke('bids:open-file-external', {
+          path: singleTsv.key,
+          reveal: true
+        })
+      }
+    }
     return (
       <div
         className="border border-[var(--gray-5)] rounded p-3 flex flex-col gap-3"
         style={{ minHeight: 240 }}
       >
         <Text size="2" weight="medium">
-          {selectedFiles.length === 1
-            ? selectedFiles[0].filename
-            : `${selectedFiles.length} TSV files selected`}
+          {singleTsv ? singleTsv.filename : `${selectedFiles.length} TSV files selected`}
         </Text>
         <Callout.Root color="gray" size="1">
           <Callout.Icon>
@@ -1407,14 +1437,24 @@ function SchemaAwareInspector({
             this file are listed below.
           </Callout.Text>
         </Callout.Root>
-        {selectedFiles.length === 1 && (
-          <Text
-            size="1"
-            className="font-mono text-[var(--gray-11)] truncate"
-            title={selectedFiles[0].bidsPath}
-          >
-            {selectedFiles[0].bidsPath}
-          </Text>
+        {singleTsv && (
+          <>
+            <Text
+              size="1"
+              className="font-mono text-[var(--gray-11)] truncate"
+              title={singleTsv.bidsPath}
+            >
+              {singleTsv.bidsPath}
+            </Text>
+            <div className="flex gap-2">
+              <Button size="1" onClick={() => void openTsv(false)}>
+                Open in default app
+              </Button>
+              <Button size="1" variant="soft" onClick={() => void openTsv(true)}>
+                Reveal in file manager
+              </Button>
+            </div>
+          </>
         )}
         <ValidatorMessagesPanel issues={sharedIssues} onFixError={fixError} />
       </div>
