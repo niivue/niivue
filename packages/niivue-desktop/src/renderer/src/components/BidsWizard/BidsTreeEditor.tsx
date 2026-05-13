@@ -264,22 +264,42 @@ function FileTree({ files, selectedKeys, onToggle, onSelectMany }: TreeProps): R
                               <Text size="1" color="blue" className="font-mono">{dt.datatype}/</Text>
                             </div>
                             {!dtCollapsed &&
-                              dt.files.map((f) => (
-                                <div
-                                  key={f.key}
-                                  className={`ml-6 flex items-center gap-1 hover:bg-[var(--gray-3)] rounded px-1 ${
-                                    selectedKeys.has(f.key) ? 'bg-[var(--accent-3)]' : ''
-                                  }`}
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedKeys.has(f.key)}
-                                    onChange={() => onToggle(f.key)}
-                                    className="w-3 h-3"
-                                  />
-                                  <Text size="1" className="font-mono truncate">{f.filename}</Text>
-                                </div>
-                              ))}
+                              dt.files.map((f) => {
+                                const sidecarName = f.sidecarPath
+                                  ? f.sidecarPath.split('/').pop()
+                                  : null
+                                return (
+                                  <div key={f.key}>
+                                    <div
+                                      className={`ml-6 flex items-center gap-1 hover:bg-[var(--gray-3)] rounded px-1 ${
+                                        selectedKeys.has(f.key) ? 'bg-[var(--accent-3)]' : ''
+                                      }`}
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedKeys.has(f.key)}
+                                        onChange={() => onToggle(f.key)}
+                                        className="w-3 h-3"
+                                      />
+                                      <Text size="1" className="font-mono truncate">{f.filename}</Text>
+                                    </div>
+                                    {sidecarName && (
+                                      <div
+                                        className={`ml-10 flex items-center gap-1 hover:bg-[var(--gray-3)] rounded px-1 cursor-pointer ${
+                                          selectedKeys.has(f.key) ? 'bg-[var(--accent-3)]' : ''
+                                        }`}
+                                        onClick={() => onToggle(f.key)}
+                                        title={`Sidecar: ${f.sidecarPath}`}
+                                      >
+                                        <span className="text-[10px] text-[var(--gray-10)] w-3 inline-block">↳</span>
+                                        <Text size="1" color="gray" className="font-mono truncate">
+                                          {sidecarName}
+                                        </Text>
+                                      </div>
+                                    )}
+                                  </div>
+                                )
+                              })}
                           </div>
                         )
                       })}
@@ -860,6 +880,14 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
 
       {loading && files.length === 0 ? (
         <Text size="1" color="gray">Loading dataset…</Text>
+      ) : files.length === 0 ? (
+        <Callout.Root color="amber" size="1">
+          <Callout.Icon><InfoCircledIcon /></Callout.Icon>
+          <Callout.Text>
+            No NIfTI files found under <span className="font-mono">{bidsDir}</span>. The Write
+            step may have failed to copy files into the dataset.
+          </Callout.Text>
+        </Callout.Root>
       ) : (
         <div className="grid grid-cols-2 gap-3">
           <FileTree
