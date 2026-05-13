@@ -1,5 +1,5 @@
 // src/MainApp.tsx
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { NVImage, NVMesh, NiiVueLocation, Niivue, NVDocument } from '@niivue/niivue'
 import { Sidebar } from './components/Sidebar.js'
 import { Viewer } from './components/Viewer.js'
@@ -97,17 +97,67 @@ function MainApp(): JSX.Element {
   const bidsMappings = selected?.bidsMappings ?? []
   const setBidsMappings = selected?.setBidsMappings
 
-  // Workflow dialog state
-  const [workflowOpen, setWorkflowOpen] = useState(false)
-  const [workflowName, setWorkflowName] = useState('')
-  const [workflowInputs, setWorkflowInputs] = useState<Record<string, unknown>>({})
+  // Workspace mode — collapses the old workflowOpen / templateGalleryOpen /
+  // workflowDesignerOpen booleans into a single tagged union so subsequent
+  // PRs can move each panel from a Dialog overlay into the center pane
+  // without retouching every call site. The designer's `parent` field lets
+  // it stack over a wizard (the "Edit Workflow" flow) and pop back when
+  // closed.
+  type WorkspaceMode =
+    | { kind: 'viewer' }
+    | { kind: 'gallery' }
+    | { kind: 'wizard'; workflowName: string; inputs: Record<string, unknown> }
+    | {
+        kind: 'designer'
+        initialDefinition: Record<string, unknown> | null
+        parent: WorkspaceMode
+      }
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>({ kind: 'viewer' })
 
-  // Workflow designer state
-  const [workflowDesignerOpen, setWorkflowDesignerOpen] = useState(false)
-  const [designerInitialDefinition, setDesignerInitialDefinition] = useState<Record<string, unknown> | null>(null)
+  const openGalleryMode = useCallback(
+    () => setWorkspaceMode({ kind: 'gallery' }),
+    []
+  )
+  const openWizardMode = useCallback(
+    (workflowName: string, inputs: Record<string, unknown>) =>
+      setWorkspaceMode({ kind: 'wizard', workflowName, inputs }),
+    []
+  )
+  // Most opens (menu, gallery handoff) drop the previous mode — closing the
+  // designer returns to the viewer. `fromWizard: true` is the "Edit Workflow"
+  // button mid-wizard, which stacks the designer on top so closing returns
+  // to the wizard the author was running.
+  const openDesignerMode = useCallback(
+    (
+      initialDefinition: Record<string, unknown> | null,
+      options?: { fromWizard?: boolean }
+    ) =>
+      setWorkspaceMode((prev) => ({
+        kind: 'designer',
+        initialDefinition,
+        parent:
+          options?.fromWizard && prev.kind === 'wizard' ? prev : { kind: 'viewer' as const }
+      })),
+    []
+  )
+  const closeWorkspaceMode = useCallback(() => setWorkspaceMode({ kind: 'viewer' }), [])
+  const closeDesignerMode = useCallback(
+    () =>
+      setWorkspaceMode((prev) => (prev.kind === 'designer' ? prev.parent : prev)),
+    []
+  )
 
-  // Template gallery state
-  const [templateGalleryOpen, setTemplateGalleryOpen] = useState(false)
+  // Render predicates — the dialogs stay mounted by current behavior, so
+  // wizard remains open underneath a designer opened via "Edit Workflow".
+  const wizardParams =
+    workspaceMode.kind === 'wizard'
+      ? workspaceMode
+      : workspaceMode.kind === 'designer' && workspaceMode.parent.kind === 'wizard'
+        ? workspaceMode.parent
+        : null
+  const designerActive = workspaceMode.kind === 'designer'
+  const designerInitialDefinition = designerActive ? workspaceMode.initialDefinition : null
+  const galleryOpen = workspaceMode.kind === 'gallery'
 
   // Heuristic designer state
   const [heuristicDesignerOpen, setHeuristicDesignerOpen] = useState(false)
@@ -119,28 +169,24 @@ function MainApp(): JSX.Element {
       _evt: unknown,
       payload: { workflowName: string; inputs: Record<string, unknown> }
     ): void => {
-      setWorkflowName(payload.workflowName)
-      setWorkflowInputs(payload.inputs)
-      setWorkflowOpen(true)
+      openWizardMode(payload.workflowName, payload.inputs)
     }
     electron.ipcRenderer.on('workflow:open', handleWorkflowOpen)
 
     const handleOpenDesigner = (): void => {
-      setTemplateGalleryOpen(true)
+      openGalleryMode()
     }
     electron.ipcRenderer.on('workflow:open-designer', handleOpenDesigner)
 
     const handleOpenDesignerTutorial = (): void => {
-      setDesignerInitialDefinition(null)
-      setWorkflowDesignerOpen(true)
+      openDesignerMode(null)
     }
     electron.ipcRenderer.on('workflow:open-designer-tutorial', handleOpenDesignerTutorial)
 
     const handleEditDesigner = (_evt: unknown, workflowName: string): void => {
       electron.ipcRenderer.invoke('workflow:get-definition', workflowName).then(
         (definition: Record<string, unknown>) => {
-          setDesignerInitialDefinition(definition)
-          setWorkflowDesignerOpen(true)
+          openDesignerMode(definition)
         }
       )
     }
@@ -1611,10 +1657,8 @@ function MainApp(): JSX.Element {
         canCancel={true}
       />
       <WorkflowDialog
-        open={workflowOpen}
-        onClose={() => {
-          setWorkflowOpen(false)
-        }}
+        open={!!wizardParams}
+        onClose={closeWorkspaceMode}
         onLoadFile={async (niftiPath: string, options?: { append?: boolean }) => {
           try {
             // Append mode skips the new/current prompt — the user clicked Open
@@ -1683,52 +1727,42 @@ function MainApp(): JSX.Element {
           setRightPanelTab('bids')
           setRightPanelOpen(true)
         }}
-        workflowName={workflowName}
-        inputs={workflowInputs}
+        workflowName={wizardParams?.workflowName ?? ''}
+        inputs={wizardParams?.inputs ?? {}}
         onEditWorkflow={(name) => {
           electron.ipcRenderer.invoke('workflow:get-definition', name).then(
             (definition: Record<string, unknown>) => {
-              setDesignerInitialDefinition(definition)
-              setWorkflowDesignerOpen(true)
+              openDesignerMode(definition, { fromWizard: true })
             }
           )
         }}
       />
       <WorkflowTemplateGallery
-        open={templateGalleryOpen}
-        onClose={() => setTemplateGalleryOpen(false)}
+        open={galleryOpen}
+        onClose={closeWorkspaceMode}
         onSelect={(choice: TemplateChoice) => {
-          setTemplateGalleryOpen(false)
           if (choice.kind === 'run-workflow') {
-            setWorkflowName(choice.workflowName)
-            setWorkflowInputs(choice.inputs)
-            setWorkflowOpen(true)
+            openWizardMode(choice.workflowName, choice.inputs)
           } else if (
             choice.kind === 'customize' ||
             choice.kind === 'use-as-template' ||
             choice.kind === 'edit-user'
           ) {
-            setDesignerInitialDefinition(choice.definition)
-            setWorkflowDesignerOpen(true)
+            openDesignerMode(choice.definition)
           } else if (choice.kind === 'blank' || choice.kind === 'advanced') {
-            setDesignerInitialDefinition(null)
-            setWorkflowDesignerOpen(true)
+            openDesignerMode(null)
           }
         }}
       />
       <WorkflowDesignerDialog
-        open={workflowDesignerOpen}
-        onClose={() => {
-          setWorkflowDesignerOpen(false)
-          setDesignerInitialDefinition(null)
-        }}
+        open={designerActive}
+        onClose={closeDesignerMode}
         onSave={(schema) => {
           electron.ipcRenderer
             .invoke('workflow:save', schema)
             .then(() => {
               console.log('Workflow saved:', schema)
-              setWorkflowDesignerOpen(false)
-              setDesignerInitialDefinition(null)
+              closeDesignerMode()
             })
             .catch((err: Error) => {
               console.error('Failed to save workflow:', err)
