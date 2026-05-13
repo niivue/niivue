@@ -228,6 +228,27 @@ function repairMissingFormSections(
   const exposedInForm = new Set<string>()
   for (const sec of newSections) for (const f of sec.fields) exposedInForm.add(f)
 
+  // Workflow-level inputs are collected by the run-launcher (native dialogs in
+  // the menu's handleWorkflowMenuClick) before the wizard mounts. Any block
+  // exposedField that names one of those is already satisfied — synthesizing a
+  // form section for it would surface a second, redundant prompt for the user
+  // (e.g. dcm2niix's `dicom_dir` block-exposed → "asked twice for DICOM" with
+  // a synthetic 'Import DICOMs' section sitting before the real Filter step).
+  const workflowInputNames = new Set(Object.keys(definition.inputs ?? {}))
+
+  // Context fields that some step populates via its outputMappings (e.g.
+  // bids-write writes `bids_dir` into context). Surfacing these as form
+  // fields asks the user to enter a value that the workflow itself
+  // produces — typically empty when the form mounts, since the producing
+  // step runs in the final execute-all phase. Skip them too.
+  const stepProducedContextFields = new Set<string>()
+  for (const step of Object.values(definition.steps)) {
+    if (!step.outputMappings) continue
+    for (const ctxField of Object.values(step.outputMappings)) {
+      stepProducedContextFields.add(ctxField)
+    }
+  }
+
   let inserted = false
   const stepEntries = Object.entries(definition.steps)
   for (let stepIdx = 0; stepIdx < stepEntries.length; stepIdx++) {
@@ -235,7 +256,12 @@ function repairMissingFormSections(
     const block = findBlockForStep(stepName, step.tool, tools)
     if (!block?.exposedFields?.length) continue
 
-    const uncovered = block.exposedFields.filter((f) => !exposedInForm.has(f))
+    const uncovered = block.exposedFields.filter(
+      (f) =>
+        !exposedInForm.has(f) &&
+        !workflowInputNames.has(f) &&
+        !stepProducedContextFields.has(f)
+    )
     if (uncovered.length === 0) continue
 
     // If a section already carries the block's title, fold the missing
