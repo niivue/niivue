@@ -18,19 +18,61 @@ export interface ScansRow {
   acqTime: string
 }
 
+/** Pad an `HH`, `MM`, or `SS[.fraction]` component to a 2-digit integer part. */
+function padTimePart(part: string): string {
+  const dot = part.indexOf('.')
+  const intPart = dot >= 0 ? part.slice(0, dot) : part
+  const fracPart = dot >= 0 ? part.slice(dot) : ''
+  return (intPart.length === 1 ? '0' : '') + intPart + fracPart
+}
+
+/**
+ * Normalize the `HH:MM:SS[.fraction][Z|±HH:MM]` portion of an ISO datetime.
+ * Some dcm2niix builds emit `15:05:7.447500Z` (single-digit seconds), which
+ * the BIDS validator rejects. We rewrite each component to 2-digit integer
+ * width while preserving fractional seconds and any trailing timezone.
+ */
+function normalizeIsoTime(time: string): string {
+  // Split off a trailing 'Z' or signed offset (±HH:MM / ±HHMM) so we only
+  // pad the HH/MM/SS of the time-of-day itself.
+  let suffix = ''
+  let core = time
+  if (core.endsWith('Z')) {
+    suffix = 'Z'
+    core = core.slice(0, -1)
+  } else {
+    const tzMatch = core.match(/([+-]\d{2}:?\d{2})$/)
+    if (tzMatch) {
+      suffix = tzMatch[1]
+      core = core.slice(0, -suffix.length)
+    }
+  }
+  const parts = core.split(':')
+  if (parts.length !== 3) return time
+  return `${padTimePart(parts[0])}:${padTimePart(parts[1])}:${padTimePart(parts[2])}${suffix}`
+}
+
+/** Normalize the time portion of a `YYYY-MM-DDTHH:MM:SS...` datetime. */
+export function normalizeAcqIso(value: string): string {
+  const tIdx = value.indexOf('T')
+  if (tIdx < 0) return value
+  return `${value.slice(0, tIdx)}T${normalizeIsoTime(value.slice(tIdx + 1))}`
+}
+
 /**
  * Compute the best-available ISO 8601 acquisition timestamp from a
  * sidecar's parsed JSON, or null when neither AcquisitionDateTime nor
  * the date+time pair are present / well-formed. Mirrors reproinx.py's
- * `_acq_iso`.
+ * `_acq_iso`. dcm2niix sometimes emits single-digit seconds, which the
+ * BIDS validator rejects — we normalize before returning.
  */
 export function acqIso(data: Record<string, unknown>): string | null {
   const adt = data.AcquisitionDateTime
-  if (typeof adt === 'string' && adt.length > 0) return adt
+  if (typeof adt === 'string' && adt.length > 0) return normalizeAcqIso(adt)
   const d = data.AcquisitionDate
   const t = data.AcquisitionTime
   if (typeof d === 'string' && typeof t === 'string' && d.length === 8) {
-    return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T${t}`
+    return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}T${normalizeIsoTime(t)}`
   }
   return null
 }

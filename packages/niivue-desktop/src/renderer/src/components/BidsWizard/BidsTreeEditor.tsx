@@ -27,6 +27,7 @@ import {
   type BidsMetadataDef,
   type SidecarFieldRow
 } from './bidsViewSidecarModel.js'
+import { TsvSpreadsheetEditor } from './TsvSpreadsheetEditor.js'
 
 const electron = window.electron
 
@@ -1085,28 +1086,12 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
   // animation frames give the new SchemaAwareInspector instance time to
   // render its row tree before we ask the DOM for the row element.
   //
-  // For TSV rows there's no field-level editor to focus — just select the
-  // file so its read-only inspector surfaces the validator messages.
+  // TSV rows open the inline spreadsheet editor (via selection); they
+  // don't have field-level focus.
   const fixErrorFromPanel = useCallback((file: TreeFile, field: string): void => {
     setSelectedKeys(new Set([file.key]))
-    // TSV rows have no inline editor — open the file in the user's default
-    // OS handler so they can actually fix it. If openPath fails (no
-    // registered handler for .tsv), fall back to revealing it in the OS
-    // file manager. Fire-and-forget; success of the IPC call doesn't
-    // influence the in-app selection.
     if (file.kind === 'tsv') {
       setFocusedField(null)
-      void (async (): Promise<void> => {
-        const res = (await electron.ipcRenderer.invoke('bids:open-file-external', {
-          path: file.key
-        })) as { success: boolean; error?: string }
-        if (!res?.success) {
-          await electron.ipcRenderer.invoke('bids:open-file-external', {
-            path: file.key,
-            reveal: true
-          })
-        }
-      })()
       return
     }
     // NIfTI row but no field to focus — just land on the file.
@@ -1314,6 +1299,7 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
               focusedField={focusedField}
               onFocusField={setFocusedField}
               onApplyEdit={handleApplyEdit}
+              onReload={reload}
             />
           </div>
         </>
@@ -1332,6 +1318,7 @@ interface SchemaAwareInspectorProps {
   focusedField: string | null
   onFocusField: (field: string | null) => void
   onApplyEdit: (keys: string[], field: string, value: unknown) => void
+  onReload: () => Promise<void>
 }
 
 function SchemaAwareInspector({
@@ -1341,7 +1328,8 @@ function SchemaAwareInspector({
   metadataDefs,
   focusedField,
   onFocusField,
-  onApplyEdit
+  onApplyEdit,
+  onReload
 }: SchemaAwareInspectorProps): React.ReactElement {
   const selectedFiles = useMemo(
     () => files.filter((f) => selectedKeys.has(f.key)),
@@ -1401,23 +1389,23 @@ function SchemaAwareInspector({
     )
   }
 
-  // TSV rows are visible in the tree (so the validator panel can route the
-  // user to them) but we don't have an in-app editor for tabular data yet —
-  // show the validator messages and point the user at the on-disk file.
+  // TSV rows: render an inline spreadsheet editor for single selections.
+  // Multi-select TSVs fall back to a summary + validator messages, since
+  // bulk editing arbitrary tabular files isn't well-defined.
   if (selectedFiles.every((f) => f.kind === 'tsv')) {
     const singleTsv = selectedFiles.length === 1 ? selectedFiles[0] : null
-    const openTsv = async (reveal: boolean): Promise<void> => {
-      if (!singleTsv) return
-      const res = (await electron.ipcRenderer.invoke('bids:open-file-external', {
-        path: singleTsv.key,
-        reveal
-      })) as { success: boolean; error?: string }
-      if (!reveal && !res?.success) {
-        await electron.ipcRenderer.invoke('bids:open-file-external', {
-          path: singleTsv.key,
-          reveal: true
-        })
-      }
+    if (singleTsv) {
+      return (
+        <div className="flex flex-col gap-3">
+          <TsvSpreadsheetEditor
+            tsvPath={singleTsv.key}
+            bidsPath={singleTsv.bidsPath}
+            filename={singleTsv.filename}
+            onCloseAfterSave={() => void onReload()}
+          />
+          <ValidatorMessagesPanel issues={sharedIssues} onFixError={fixError} />
+        </div>
+      )
     }
     return (
       <div
@@ -1425,37 +1413,17 @@ function SchemaAwareInspector({
         style={{ minHeight: 240 }}
       >
         <Text size="2" weight="medium">
-          {singleTsv ? singleTsv.filename : `${selectedFiles.length} TSV files selected`}
+          {selectedFiles.length} TSV files selected
         </Text>
         <Callout.Root color="gray" size="1">
           <Callout.Icon>
             <InfoCircledIcon />
           </Callout.Icon>
           <Callout.Text>
-            Tabular files (participants.tsv, sessions.tsv, scans.tsv, events.tsv) aren&apos;t
-            editable inline yet — open the file on disk to fix column issues. Validator messages for
-            this file are listed below.
+            Select a single TSV row to edit it inline. Validator messages common to all selected
+            TSVs are listed below.
           </Callout.Text>
         </Callout.Root>
-        {singleTsv && (
-          <>
-            <Text
-              size="1"
-              className="font-mono text-[var(--gray-11)] truncate"
-              title={singleTsv.bidsPath}
-            >
-              {singleTsv.bidsPath}
-            </Text>
-            <div className="flex gap-2">
-              <Button size="1" onClick={() => void openTsv(false)}>
-                Open in default app
-              </Button>
-              <Button size="1" variant="soft" onClick={() => void openTsv(true)}>
-                Reveal in file manager
-              </Button>
-            </div>
-          </>
-        )}
         <ValidatorMessagesPanel issues={sharedIssues} onFixError={fixError} />
       </div>
     )
@@ -1784,7 +1752,7 @@ function DatasetErrorsPanel({
                     disabled={!file}
                     onClick={() => file && onFix(file, e.subCode ?? '')}
                   >
-                    {file?.kind === 'tsv' ? 'Open file' : 'Fix error'}
+                    {file?.kind === 'tsv' ? 'Edit file' : 'Fix error'}
                   </Button>
                 </div>
               )

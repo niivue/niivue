@@ -371,6 +371,46 @@ export function registerBidsIpcHandlers(): void {
   )
 
   /**
+   * Read a TSV file as a header row + rows-of-cells grid, suitable for the
+   * react-spreadsheet editor. Returns the raw text alongside so the caller
+   * can detect a stale on-disk version before overwriting it.
+   */
+  ipcMain.handle('bids:read-tsv', async (_evt, tsvPath: string) => {
+    try {
+      if (!tsvPath) return { success: false, error: 'No path provided' }
+      const raw = await fs.promises.readFile(tsvPath, 'utf-8')
+      // Strip a single trailing newline so we don't add a phantom empty row.
+      const trimmed = raw.endsWith('\n') ? raw.slice(0, -1) : raw
+      const lines = trimmed.length === 0 ? [] : trimmed.split('\n')
+      const grid = lines.map((line) => line.split('\t'))
+      return { success: true, grid, raw }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  /**
+   * Persist an edited TSV grid back to disk. The grid arrives as
+   * rows-of-strings (caller is responsible for converting react-spreadsheet
+   * cell objects to plain strings); we join with tabs + newlines and end
+   * the file with a single trailing newline, matching the convention BIDS
+   * tools (and our writer) use.
+   */
+  ipcMain.handle(
+    'bids:write-tsv',
+    async (_evt, payload: { path: string; grid: string[][] }) => {
+      try {
+        if (!payload?.path) return { success: false, error: 'No path provided' }
+        const body = payload.grid.map((row) => row.join('\t')).join('\n')
+        await fs.promises.writeFile(payload.path, body + '\n', 'utf-8')
+        return { success: true }
+      } catch (err) {
+        return { success: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    }
+  )
+
+  /**
    * Validate a BIDS directory on disk using the in-process @bids/validator.
    * Returns the result with `subCode` (field name) and `rule` (schema path)
    * preserved on each issue, so the renderer can attach per-field warnings

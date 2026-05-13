@@ -35,6 +35,25 @@ describe('bidsPostpass: pure helpers', () => {
     expect(acqIso({ AcquisitionDate: 'oops' })).toBeNull()
   })
 
+  it('acqIso pads single-digit seconds emitted by dcm2niix', () => {
+    expect(acqIso({ AcquisitionDateTime: '2026-02-05T15:05:7.447500Z' })).toBe(
+      '2026-02-05T15:05:07.447500Z'
+    )
+    expect(acqIso({ AcquisitionDateTime: '2026-02-05T1:5:7' })).toBe('2026-02-05T01:05:07')
+    expect(
+      acqIso({ AcquisitionDate: '20240102', AcquisitionTime: '03:04:5.123' })
+    ).toBe('2024-01-02T03:04:05.123')
+  })
+
+  it('acqIso leaves well-formed timestamps and timezone offsets untouched', () => {
+    expect(acqIso({ AcquisitionDateTime: '2024-01-02T03:04:05.000Z' })).toBe(
+      '2024-01-02T03:04:05.000Z'
+    )
+    expect(acqIso({ AcquisitionDateTime: '2024-01-02T03:04:05+02:00' })).toBe(
+      '2024-01-02T03:04:05+02:00'
+    )
+  })
+
   it('hmsSeconds parses HH:MM:SS', () => {
     expect(hmsSeconds('01:02:03')).toBeCloseTo(3723)
     expect(hmsSeconds('00:00:00.5')).toBeCloseTo(0.5)
