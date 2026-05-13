@@ -91,4 +91,49 @@ describe('readBidsTree', () => {
     expect(rows).toHaveLength(1)
     expect(rows[0].sidecar).toEqual({})
   })
+
+  it('emits dataset-level TSV with empty subject/session/datatype', () => {
+    touch('participants.tsv', 'participant_id\tage\nsub-01\t30\n')
+    const rows = readBidsTree(tmpDir)
+    expect(rows).toHaveLength(1)
+    expect(rows[0]).toMatchObject({
+      kind: 'tsv',
+      subject: '',
+      session: '',
+      datatype: '',
+      filename: 'participants.tsv',
+      bidsPath: 'participants.tsv'
+    })
+  })
+
+  it('pairs a TSV with its same-stem JSON sidecar', () => {
+    touch('participants.tsv', 'participant_id\nsub-01\n')
+    writeJson('participants.json', { participant_id: { Description: 'id' } })
+    const rows = readBidsTree(tmpDir)
+    const tsv = rows.find((r) => r.filename === 'participants.tsv')!
+    expect(tsv.sidecarPath).toMatch(/participants\.json$/)
+    expect(tsv.sidecar).toEqual({ participant_id: { Description: 'id' } })
+  })
+
+  it('emits subject- and session-level TSV alongside NIfTI rows', () => {
+    touch('sub-07/sub-07_sessions.tsv', 'session_id\nses-pre\n')
+    touch('sub-07/ses-pre/sub-07_ses-pre_scans.tsv', 'filename\nfunc/x.nii.gz\n')
+    touch('sub-07/ses-pre/func/sub-07_ses-pre_task-rest_bold.nii.gz')
+    touch(
+      'sub-07/ses-pre/func/sub-07_ses-pre_task-rest_events.tsv',
+      'onset\tduration\n0\t1\n'
+    )
+    const rows = readBidsTree(tmpDir)
+    const kindByName = new Map(rows.map((r) => [r.filename, { kind: r.kind, datatype: r.datatype }]))
+    expect(kindByName.get('sub-07_sessions.tsv')).toEqual({ kind: 'tsv', datatype: '' })
+    expect(kindByName.get('sub-07_ses-pre_scans.tsv')).toEqual({ kind: 'tsv', datatype: '' })
+    expect(kindByName.get('sub-07_ses-pre_task-rest_events.tsv')).toEqual({
+      kind: 'tsv',
+      datatype: 'func'
+    })
+    expect(kindByName.get('sub-07_ses-pre_task-rest_bold.nii.gz')).toEqual({
+      kind: 'nifti',
+      datatype: 'func'
+    })
+  })
 })

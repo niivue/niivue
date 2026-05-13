@@ -228,7 +228,7 @@ function FileTree({ files, selectedKeys, onToggle, onSelectMany }: TreeProps): R
                 className="w-3 h-3"
               />
               <Text size="2" weight="medium" className="font-mono">
-                sub-{g.subject}
+                {g.subject ? `sub-${g.subject}` : '(dataset)'}
               </Text>
               <Badge size="1" variant="soft" color="gray">
                 {subjectFileKeys.length}
@@ -287,7 +287,7 @@ function FileTree({ files, selectedKeys, onToggle, onSelectMany }: TreeProps): R
                                 className="w-3 h-3"
                               />
                               <Text size="1" color="blue" className="font-mono">
-                                {dt.datatype}/
+                                {dt.datatype ? `${dt.datatype}/` : '(top-level files)'}
                               </Text>
                             </div>
                             {!dtCollapsed &&
@@ -308,6 +308,11 @@ function FileTree({ files, selectedKeys, onToggle, onSelectMany }: TreeProps): R
                                         onChange={() => onToggle(f.key)}
                                         className="w-3 h-3"
                                       />
+                                      {f.kind === 'tsv' && (
+                                        <Badge size="1" variant="soft" color="gray">
+                                          tsv
+                                        </Badge>
+                                      )}
                                       <Text size="1" className="font-mono truncate">
                                         {f.filename}
                                       </Text>
@@ -881,6 +886,7 @@ function diskToTreeFile(
   }
   return {
     key: f.niftiPath,
+    kind: f.kind,
     subject: f.subject,
     session: f.session,
     datatype: f.datatype,
@@ -1078,8 +1084,18 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
   // field row into view once the inspector has mounted/rerendered. Two
   // animation frames give the new SchemaAwareInspector instance time to
   // render its row tree before we ask the DOM for the row element.
+  //
+  // For TSV rows there's no field-level editor to focus — just select the
+  // file so its read-only inspector surfaces the validator messages.
   const fixErrorFromPanel = useCallback((file: TreeFile, field: string): void => {
     setSelectedKeys(new Set([file.key]))
+    // No field to focus (TSV row, or a NIfTI-level issue without a subCode)
+    // — just land on the file; its inspector will show the validator
+    // messages.
+    if (file.kind === 'tsv' || !field) {
+      setFocusedField(null)
+      return
+    }
     setFocusedField(field)
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
@@ -1367,6 +1383,44 @@ function SchemaAwareInspector({
     )
   }
 
+  // TSV rows are visible in the tree (so the validator panel can route the
+  // user to them) but we don't have an in-app editor for tabular data yet —
+  // show the validator messages and point the user at the on-disk file.
+  if (selectedFiles.every((f) => f.kind === 'tsv')) {
+    return (
+      <div
+        className="border border-[var(--gray-5)] rounded p-3 flex flex-col gap-3"
+        style={{ minHeight: 240 }}
+      >
+        <Text size="2" weight="medium">
+          {selectedFiles.length === 1
+            ? selectedFiles[0].filename
+            : `${selectedFiles.length} TSV files selected`}
+        </Text>
+        <Callout.Root color="gray" size="1">
+          <Callout.Icon>
+            <InfoCircledIcon />
+          </Callout.Icon>
+          <Callout.Text>
+            Tabular files (participants.tsv, sessions.tsv, scans.tsv, events.tsv) aren&apos;t
+            editable inline yet — open the file on disk to fix column issues. Validator messages for
+            this file are listed below.
+          </Callout.Text>
+        </Callout.Root>
+        {selectedFiles.length === 1 && (
+          <Text
+            size="1"
+            className="font-mono text-[var(--gray-11)] truncate"
+            title={selectedFiles[0].bidsPath}
+          >
+            {selectedFiles[0].bidsPath}
+          </Text>
+        )}
+        <ValidatorMessagesPanel issues={sharedIssues} onFixError={fixError} />
+      </div>
+    )
+  }
+
   const singleFile = selectedFiles.length === 1 ? selectedFiles[0] : null
   const keys = [...selectedKeys]
 
@@ -1450,7 +1504,7 @@ function buildMergedSidecarRows(
   // Plus any field a validator issue names against any selected file.
   const aggregatedIssues: BidsValidationIssue[] = []
   for (const f of selectedFiles) {
-    const sidecarBidsPath = f.bidsPath.replace(/\.(nii\.gz|nii)$/, '.json')
+    const sidecarBidsPath = jsonSidecarPathFor(f.bidsPath)
     for (const i of issuesForFile(allIssues, f.bidsPath, sidecarBidsPath)) {
       aggregatedIssues.push(i)
       if (i.subCode) fieldSet.add(i.subCode)
@@ -1500,13 +1554,13 @@ function commonIssuesAcross(
   if (selectedFiles.length === 0) return []
   if (selectedFiles.length === 1) {
     const f = selectedFiles[0]
-    const sidecarBidsPath = f.bidsPath.replace(/\.(nii\.gz|nii)$/, '.json')
+    const sidecarBidsPath = jsonSidecarPathFor(f.bidsPath)
     return issuesForFile(allIssues, f.bidsPath, sidecarBidsPath)
   }
   // Multi-select: intersect by (code, subCode) tuples so we only show issues
   // every selected file has in common — anything else is per-file noise.
   const perFile = selectedFiles.map((f) => {
-    const sidecarBidsPath = f.bidsPath.replace(/\.(nii\.gz|nii)$/, '.json')
+    const sidecarBidsPath = jsonSidecarPathFor(f.bidsPath)
     return issuesForFile(allIssues, f.bidsPath, sidecarBidsPath)
   })
   const keyOf = (i: BidsValidationIssue): string => `${i.code ?? ''}|${i.subCode ?? ''}`
@@ -1602,7 +1656,20 @@ function findSimilarCandidates(
 }
 
 /**
- * Find the TreeFile whose NIfTI path or paired sidecar path matches the
+ * Map a NIfTI or TSV BIDS path to the paired `.json` sidecar path. For
+ * NIfTI this strips `.nii(.gz)`; for TSV it strips `.tsv`. Any other
+ * extension is returned unchanged — callers treat the result as a
+ * candidate, not a promise that the sidecar exists.
+ */
+function jsonSidecarPathFor(bidsPath: string): string {
+  if (bidsPath.endsWith('.nii.gz')) return bidsPath.slice(0, -'.nii.gz'.length) + '.json'
+  if (bidsPath.endsWith('.nii')) return bidsPath.slice(0, -'.nii'.length) + '.json'
+  if (bidsPath.endsWith('.tsv')) return bidsPath.slice(0, -'.tsv'.length) + '.json'
+  return bidsPath
+}
+
+/**
+ * Find the TreeFile whose data path or paired sidecar path matches the
  * dataset-relative file path attached to a validator issue. Used by the
  * dataset-level errors panel to navigate the user to the right row.
  */
@@ -1610,9 +1677,9 @@ function findFileForIssuePath(files: TreeFile[], issueFile: string | undefined):
   if (!issueFile) return null
   const target = normalizeIssuePath(issueFile)
   for (const f of files) {
-    const niftiP = normalizeIssuePath(f.bidsPath)
-    const sidecarP = normalizeIssuePath(f.bidsPath.replace(/\.(nii\.gz|nii)$/, '.json'))
-    if (target === niftiP || target === sidecarP) return f
+    const dataP = normalizeIssuePath(f.bidsPath)
+    const sidecarP = normalizeIssuePath(jsonSidecarPathFor(f.bidsPath))
+    if (target === dataP || target === sidecarP) return f
   }
   return null
 }
@@ -1636,7 +1703,12 @@ function DatasetErrorsPanel({
   files: TreeFile[]
   onFix: (file: TreeFile, field: string) => void
 }): React.ReactElement | null {
-  const fixable = errors.filter((e) => !!e.subCode && !!e.file)
+  // Anything pinned to a file gets a Fix button — for NIfTI rows we navigate
+  // to the field; for TSV rows we just select the file so the read-only
+  // inspector surfaces the validator messages. subCode is empty for many
+  // TSV-level errors (e.g. TSV_HEADER_LENGTH_MISMATCH) but the per-file
+  // jump is still useful.
+  const fixable = errors.filter((e) => !!e.file)
   if (errors.length === 0) return null
   return (
     <Callout.Root color="red" size="1">
@@ -1659,7 +1731,8 @@ function DatasetErrorsPanel({
                 >
                   <div className="flex flex-col min-w-0 flex-1">
                     <Text size="1">
-                      <span className="font-mono">{e.subCode}</span> — {e.message}
+                      {e.subCode && <span className="font-mono">{e.subCode} — </span>}
+                      {e.message}
                     </Text>
                     <Text size="1" color="gray" className="font-mono truncate">
                       {shortPath}
@@ -1669,9 +1742,9 @@ function DatasetErrorsPanel({
                     size="1"
                     color="red"
                     disabled={!file}
-                    onClick={() => file && onFix(file, e.subCode!)}
+                    onClick={() => file && onFix(file, e.subCode ?? '')}
                   >
-                    Fix error
+                    {file?.kind === 'tsv' ? 'Open file' : 'Fix error'}
                   </Button>
                 </div>
               )
@@ -1679,8 +1752,8 @@ function DatasetErrorsPanel({
             {fixable.length < errors.length && (
               <Text size="1" color="gray">
                 {errors.length - fixable.length} other error
-                {errors.length - fixable.length !== 1 ? 's' : ''} aren&apos;t tied to a single field
-                — see Validator messages below after selecting a file.
+                {errors.length - fixable.length !== 1 ? 's' : ''} aren&apos;t tied to a single file
+                — see Validator messages after selecting a file.
               </Text>
             )}
           </div>

@@ -7,8 +7,16 @@ export interface TreeFile {
    *  the Prep adapter uses `mapping.index`; the View adapter will use the
    *  on-disk absolute path. */
   key: string
+  /** Discriminates the row type. `nifti` rows are editable through the
+   *  sidecar inspector; `tsv` rows render in the tree (so validator errors
+   *  about participants.tsv / scans.tsv / events.tsv have a clickable
+   *  home) but the inspector falls back to a read-only placeholder. */
+  kind: 'nifti' | 'tsv'
+  /** Empty string for dataset-level TSV (e.g. participants.tsv). */
   subject: string
   session: string
+  /** Empty for top-level / subject-level / session-level TSV rows. The
+   *  tree renderer groups those under a "(top-level files)" pseudo-folder. */
   datatype: string
   /** Basename of the file as it will appear in the BIDS tree, including
    *  the extension (e.g. sub-01_T1w.nii.gz). */
@@ -58,6 +66,7 @@ export function mappingsToTreeFiles(mappings: BidsSeriesMapping[]): TreeFile[] {
     const { BidsGuess: _ignored, ...originalUserVisible } = original as Record<string, unknown>
     files.push({
       key: String(m.index),
+      kind: 'nifti',
       subject: m.subject,
       session: m.session ?? '',
       datatype: m.datatype,
@@ -82,7 +91,9 @@ export function groupTreeFiles(files: TreeFile[]): TreeGroup[] {
     datatypeMap.get(f.datatype)!.push(f)
   }
   const groups: TreeGroup[] = []
-  for (const [subject, sessionMap] of [...bySubject.entries()].sort(([a], [b]) => a.localeCompare(b))) {
+  for (const [subject, sessionMap] of [...bySubject.entries()].sort(([a], [b]) =>
+    a.localeCompare(b)
+  )) {
     const sessions = [...sessionMap.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([session, datatypeMap]) => ({

@@ -296,16 +296,30 @@ export interface QualityMetrics {
  * the renderer-side TreeFile shape but uses absolute disk paths for the
  * `key`, since the renderer needs to round-trip edits back to specific
  * files on disk.
+ *
+ * Covers both NIfTI scans (which carry an editable JSON sidecar) and
+ * tabular files (`participants.tsv`, `sessions.tsv`, `scans.tsv`,
+ * `events.tsv`) so that validator errors about those files surface in the
+ * tree. TSV rows are read-only in the inspector for now.
  */
 export interface BidsDiskFile {
-  /** Absolute path to the NIfTI on disk — also the row's stable key. */
+  /** Discriminates the row type. `nifti` is the editable case; `tsv` is
+   *  visible-only and lets us point the validator panel at the file. */
+  kind: 'nifti' | 'tsv'
+  /** Absolute path to the data file on disk (NIfTI for `nifti` rows, the
+   *  TSV file itself for `tsv` rows) — also the row's stable key. Named
+   *  `niftiPath` for historical reasons. */
   niftiPath: string
   /** Absolute path to the JSON sidecar, or null if no sidecar exists. */
   sidecarPath: string | null
   /** Path relative to the dataset root (e.g. `sub-01/anat/sub-01_T1w.nii.gz`). */
   bidsPath: string
+  /** Empty string for dataset-level files like `participants.tsv`. */
   subject: string
   session: string
+  /** Empty string for subject- and session-level files (e.g. `scans.tsv`)
+   *  and dataset-level files. Renderer surfaces those under a synthetic
+   *  "top-level files" group. */
   datatype: string
   filename: string
   /** Parsed sidecar JSON, or `{}` if no sidecar exists. */
