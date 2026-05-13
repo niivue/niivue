@@ -173,6 +173,56 @@ export function buildInspectorRows(files: TreeFile[]): InspectorRow[] {
   return rows
 }
 
+// ── "Select all similar" helpers ───────────────────────────────────────
+
+/**
+ * Parse the BIDS suffix (last `_<label>` before the .nii/.nii.gz extension)
+ * from a filename. Returns null when the name doesn't look BIDS-shaped —
+ * the chip bar then just skips that file.
+ */
+export function parseSuffix(filename: string): string | null {
+  const m = filename.match(/_([A-Za-z0-9]+)\.(nii\.gz|nii)$/)
+  return m ? m[1] : null
+}
+
+export interface SelectChip {
+  label: string
+  count: number
+  keys: string[]
+}
+
+/**
+ * Build "Select all <datatype>" and "Select all <suffix>" chip data from
+ * the current tree. A chip is only emitted if its set is non-trivial
+ * (>1 file AND smaller than the whole tree) — otherwise it's either
+ * redundant with the subject-level checkbox or matches nothing useful.
+ */
+export function buildSelectChips(files: TreeFile[]): {
+  datatypes: SelectChip[]
+  suffixes: SelectChip[]
+} {
+  const byDatatype = new Map<string, string[]>()
+  const bySuffix = new Map<string, string[]>()
+  for (const f of files) {
+    if (!byDatatype.has(f.datatype)) byDatatype.set(f.datatype, [])
+    byDatatype.get(f.datatype)!.push(f.key)
+    const suffix = parseSuffix(f.filename)
+    if (suffix) {
+      if (!bySuffix.has(suffix)) bySuffix.set(suffix, [])
+      bySuffix.get(suffix)!.push(f.key)
+    }
+  }
+  const meaningful = (entries: Map<string, string[]>): SelectChip[] =>
+    [...entries.entries()]
+      .filter(([, keys]) => keys.length > 1 && keys.length < files.length)
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([label, keys]) => ({ label, count: keys.length, keys }))
+  return {
+    datatypes: meaningful(byDatatype),
+    suffixes: meaningful(bySuffix)
+  }
+}
+
 /** Strict-but-cheap equality for sidecar values. Arrays compare element-wise;
  *  objects compare by JSON stringification (sidecars are leaf-y). */
 function sidecarValuesEqual(a: unknown, b: unknown): boolean {

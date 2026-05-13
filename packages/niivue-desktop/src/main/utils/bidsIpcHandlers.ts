@@ -28,6 +28,7 @@ import {
 } from './bidsSidecarFixer.js'
 import { nodePostPassFs, runPostPass } from './bidsPostpass/index.js'
 import { readBidsTree } from './bidsTreeReader.js'
+import { renameSubject } from './bidsSubjectRename.js'
 import type {
   BidsConvertAndClassifyPayload,
   BidsWritePayload,
@@ -373,6 +374,21 @@ export function registerBidsIpcHandlers(): void {
         }
       }
       return { applied, failed }
+    }
+  )
+
+  /**
+   * Rename a subject in a written BIDS dataset on disk. Moves the
+   * subject directory, rewrites every file basename, and updates
+   * participants.tsv. Returns counts so the UI can confirm what happened.
+   */
+  ipcMain.handle(
+    'bids:rename-subject',
+    async (
+      _evt,
+      payload: { bidsDir: string; oldLabel: string; newLabel: string }
+    ) => {
+      return renameSubject(payload.bidsDir, payload.oldLabel, payload.newLabel)
     }
   )
 

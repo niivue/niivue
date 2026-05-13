@@ -3,7 +3,9 @@ import {
   mappingsToTreeFiles,
   groupTreeFiles,
   applySidecarOverrideBatch,
-  buildInspectorRows
+  buildInspectorRows,
+  buildSelectChips,
+  parseSuffix
 } from '../../src/renderer/src/components/BidsWizard/bidsTreeEditorModel.js'
 import type { BidsSeriesMapping } from '../../src/common/bidsTypes.js'
 
@@ -120,6 +122,67 @@ describe('applySidecarOverrideBatch', () => {
       EchoTime: 0.03,
       FlipAngle: 90
     })
+  })
+})
+
+describe('parseSuffix', () => {
+  it('extracts the suffix from a canonical BIDS filename', () => {
+    expect(parseSuffix('sub-01_T1w.nii.gz')).toBe('T1w')
+    expect(parseSuffix('sub-01_task-rest_bold.nii.gz')).toBe('bold')
+    expect(parseSuffix('sub-01_T2w.nii')).toBe('T2w')
+  })
+
+  it('returns null for non-BIDS names', () => {
+    expect(parseSuffix('random.nii.gz')).toBeNull() // no underscore
+    expect(parseSuffix('no-extension')).toBeNull()
+    expect(parseSuffix('foo.json')).toBeNull()
+  })
+})
+
+describe('buildSelectChips', () => {
+  const mkFile = (key: string, datatype: string, suffix: string): {
+    key: string
+    subject: string
+    session: string
+    datatype: string
+    filename: string
+    bidsPath: string
+    sidecar: Record<string, unknown>
+  } => ({
+    key,
+    subject: '01',
+    session: '',
+    datatype,
+    filename: `sub-01_${suffix}.nii.gz`,
+    bidsPath: `sub-01/${datatype}/sub-01_${suffix}.nii.gz`,
+    sidecar: {}
+  })
+
+  it('emits a chip only when set is >1 and < total', () => {
+    const files = [
+      mkFile('a', 'anat', 'T1w'),
+      mkFile('b', 'anat', 'T2w'),
+      mkFile('c', 'func', 'bold'),
+      mkFile('d', 'func', 'bold')
+    ]
+    const chips = buildSelectChips(files)
+    expect(chips.datatypes.map((c) => c.label).sort()).toEqual(['anat', 'func'])
+    // T1w is singleton → skipped. T2w is singleton → skipped. bold has 2 → kept.
+    expect(chips.suffixes.map((c) => c.label)).toEqual(['bold'])
+    expect(chips.suffixes[0].count).toBe(2)
+    expect(chips.suffixes[0].keys.sort()).toEqual(['c', 'd'])
+  })
+
+  it('skips a chip whose set equals the whole tree', () => {
+    const files = [mkFile('a', 'anat', 'T1w'), mkFile('b', 'anat', 'T1w')]
+    const chips = buildSelectChips(files)
+    // All 2 files are anat + T1w — both chips match the whole tree, so both skipped
+    expect(chips.datatypes).toEqual([])
+    expect(chips.suffixes).toEqual([])
+  })
+
+  it('returns empty arrays for empty input', () => {
+    expect(buildSelectChips([])).toEqual({ datatypes: [], suffixes: [] })
   })
 })
 

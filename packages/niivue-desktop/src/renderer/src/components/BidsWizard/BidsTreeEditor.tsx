@@ -14,6 +14,7 @@ import {
   groupTreeFiles,
   applySidecarOverrideBatch,
   buildInspectorRows,
+  buildSelectChips,
   type TreeFile
 } from './bidsTreeEditorModel.js'
 
@@ -608,6 +609,7 @@ export function BidsPrepEditor({
         subjects={subjects}
         onUpdate={handleRelabel}
       />
+      <SelectByChips files={files} onSelectMany={selectMany} />
       <div className="grid grid-cols-2 gap-3">
         <FileTree
           files={files}
@@ -628,6 +630,177 @@ export function BidsPrepEditor({
         }}
         onLoadFile={onLoadFile}
       />
+    </div>
+  )
+}
+
+// ── "Select all similar" chip bar ──────────────────────────────────────
+
+function SelectByChips({
+  files,
+  onSelectMany
+}: {
+  files: TreeFile[]
+  onSelectMany: (keys: string[], on: boolean) => void
+}): React.ReactElement | null {
+  const { datatypes, suffixes } = useMemo(() => buildSelectChips(files), [files])
+  if (datatypes.length === 0 && suffixes.length === 0) return null
+  return (
+    <div className="flex flex-wrap items-center gap-1">
+      <Text size="1" color="gray">Select all:</Text>
+      {datatypes.map((c) => (
+        <button
+          key={`dt:${c.label}`}
+          type="button"
+          onClick={() => onSelectMany(c.keys, true)}
+          className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-[var(--blue-6)] bg-[var(--blue-3)] text-[var(--blue-11)] hover:bg-[var(--blue-4)] cursor-pointer"
+        >
+          {c.label}/ ({c.count})
+        </button>
+      ))}
+      {suffixes.map((c) => (
+        <button
+          key={`sfx:${c.label}`}
+          type="button"
+          onClick={() => onSelectMany(c.keys, true)}
+          className="text-[10px] font-mono px-1.5 py-0.5 rounded border border-[var(--gray-6)] bg-[var(--gray-3)] text-[var(--gray-11)] hover:bg-[var(--gray-4)] cursor-pointer"
+        >
+          _{c.label} ({c.count})
+        </button>
+      ))}
+    </div>
+  )
+}
+
+// ── On-disk subject rename form ────────────────────────────────────────
+
+interface SubjectRenameDiskFormProps {
+  files: TreeFile[]
+  bidsDir: string
+  onRenamed: () => Promise<void> | void
+}
+
+function SubjectRenameDiskForm({
+  files,
+  bidsDir,
+  onRenamed
+}: SubjectRenameDiskFormProps): React.ReactElement | null {
+  // Use ALL subjects present in the tree (deduped). One draft per subject.
+  const subjects = useMemo(
+    () => [...new Set(files.map((f) => f.subject))].filter(Boolean).sort(),
+    [files]
+  )
+  const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [busy, setBusy] = useState<string | null>(null)
+  const [status, setStatus] = useState<
+    | { kind: 'idle' }
+    | { kind: 'ok'; subject: string; renamedFiles: number; participantsUpdated: boolean }
+    | { kind: 'error'; subject: string; message: string }
+  >({ kind: 'idle' })
+
+  if (subjects.length === 0) return null
+
+  const handleApply = async (oldLabel: string): Promise<void> => {
+    const newLabel = (drafts[oldLabel] ?? '').replace(/[^a-zA-Z0-9]/g, '')
+    if (!newLabel || newLabel === oldLabel) return
+    setBusy(oldLabel)
+    setStatus({ kind: 'idle' })
+    try {
+      const result = (await electron.ipcRenderer.invoke('bids:rename-subject', {
+        bidsDir,
+        oldLabel,
+        newLabel
+      })) as {
+        success: boolean
+        renamedFiles: number
+        participantsUpdated: boolean
+        error?: string
+      }
+      if (result.success) {
+        setStatus({
+          kind: 'ok',
+          subject: newLabel,
+          renamedFiles: result.renamedFiles,
+          participantsUpdated: result.participantsUpdated
+        })
+        setDrafts((prev) => {
+          const next = { ...prev }
+          delete next[oldLabel]
+          return next
+        })
+        await onRenamed()
+      } else {
+        setStatus({ kind: 'error', subject: oldLabel, message: result.error ?? 'Rename failed' })
+      }
+    } catch (err) {
+      setStatus({
+        kind: 'error',
+        subject: oldLabel,
+        message: err instanceof Error ? err.message : String(err)
+      })
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-1">
+      <Text size="2" weight="medium">Rename subject (on disk)</Text>
+      <Text size="1" color="gray">
+        Moves <span className="font-mono">sub-&lt;old&gt;/</span> →{' '}
+        <span className="font-mono">sub-&lt;new&gt;/</span>, rewrites every file basename, and
+        updates participants.tsv. Applied immediately — not staged with sidecar edits.
+      </Text>
+      <div className="border border-[var(--gray-5)] rounded overflow-hidden">
+        <table className="w-full text-xs">
+          <thead className="bg-[var(--gray-3)]">
+            <tr>
+              <th className="text-left px-2 py-1 font-medium">Current</th>
+              <th className="text-left px-2 py-1 font-medium">New label</th>
+              <th className="px-2 py-1 w-20"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {subjects.map((s) => (
+              <tr key={s} className="border-t border-[var(--gray-4)]">
+                <td className="px-2 py-1 font-mono">sub-{s}</td>
+                <td className="px-2 py-1">
+                  <TextField.Root
+                    size="1"
+                    placeholder={s}
+                    value={drafts[s] ?? ''}
+                    onChange={(e) =>
+                      setDrafts((prev) => ({ ...prev, [s]: e.target.value }))
+                    }
+                  />
+                </td>
+                <td className="px-2 py-1">
+                  <Button
+                    size="1"
+                    variant="soft"
+                    disabled={busy !== null || !drafts[s] || drafts[s] === s}
+                    onClick={() => void handleApply(s)}
+                  >
+                    {busy === s ? 'Renaming…' : 'Rename'}
+                  </Button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {status.kind === 'ok' && (
+        <Text size="1" color="green">
+          Renamed to sub-{status.subject} — {status.renamedFiles} file
+          {status.renamedFiles !== 1 ? 's' : ''} rewritten
+          {status.participantsUpdated ? ', participants.tsv updated' : ''}.
+        </Text>
+      )}
+      {status.kind === 'error' && (
+        <Text size="1" color="red">
+          Rename failed for sub-{status.subject}: {status.message}
+        </Text>
+      )}
     </div>
   )
 }
@@ -889,19 +1062,31 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
           </Callout.Text>
         </Callout.Root>
       ) : (
-        <div className="grid grid-cols-2 gap-3">
-          <FileTree
+        <>
+          <SubjectRenameDiskForm
             files={files}
-            selectedKeys={validSelected}
-            onToggle={toggle}
-            onSelectMany={selectMany}
+            bidsDir={bidsDir}
+            onRenamed={async () => {
+              setSelectedKeys(new Set())
+              setStaged(new Map())
+              await reload()
+            }}
           />
-          <Inspector
-            files={files}
-            selectedKeys={validSelected}
-            onApplyEdit={handleApplyEdit}
-          />
-        </div>
+          <SelectByChips files={files} onSelectMany={selectMany} />
+          <div className="grid grid-cols-2 gap-3">
+            <FileTree
+              files={files}
+              selectedKeys={validSelected}
+              onToggle={toggle}
+              onSelectMany={selectMany}
+            />
+            <Inspector
+              files={files}
+              selectedKeys={validSelected}
+              onApplyEdit={handleApplyEdit}
+            />
+          </div>
+        </>
       )}
     </div>
   )
