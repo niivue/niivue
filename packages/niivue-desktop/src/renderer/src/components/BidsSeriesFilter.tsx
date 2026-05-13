@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { DicomSeries } from '../../../common/dcm2niixTypes.js'
 
 const UNKNOWN = '—'
@@ -11,6 +11,37 @@ function shortUID(uid: string | undefined): string {
   if (!uid) return UNKNOWN
   if (uid.length <= 12) return uid
   return `${uid.slice(0, 8)}…${uid.slice(-4)}`
+}
+
+/**
+ * Diff a freshly-computed visible-series set against the previously-visible
+ * set and apply it to a prior selection. Newly-visible series are added,
+ * newly-hidden ones are removed. Returns null when nothing changes, so the
+ * caller can skip a state update.
+ *
+ * Exposed for unit testing — keeps the React component free of state machinery
+ * that's awkward to drive from vitest's Node environment.
+ */
+export function reconcileSelectionAgainstVisible(
+  selected: Set<number>,
+  prevVisible: Set<number>,
+  nextVisible: Set<number>
+): Set<number> | null {
+  const next = new Set<number>(selected)
+  let changed = false
+  for (const n of nextVisible) {
+    if (!prevVisible.has(n) && !next.has(n)) {
+      next.add(n)
+      changed = true
+    }
+  }
+  for (const n of prevVisible) {
+    if (!nextVisible.has(n) && next.has(n)) {
+      next.delete(n)
+      changed = true
+    }
+  }
+  return changed ? next : null
 }
 
 type FacetProps = {
@@ -118,24 +149,29 @@ export function BidsSeriesFilter({
     })
   }, [series, selectedModalities, selectedSubjects, selectedSessions])
 
-  // Narrowing facets also trims the export selection. Without this, applying
-  // a facet only narrows the visible table — `selected_series` keeps every
-  // hidden row, so dcm2niix downstream still converts everything. Series
-  // that fall outside the facet get dropped from selection; if the user
-  // later relaxes the facet, those series stay deselected (the user can
-  // re-check them explicitly or use "Check all").
+  // Facet changes are diffed against the previous visible set so the export
+  // selection tracks the visible table symmetrically: newly-visible series
+  // are auto-added (so checking a second subject facet actually includes
+  // that subject's series) and newly-hidden ones are dropped (so dcm2niix
+  // doesn't convert series the user has filtered out). The initial mount
+  // is a no-op — the parent adapter seeds selected_series itself.
+  const prevVisible = useRef<Set<number> | null>(null)
   useEffect(() => {
     const visibleNumbers = new Set<number>()
     for (const s of filtered) {
       if (typeof s.seriesNumber === 'number') visibleNumbers.add(s.seriesNumber)
     }
-    const next = new Set<number>()
-    let changed = false
-    for (const n of selectedSeriesNumbers) {
-      if (visibleNumbers.has(n)) next.add(n)
-      else changed = true
+    if (prevVisible.current === null) {
+      prevVisible.current = visibleNumbers
+      return
     }
-    if (changed) onSelectionChange(next)
+    const next = reconcileSelectionAgainstVisible(
+      selectedSeriesNumbers,
+      prevVisible.current,
+      visibleNumbers
+    )
+    prevVisible.current = visibleNumbers
+    if (next) onSelectionChange(next)
   }, [filtered, selectedSeriesNumbers, onSelectionChange])
 
   const activeSeries = useMemo<DicomSeries | null>(
