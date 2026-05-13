@@ -128,6 +128,7 @@ interface ValidatorIssue {
   location?: string
   issueMessage?: string
   affects?: string[]
+  rule?: string
 }
 
 interface ValidatorDatasetIssues {
@@ -252,6 +253,8 @@ export async function validateBidsDirectoryInProcess(
         message: baseMessage,
         file: filePath,
         code,
+        subCode: issue.subCode,
+        rule: issue.rule,
         seriesIndex: matchIssueToSeries(filePath, mappings),
         targetStep: getTargetStepFromMessage(baseMessage, code)
       }

@@ -347,6 +347,50 @@ export function registerBidsIpcHandlers(): void {
   })
 
   /**
+   * Validate a BIDS directory on disk using the in-process @bids/validator.
+   * Returns the result with `subCode` (field name) and `rule` (schema path)
+   * preserved on each issue, so the renderer can attach per-field warnings
+   * to the inspector and a rule reference to each validator message.
+   */
+  ipcMain.handle('bids:validate-tree', async (_evt, dirPath: string) => {
+    debugLog(`bids:validate-tree invoked with dirPath=${dirPath}`)
+    try {
+      const result = await validateBidsDirectory(dirPath, [])
+      debugLog(
+        `bids:validate-tree ok valid=${result.valid} errors=${result.errors.length} warnings=${result.warnings.length}`
+      )
+      return { success: true, result }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      debugLog(`bids:validate-tree THREW: ${msg}`)
+      if (err instanceof Error && err.stack) debugLog(err.stack)
+      return { success: false, error: msg }
+    }
+  })
+
+  /**
+   * Return the BIDS schema's `objects.metadata` catalog. The renderer uses
+   * this to look up `display_name`, `description`, `type`, and `enum` for
+   * each sidecar field surfaced by the validator. ~160 KB; cached at the
+   * call site so the cost is paid once per session.
+   */
+  ipcMain.handle('bids:get-metadata-defs', async () => {
+    debugLog('bids:get-metadata-defs invoked')
+    try {
+      const mod = (await import('@jsr/bids__schema')) as unknown as {
+        schema: { objects: { metadata: Record<string, unknown> } }
+      }
+      const metadata = mod.schema.objects.metadata
+      debugLog(`bids:get-metadata-defs ok keys=${Object.keys(metadata).length}`)
+      return { success: true, metadata }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
+      debugLog(`bids:get-metadata-defs THREW: ${msg}`)
+      return { success: false, error: msg }
+    }
+  })
+
+  /**
    * Apply a batch of staged sidecar edits. Edits are grouped by sidecar
    * path so each JSON file is read/written once even if the user touched
    * multiple fields in it. Continues on per-file failure and reports
@@ -384,10 +428,7 @@ export function registerBidsIpcHandlers(): void {
    */
   ipcMain.handle(
     'bids:rename-subject',
-    async (
-      _evt,
-      payload: { bidsDir: string; oldLabel: string; newLabel: string }
-    ) => {
+    async (_evt, payload: { bidsDir: string; oldLabel: string; newLabel: string }) => {
       return renameSubject(payload.bidsDir, payload.oldLabel, payload.newLabel)
     }
   )

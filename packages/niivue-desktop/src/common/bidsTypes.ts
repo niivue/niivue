@@ -146,6 +146,10 @@ export interface BidsValidationIssue {
   seriesIndex?: number
   targetStep?: number
   code?: string
+  /** Sub-classification — for SIDECAR_KEY_* issues this is the JSON field name. */
+  subCode?: string
+  /** Schema rule path that fired the issue, e.g. rules.sidecars.mri.MRISequenceSpecifics. */
+  rule?: string
 }
 
 export interface BidsValidatePayload {
