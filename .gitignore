@@ -59,6 +59,7 @@ packages/docs/docs/api
 # Claude Code machine-local state
 .claude/scheduled_tasks.lock
 .claude/settings.local.json
+AGENTS.md
 
 # Generated audit artifacts
 packages/niivue-desktop/audit-report.md
