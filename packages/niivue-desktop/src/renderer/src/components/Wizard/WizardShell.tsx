@@ -14,6 +14,8 @@ interface WizardShellProps {
   currentStep: number
   onStepChange: (step: number) => void
   canProceed?: boolean
+  /** Tooltip text on the disabled Next button explaining what's missing. */
+  disabledReason?: string
   loading?: boolean
   lastStepLabel?: string
   onComplete?: () => void
@@ -34,6 +36,7 @@ export function WizardShell({
   currentStep,
   onStepChange,
   canProceed = true,
+  disabledReason,
   loading = false,
   lastStepLabel,
   onComplete,
@@ -134,6 +137,7 @@ export function WizardShell({
               isFirstStep={isFirstStep}
               isLastStep={isLastStep}
               canProceed={canProceed}
+              disabledReason={disabledReason}
               loading={loading}
               lastStepLabel={lastStepLabel}
               onBack={goBack}

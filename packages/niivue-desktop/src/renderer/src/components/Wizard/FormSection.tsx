@@ -31,6 +31,8 @@ interface FormSectionProps {
   heuristicLoading: Set<string>
   onLoadFile?: (niftiPath: string) => Promise<void>
   componentRegistry: Record<string, React.FC<CustomComponentProps>>
+  /** Per-field validation errors keyed by context field name. */
+  fieldErrors?: Record<string, string>
 }
 
 export function FormSection({
@@ -41,7 +43,8 @@ export function FormSection({
   onFieldChange,
   heuristicLoading,
   onLoadFile,
-  componentRegistry
+  componentRegistry,
+  fieldErrors
 }: FormSectionProps): React.ReactElement {
   const fields = definition.context?.fields ?? {}
 
@@ -99,6 +102,7 @@ export function FormSection({
                   datasetName={context.dataset_name as string | undefined}
                   stepOutputs={stepOutputs}
                   context={context}
+                  error={fieldErrors?.[name]}
                 />
               ))}
             </div>
@@ -145,6 +149,7 @@ export function FormSection({
               datasetName={context.dataset_name as string | undefined}
               stepOutputs={stepOutputs}
               context={context}
+              error={fieldErrors?.[fieldName]}
             />
           )
         })}

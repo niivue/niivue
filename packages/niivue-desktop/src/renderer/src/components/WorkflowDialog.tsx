@@ -536,6 +536,35 @@ export function WorkflowDialog({
   const currentSectionDef = sections[engine.currentSection]
   const inPostCompletionSection = isCompleted && currentSectionDef?.postCompletion === true
 
+  // Derive per-field errors and a humanized "why is Next disabled?" reason
+  // from the engine's missingInputs so the wizard footer can surface them
+  // as a tooltip and the form section can mark offending inputs.
+  const fieldDefs = engine.definition?.context?.fields ?? {}
+  const fieldErrors = useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const m of engine.missingInputs) {
+      if (!m.contextField || map[m.contextField]) continue
+      map[m.contextField] = 'Required'
+    }
+    return map
+  }, [engine.missingInputs])
+
+  const disabledReason = useMemo(() => {
+    if (engine.missingInputs.length === 0) return undefined
+    const labels: string[] = []
+    const seen = new Set<string>()
+    for (const m of engine.missingInputs) {
+      const key = m.contextField || m.inputName
+      if (seen.has(key)) continue
+      seen.add(key)
+      const def = m.contextField ? fieldDefs[m.contextField] : undefined
+      labels.push(def?.label || def?.description || m.description || key)
+    }
+    if (labels.length === 1) return `Provide ${labels[0]} to continue`
+    if (labels.length <= 3) return `Provide ${labels.join(', ')} to continue`
+    return `Provide ${labels.slice(0, 2).join(', ')} and ${labels.length - 2} more to continue`
+  }, [engine.missingInputs, fieldDefs])
+
   return (
     <WizardShell
       open={open}
@@ -546,6 +575,7 @@ export function WorkflowDialog({
       onStepChange={engine.goToSection}
       onNext={engine.handleNext}
       canProceed={!isPreparing && !isRunning && engine.missingInputs.length === 0}
+      disabledReason={disabledReason}
       loading={isRunning}
       lastStepLabel={sections[engine.currentSection]?.buttonText || 'Run'}
       onComplete={inPostCompletionSection ? engine.handleClose : handleComplete}
@@ -577,6 +607,7 @@ export function WorkflowDialog({
           heuristicLoading={engine.heuristicLoading}
           onLoadFile={handleLoadFile}
           componentRegistry={COMPONENT_REGISTRY}
+          fieldErrors={fieldErrors}
         />
       )}
 
