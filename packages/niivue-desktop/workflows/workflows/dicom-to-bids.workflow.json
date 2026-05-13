@@ -1,8 +1,8 @@
 {
   "$schema": "../schemas/workflow.schema.json",
   "name": "dicom-to-bids",
-  "version": "1.0.0",
-  "description": "Convert DICOM to a BIDS-compliant dataset with auto-classification and validation",
+  "version": "2.0.0",
+  "description": "Convert DICOM to a BIDS-compliant dataset",
   "menu": "Import",
 
   "inputs": {
@@ -23,7 +23,7 @@
       },
       "selected_series": {
         "type": "dicom-series[]",
-        "description": "Subset of dicom_series chosen by the user for conversion",
+        "description": "Subset of dicom_series chosen for conversion",
         "default": []
       },
       "series_list": {
@@ -35,6 +35,11 @@
         "type": "subject[]",
         "description": "Detected subjects and sessions grouped by PatientID and AcquisitionDate",
         "heuristic": "detect-subjects"
+      },
+      "skull_strip_config": {
+        "type": "object",
+        "description": "Skull stripping configuration (engine, scope, selections)",
+        "default": {}
       },
       "dataset_name": {
         "type": "string",
@@ -63,13 +68,8 @@
         "default": ""
       },
       "output_dir": {
-        "type": "string",
+        "type": "directory",
         "description": "Output directory for the BIDS dataset"
-      },
-      "skull_strip_config": {
-        "type": "object",
-        "description": "Skull stripping configuration (engine, scope, selections)",
-        "default": {}
       },
       "bids_dir": {
         "type": "string",
@@ -81,52 +81,28 @@
   "form": {
     "sections": [
       {
-        "title": "Select Series",
+        "title": "Filter",
         "description": "Filter the detected DICOM series by modality, subject, and session, then choose which to convert",
         "fields": ["dicom_series", "selected_series"],
         "component": "bids-series-filter"
       },
       {
-        "title": "Subject Selection",
-        "description": "Select which subjects to include in the BIDS dataset",
-        "fields": ["subjects"],
-        "component": "subject-select"
+        "title": "BIDSUI",
+        "description": "Review the proposed BIDS layout with thumbnails before processing",
+        "fields": ["series_list", "subjects"],
+        "component": "bids-preview"
       },
       {
-        "title": "Classification",
-        "description": "Review auto-detected BIDS classification for each series",
-        "fields": ["series_list"],
-        "component": "bids-classification-table"
-      },
-      {
-        "title": "Sessions",
-        "description": "Edit session labels and demographics for included subjects",
-        "fields": ["subjects"],
-        "component": "subject-session-editor"
-      },
-      {
-        "title": "Dataset Metadata",
-        "fields": ["dataset_name", "dataset_version", "license", "authors", "readme", "output_dir"]
-      },
-      {
-        "title": "Skull Stripping",
-        "description": "Optionally remove non-brain tissue before writing BIDS data",
+        "title": "Skull Strip",
+        "description": "Optionally remove non-brain tissue before writing the dataset",
         "fields": ["skull_strip_config", "series_list"],
         "component": "skull-strip-editor"
       },
       {
-        "title": "Review & Write",
-        "description": "Review the proposed BIDS dataset before writing to disk",
-        "fields": ["series_list", "subjects"],
-        "component": "bids-preview",
+        "title": "Write BIDS",
+        "description": "Configure dataset metadata and write to disk",
+        "fields": ["dataset_name", "dataset_version", "license", "authors", "readme", "output_dir"],
         "buttonText": "Write BIDS"
-      },
-      {
-        "title": "Fix BIDS Sidecars",
-        "description": "Auto-apply unambiguous JSON sidecar fixes and let you edit any remaining validator issues",
-        "fields": [],
-        "component": "bids-sidecar-fix",
-        "buttonText": "Finish"
       }
     ]
   },
@@ -153,13 +129,6 @@
         "subjects": "subjects"
       }
     },
-    "validate": {
-      "tool": "bids-validate",
-      "inputs": {
-        "mappings": { "ref": "context.series_list" },
-        "config": { "ref": "context" }
-      }
-    },
     "write": {
       "tool": "bids-write",
       "inputs": {
@@ -172,8 +141,8 @@
         "bids_dir": "bids_dir"
       }
     },
-    "fix_sidecars": {
-      "tool": "bids-fix-sidecars",
+    "postpass": {
+      "tool": "bids-postpass",
       "inputs": {
         "bids_dir": { "ref": "steps.write.outputs.bids_dir" }
       }
@@ -183,7 +152,7 @@
   "outputs": {
     "bids_dir": {
       "type": "bids-dir",
-      "ref": "steps.write.outputs.bids_dir"
+      "ref": "steps.postpass.outputs.bids_dir"
     }
   }
 }

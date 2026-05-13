@@ -76,12 +76,6 @@
   "form": {
     "sections": [
       {
-        "title": "Subject Selection",
-        "description": "Select which subjects to include in the BIDS dataset",
-        "fields": ["subjects"],
-        "component": "subject-select"
-      },
-      {
         "title": "Classification",
         "description": "Review auto-detected BIDS classification for each series",
         "fields": ["series_list"],
@@ -143,13 +137,19 @@
         "config": { "ref": "context" },
         "output_dir": { "ref": "context.output_dir" }
       }
+    },
+    "postpass": {
+      "tool": "bids-postpass",
+      "inputs": {
+        "bids_dir": { "ref": "steps.write.outputs.bids_dir" }
+      }
     }
   },
 
   "outputs": {
     "bids_dir": {
       "type": "bids-dir",
-      "ref": "steps.write.outputs.bids_dir"
+      "ref": "steps.postpass.outputs.bids_dir"
     }
   }
 }

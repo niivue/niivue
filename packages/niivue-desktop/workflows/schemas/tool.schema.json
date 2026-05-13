@@ -119,7 +119,7 @@
         },
         "formComponent": {
           "type": "string",
-          "description": "Custom form component name (e.g. 'subject-select', 'bids-classification-table')"
+          "description": "Custom form component name (e.g. 'bids-series-filter', 'bids-classification-table')"
         },
         "condition": {
           "type": "string",

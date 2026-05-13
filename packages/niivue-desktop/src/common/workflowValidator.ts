@@ -357,6 +357,17 @@ export function validateRequiredInputs(
 ): MissingInput[] {
   const missing: MissingInput[] = []
 
+  // Pre-compute the set of context fields that will be populated by some
+  // step's outputMappings (e.g. `bids_dir` from bids-write). The pre-flight
+  // doesn't need to flag these as missing — executeAllSteps will fill them in.
+  const stepProducedContextFields = new Set<string>()
+  for (const step of Object.values(definition.steps)) {
+    if (!step.outputMappings) continue
+    for (const contextField of Object.values(step.outputMappings)) {
+      stepProducedContextFields.add(contextField)
+    }
+  }
+
   for (const [stepName, step] of Object.entries(definition.steps)) {
     const tool = tools.get(step.tool)
     if (!tool) continue
@@ -373,6 +384,22 @@ export function validateRequiredInputs(
           description: inputDef.description
         })
         continue
+      }
+
+      // Skip bindings that will resolve when a downstream step runs during
+      // executeAllSteps. Two cases:
+      //  1) Direct step output refs (`steps.X.outputs.Y`) — X runs first.
+      //  2) Context refs (`context.X`) where X is a step outputMapping target
+      //     (e.g. context.bids_dir is populated by bids-write's outputMapping).
+      // Pre-flight only needs to catch user-provided bindings that are empty.
+      if ('ref' in binding) {
+        const parts = binding.ref.split('.')
+        if (parts[0] === 'steps' && parts.length >= 4 && parts[2] === 'outputs') {
+          if (definition.steps[parts[1]]) continue
+        }
+        if (parts[0] === 'context' && parts.length === 2) {
+          if (stepProducedContextFields.has(parts[1])) continue
+        }
       }
 
       const value = resolveBindingValue(binding, inputs, context, stepOutputs)

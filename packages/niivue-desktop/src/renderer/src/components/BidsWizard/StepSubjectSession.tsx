@@ -1,5 +1,5 @@
 import { Text } from '@radix-ui/themes'
-import type { BidsSeriesMapping, ParticipantDemographics, DetectedSubject, DetectedSession } from '../../../../common/bidsTypes.js'
+import type { BidsSeriesMapping, ParticipantDemographics, DetectedSubject } from '../../../../common/bidsTypes.js'
 import { generateBidsFilename } from './bidsTreeUtil.js'
 
 interface StepSubjectSessionProps {
@@ -14,7 +14,6 @@ interface StepSubjectSessionProps {
   onUpdateDetectedSubject: (index: number, changes: Partial<DetectedSubject>) => void
   onUpdateDetectedSubjectDemographics: (index: number, field: keyof ParticipantDemographics, value: string) => void
   onUpdateDetectedSessionLabel: (subjectIndex: number, sessionIndex: number, label: string) => void
-  onUpdateDetectedSession?: (subjectIndex: number, sessionIndex: number, changes: Partial<DetectedSession>) => void
 }
 
 export function StepSubjectSession({
@@ -28,8 +27,7 @@ export function StepSubjectSession({
   detectedSubjects,
   onUpdateDetectedSubject,
   onUpdateDetectedSubjectDemographics,
-  onUpdateDetectedSessionLabel,
-  onUpdateDetectedSession
+  onUpdateDetectedSessionLabel
 }: StepSubjectSessionProps): JSX.Element {
   const included = mappings.filter((m) => !m.excluded)
   const isMultiSubject = detectedSubjects.length > 1
@@ -84,22 +82,13 @@ export function StepSubjectSession({
                       ) : (
                         <div className="flex flex-col gap-0.5">
                           {ds.sessions.map((ses, sei) => (
-                            <div key={sei} className={`flex items-center gap-0.5${ses.excluded ? ' opacity-50' : ''}`}>
-                              {onUpdateDetectedSession && (
-                                <input
-                                  type="checkbox"
-                                  checked={!ses.excluded}
-                                  onChange={() => onUpdateDetectedSession(si, sei, { excluded: !ses.excluded })}
-                                  className="w-3 h-3"
-                                />
-                              )}
+                            <div key={sei} className="flex items-center gap-0.5">
                               <Text size="1" color="gray">ses-</Text>
                               <input
                                 type="text"
                                 value={ses.label}
                                 onChange={(e) => onUpdateDetectedSessionLabel(si, sei, e.target.value.replace(/[^a-zA-Z0-9]/g, ''))}
                                 className="w-10 px-1 py-0.5 text-xs border border-[var(--gray-6)] rounded"
-                                disabled={ses.excluded}
                               />
                               <Text size="1" color="gray">({ses.seriesIndices.length})</Text>
                             </div>

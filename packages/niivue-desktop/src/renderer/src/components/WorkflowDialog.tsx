@@ -129,60 +129,10 @@ function SubjectSessionAdapter({
           i === index ? { ...ds, ...changes } : ds
         )
 
-        if (changes.excluded !== undefined) {
-          const subLabel = old.label
-          const updatedMappings = mappings.map((m) => {
-            if (m.subject === subLabel) {
-              return {
-                ...m,
-                excluded: changes.excluded!,
-                exclusionReason: changes.excluded ? 'Subject excluded' : undefined
-              }
-            }
-            return m
-          })
-          void (async () => {
-            await onFieldChange('subjects', updated)
-            await onFieldChange('series_list', updatedMappings)
-          })()
-          return
-        }
-
         if (changes.label && changes.label !== old.label) {
           const updatedMappings = mappings.map((m) => {
             if (m.subject === old.label) {
               return { ...m, subject: changes.label! }
-            }
-            return m
-          })
-          void (async () => {
-            await onFieldChange('subjects', updated)
-            await onFieldChange('series_list', updatedMappings)
-          })()
-          return
-        }
-
-        void onFieldChange('subjects', updated)
-      }}
-      onUpdateDetectedSession={(subjectIndex, sessionIndex, changes) => {
-        const sub = detectedSubjects[subjectIndex]
-        const ses = sub.sessions[sessionIndex]
-        const updated = detectedSubjects.map((ds, si) => {
-          if (si !== subjectIndex) return ds
-          const sessions = ds.sessions.map((s, sei) =>
-            sei === sessionIndex ? { ...s, ...changes } : s
-          )
-          return { ...ds, sessions }
-        })
-
-        if (changes.excluded !== undefined) {
-          const updatedMappings = mappings.map((m) => {
-            if (m.subject === sub.label && m.session === ses.label) {
-              return {
-                ...m,
-                excluded: changes.excluded!,
-                exclusionReason: changes.excluded ? 'Session excluded' : undefined
-              }
             }
             return m
           })
@@ -355,115 +305,6 @@ function SkullStripAdapter({
   )
 }
 
-// ── Subject selection adapter ──────────────────────────────────────
-
-function SubjectSelectAdapter({
-  context,
-  onFieldChange
-}: {
-  context: Record<string, unknown>
-  onFieldChange: (fieldName: string, value: unknown) => void | Promise<void>
-}): React.ReactElement {
-  const detectedSubjects = (context.subjects as DetectedSubject[]) || []
-
-  if (detectedSubjects.length <= 1) {
-    return (
-      <div className="flex flex-col gap-2">
-        <Text size="2" weight="bold" className="text-neutral-12">Subjects</Text>
-        <Text size="1" className="text-neutral-9">
-          {detectedSubjects.length === 1
-            ? `1 subject detected: ${detectedSubjects[0].rawId}`
-            : 'No subjects detected from DICOM headers.'}
-        </Text>
-      </div>
-    )
-  }
-
-  const toggleSubject = (index: number): void => {
-    const old = detectedSubjects[index]
-    const updatedSubjects = detectedSubjects.map((ds, i) =>
-      i === index ? { ...ds, excluded: !old.excluded } : ds
-    )
-    void onFieldChange('subjects', updatedSubjects)
-
-    // Also sync exclusion flags to series_list
-    const seriesList = (context.series_list as BidsSeriesMapping[]) || []
-    if (seriesList.length > 0) {
-      const excludedIndices = getExcludedSeriesIndices(updatedSubjects)
-      const updatedSeries = seriesList.map((m) => ({
-        ...m,
-        excluded: excludedIndices.has(m.index) ? true : (m.excluded || false)
-      }))
-      void onFieldChange('series_list', updatedSeries)
-    }
-  }
-
-  const includedCount = detectedSubjects.filter((s) => !s.excluded).length
-
-  return (
-    <div className="flex flex-col gap-3">
-      <Text size="2" weight="bold" className="text-neutral-12">Select Subjects</Text>
-      <Text size="1" className="text-neutral-9">
-        {detectedSubjects.length} subjects detected from DICOM headers.
-        Uncheck any subjects you want to exclude from the BIDS dataset.
-      </Text>
-
-      <div className="border border-neutral-6 rounded-lg overflow-hidden">
-        <table className="w-full text-xs">
-          <thead className="bg-neutral-3">
-            <tr>
-              <th className="py-2 px-3 text-left font-medium text-neutral-11 w-8">Include</th>
-              <th className="py-2 px-3 text-left font-medium text-neutral-11">Patient ID</th>
-              <th className="py-2 px-3 text-left font-medium text-neutral-11">Subject</th>
-              <th className="py-2 px-3 text-left font-medium text-neutral-11">Sessions</th>
-              <th className="py-2 px-3 text-left font-medium text-neutral-11">Age</th>
-              <th className="py-2 px-3 text-left font-medium text-neutral-11">Sex</th>
-              <th className="py-2 px-3 text-left font-medium text-neutral-11">Series</th>
-            </tr>
-          </thead>
-          <tbody>
-            {detectedSubjects.map((ds, si) => {
-              const totalSeries = ds.sessions.reduce((sum, s) => sum + s.seriesIndices.length, 0)
-              const isExcluded = !!ds.excluded
-              return (
-                <tr
-                  key={si}
-                  className={`border-t border-neutral-4${isExcluded ? ' opacity-50' : ''}`}
-                >
-                  <td className="py-2 px-3">
-                    <input
-                      type="checkbox"
-                      checked={!isExcluded}
-                      onChange={() => toggleSubject(si)}
-                      className="w-3.5 h-3.5"
-                    />
-                  </td>
-                  <td className="py-2 px-3">
-                    <Text size="1" className="block truncate max-w-[160px] text-neutral-12" title={ds.rawId}>
-                      {ds.rawId}
-                    </Text>
-                  </td>
-                  <td className="py-2 px-3">
-                    <Text size="1" className="font-mono text-neutral-12">sub-{ds.label}</Text>
-                  </td>
-                  <td className="py-2 px-3 text-neutral-11">{ds.sessions.length}</td>
-                  <td className="py-2 px-3 text-neutral-11">{ds.demographics.age || '-'}</td>
-                  <td className="py-2 px-3 text-neutral-11">{ds.demographics.sex || '-'}</td>
-                  <td className="py-2 px-3 text-neutral-11">{totalSeries}</td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
-
-      <Text size="1" className="text-neutral-9">
-        {includedCount} of {detectedSubjects.length} subjects included
-      </Text>
-    </div>
-  )
-}
-
 // ── Component registry ───────────────────────────────────────────────
 
 interface CustomComponentProps {
@@ -610,7 +451,6 @@ function BidsSeriesFilterAdapter({
 
 const COMPONENT_REGISTRY: Record<string, React.FC<CustomComponentProps>> = {
   'bids-series-filter': BidsSeriesFilterAdapter,
-  'subject-select': SubjectSelectAdapter,
   'bids-classification-table': ClassificationAdapter,
   'subject-session-editor': SubjectSessionAdapter,
   'skull-strip-editor': SkullStripAdapter,

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, Text } from '@radix-ui/themes'
 import { NVImage, Niivue, SLICE_TYPE } from '@niivue/niivue'
 import { brainchopService } from '../../services/brainchop/index.js'
@@ -103,19 +103,41 @@ export function StepSkullStrip({
 
   const nonExcluded = mappings.filter((m) => !m.excluded)
 
-  // Update selectedIndices when scope changes
+  // Keep a ref to the latest mappings so effects below can read fresh data
+  // without re-running on every mappings change (which would clobber user
+  // toggles each time a sibling component updates the array).
+  const mappingsRef = useRef(mappings)
   useEffect(() => {
-    if (engine === 'none') return
+    mappingsRef.current = mappings
+  }, [mappings])
+
+  // Seed selection from the current scope when (a) the user changes scope or
+  // picks an engine, or (b) mappings transitions from empty to populated. The
+  // bids-classify heuristic fires async after entering the section, so the
+  // lazy initializer above runs against an empty array and we need to re-seed
+  // once data arrives. Seeded-once guard prevents clobbering user toggles on
+  // subsequent mappings updates (e.g. after skull strip completes and rewrites
+  // niftiPath in place).
+  const seededRef = useRef(mappings.length > 0)
+  useEffect(() => {
+    const populated = mappings.length > 0
+    if (!populated) return
+    const isFirstPopulation = !seededRef.current
+    seededRef.current = true
+    // Only auto-fill on scope/engine change or first population. Otherwise the
+    // user has already interacted and we must leave their selection alone.
+    if (!isFirstPopulation && engine === 'none') return
     const indices = new Set<number>()
-    for (const m of nonExcluded) {
-      if (scope === 'anat' && m.datatype === 'anat') {
-        indices.add(m.index)
-      } else if (scope === 'all') {
-        indices.add(m.index)
-      }
+    for (const m of mappings) {
+      if (m.excluded) continue
+      if (scope === 'anat' && m.datatype === 'anat') indices.add(m.index)
+      else if (scope === 'all') indices.add(m.index)
     }
     setSelectedIndices(indices)
-  }, [scope, engine])
+    // mappings dep is intentionally referenced via length below to avoid
+    // re-seeding on every array reference change after the first populate.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [scope, engine, mappings.length > 0])
 
   const toggleIndex = (index: number): void => {
     setSelectedIndices((prev) => {

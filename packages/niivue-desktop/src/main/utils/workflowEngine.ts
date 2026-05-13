@@ -549,18 +549,19 @@ export async function runReadySteps(runId: string, maxStepIndex: number = -1): P
       }
     }
 
-    // Skip steps whose output mappings write to context fields managed by heuristics.
-    // During the form phase, heuristics handle these fields (e.g., subject exclusion).
-    // The step will run during the final execute-all.
-    if (allResolved && definition.context?.fields) {
-      const outputMappingTargets = Object.values(step.outputMappings || {})
-      const hasHeuristicTarget = outputMappingTargets.some((ctxField) => {
-        const fieldDef = definition.context?.fields[ctxField]
-        return fieldDef?.heuristic
-      })
-      if (hasHeuristicTarget) {
-        continue
-      }
+    // Skip steps that write into context via outputMappings during the form
+    // phase. These fall into two cases:
+    //  1) The target is heuristic-managed (e.g. bids-classify → series_list) —
+    //     the heuristic handles population during the form phase.
+    //  2) The target is a workflow-final context field (e.g. bids-write →
+    //     bids_dir) — the user expects to trigger the writing step via the
+    //     final section's button, not have it fire when leaving an earlier
+    //     section just because a smart-default resolved the binding.
+    // Steps without outputMappings (e.g. dcm2niix producing sidecars/volumes
+    // for heuristics to consume) must still run early, so the guard only
+    // applies when outputMappings is non-empty.
+    if (allResolved && step.outputMappings && Object.keys(step.outputMappings).length > 0) {
+      continue
     }
 
     if (allResolved) {

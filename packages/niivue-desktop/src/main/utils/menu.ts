@@ -609,7 +609,16 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
         {
           label: 'Convert DICOM to BIDS...',
           click: (): void => {
-            win.webContents.send('bids:open-wizard')
+            // Route through the dicom-to-bids workflow so users get a single
+            // path (one DICOM directory prompt → workflow dialog). The legacy
+            // `bids:open-wizard` event opened a separate wizard that prompted
+            // again, which surfaced as "asked for DICOM directory twice".
+            const wf = getWorkflowDefinitions().get('dicom-to-bids')
+            if (wf) {
+              handleWorkflowMenuClick(win, wf)
+            } else {
+              win.webContents.send('bids:open-wizard')
+            }
           }
         },
       ]
