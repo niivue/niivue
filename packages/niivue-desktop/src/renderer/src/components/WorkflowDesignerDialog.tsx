@@ -11,17 +11,13 @@
 // file in their text editor.
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import { Button, Text, Flex, SegmentedControl, Popover, Badge } from '@radix-ui/themes'
 import {
-  Dialog,
-  Button,
-  Text,
-  Flex,
-  SegmentedControl,
-  Popover,
-  Badge,
-  VisuallyHidden
-} from '@radix-ui/themes'
-import { Cross1Icon, ExclamationTriangleIcon, ResetIcon, ReloadIcon } from '@radix-ui/react-icons'
+  ArrowLeftIcon,
+  ExclamationTriangleIcon,
+  ResetIcon,
+  ReloadIcon
+} from '@radix-ui/react-icons'
 import type { ToolDefinition } from '../../../common/workflowTypes.js'
 import {
   blockToStepDraft,
@@ -50,6 +46,12 @@ interface WorkflowDesignerDialogProps {
   onSave?: (schema: Record<string, unknown>) => void
   /** Optional existing definition to edit (converted to a draft on open). */
   initialDefinition?: Record<string, unknown> | null
+  /**
+   * Label for the "Back to …" button. Defaults to "viewer"; pass "wizard"
+   * when the designer was opened mid-wizard via Edit Workflow so the user
+   * sees they'll return to the wizard they were running.
+   */
+  backTarget?: string
 }
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -231,7 +233,8 @@ export function WorkflowDesignerDialog({
   open,
   onClose,
   onSave,
-  initialDefinition
+  initialDefinition,
+  backTarget = 'viewer'
 }: WorkflowDesignerDialogProps): React.ReactElement | null {
   const [draft, setDraft] = useState<WorkflowDraft>({ ...DEFAULT_DRAFT })
   const [tools, setTools] = useState<ToolDefinition[]>([])
@@ -573,199 +576,186 @@ export function WorkflowDesignerDialog({
   if (!open) return null
 
   return (
-    <Dialog.Root open={open} onOpenChange={(o) => !o && requestClose()}>
-      <Dialog.Content
-        maxWidth="95vw"
-        style={{
-          width: '95vw',
-          height: '90vh',
-          padding: 0,
-          display: 'flex',
-          flexDirection: 'column'
-        }}
-      >
-        <VisuallyHidden>
-          <Dialog.Title>Workflow Designer</Dialog.Title>
-          <Dialog.Description>
-            Visual designer for building custom workflows from tool blocks.
-          </Dialog.Description>
-        </VisuallyHidden>
-
-        {/* Header */}
-        <header className="flex items-center justify-between px-4 py-2 border-b border-neutral-5">
-          <Flex gap="3" align="center">
-            <Flex gap="1" align="center">
-              <Text size="3" weight="bold">
-                Workflow Designer
+    <div
+      className="flex flex-col h-full w-full bg-surface"
+      role="region"
+      aria-label="Workflow Designer"
+    >
+      {/* Header */}
+      <header className="flex items-center justify-between px-4 py-2 border-b border-neutral-5 shrink-0 bg-panel">
+        <Flex gap="3" align="center">
+          <Button
+            variant="ghost"
+            color="gray"
+            size="2"
+            onClick={requestClose}
+            aria-label={`Back to ${backTarget}`}
+          >
+            <ArrowLeftIcon /> Back to {backTarget}
+          </Button>
+          <div className="w-px h-6 bg-neutral-5" aria-hidden />
+          <Flex gap="1" align="center">
+            <Text size="3" weight="bold">
+              Workflow Designer
+            </Text>
+            {dirty && (
+              <Text
+                size="3"
+                weight="bold"
+                color="amber"
+                title="Unsaved changes"
+                aria-label="Unsaved changes"
+              >
+                •
               </Text>
-              {dirty && (
-                <Text
-                  size="3"
-                  weight="bold"
-                  color="amber"
-                  title="Unsaved changes"
-                  aria-label="Unsaved changes"
+            )}
+          </Flex>
+          <SegmentedControl.Root
+            size="1"
+            value={view}
+            onValueChange={(v) => setView(v as 'list' | 'diagram')}
+          >
+            <SegmentedControl.Item value="list">List</SegmentedControl.Item>
+            <SegmentedControl.Item value="diagram">Diagram</SegmentedControl.Item>
+          </SegmentedControl.Root>
+        </Flex>
+        <Flex gap="2" align="center">
+          {saveError && (
+            <Text size="1" color="red">
+              {saveError}
+            </Text>
+          )}
+          {savedAt !== null && !saveError && !dirty && (
+            <Text size="1" color="green" role="status" aria-live="polite">
+              Saved.
+            </Text>
+          )}
+          {(validation.errors.length > 0 || validation.warnings.length > 0) && (
+            <Popover.Root>
+              <Popover.Trigger>
+                <Button
+                  size="1"
+                  variant="soft"
+                  color={validation.errors.length > 0 ? 'red' : 'amber'}
                 >
-                  •
-                </Text>
-              )}
-            </Flex>
-            <SegmentedControl.Root
-              size="1"
-              value={view}
-              onValueChange={(v) => setView(v as 'list' | 'diagram')}
-            >
-              <SegmentedControl.Item value="list">List</SegmentedControl.Item>
-              <SegmentedControl.Item value="diagram">Diagram</SegmentedControl.Item>
-            </SegmentedControl.Root>
-          </Flex>
-          <Flex gap="2" align="center">
-            {saveError && (
-              <Text size="1" color="red">
-                {saveError}
-              </Text>
-            )}
-            {savedAt !== null && !saveError && !dirty && (
-              <Text size="1" color="green" role="status" aria-live="polite">
-                Saved.
-              </Text>
-            )}
-            {(validation.errors.length > 0 || validation.warnings.length > 0) && (
-              <Popover.Root>
-                <Popover.Trigger>
-                  <Button
-                    size="1"
-                    variant="soft"
-                    color={validation.errors.length > 0 ? 'red' : 'amber'}
-                  >
-                    <ExclamationTriangleIcon />
-                    {validation.errors.length > 0
-                      ? `${validation.errors.length} error${validation.errors.length !== 1 ? 's' : ''}`
-                      : `${validation.warnings.length} warning${validation.warnings.length !== 1 ? 's' : ''}`}
-                  </Button>
-                </Popover.Trigger>
-                <Popover.Content size="1" maxWidth="480px">
-                  <Flex direction="column" gap="2">
-                    {validation.errors.length > 0 && (
-                      <Flex direction="column" gap="1">
-                        <Text size="1" weight="bold" color="red">
-                          Errors
-                        </Text>
-                        {validation.errors.map((e, i) => (
-                          <Flex key={`e-${i}`} gap="2" align="start">
-                            {e.stepName && (
-                              <Badge size="1" color="red" variant="soft">
-                                {e.stepName}
-                              </Badge>
-                            )}
-                            <Text size="1">{e.message}</Text>
-                          </Flex>
-                        ))}
-                      </Flex>
-                    )}
-                    {validation.warnings.length > 0 && (
-                      <Flex direction="column" gap="1">
-                        <Text size="1" weight="bold" color="amber">
-                          Warnings
-                        </Text>
-                        {validation.warnings.map((w, i) => (
-                          <Flex key={`w-${i}`} gap="2" align="start">
-                            {w.stepName && (
-                              <Badge size="1" color="amber" variant="soft">
-                                {w.stepName}
-                              </Badge>
-                            )}
-                            <Text size="1">{w.message}</Text>
-                          </Flex>
-                        ))}
-                      </Flex>
-                    )}
-                  </Flex>
-                </Popover.Content>
-              </Popover.Root>
-            )}
-            <Button
-              variant="ghost"
-              color="gray"
-              size="2"
-              onClick={undo}
-              disabled={!canUndo}
-              aria-label="Undo"
-              title="Undo (⌘Z)"
-            >
-              <ResetIcon />
-            </Button>
-            <Button
-              variant="ghost"
-              color="gray"
-              size="2"
-              onClick={redo}
-              disabled={!canRedo}
-              aria-label="Redo"
-              title="Redo (⌘⇧Z)"
-            >
-              <ReloadIcon />
-            </Button>
-            <Button variant="soft" size="2" onClick={handleSave}>
-              Save
-            </Button>
-            <Button
-              variant="ghost"
-              color="gray"
-              size="2"
-              onClick={requestClose}
-              aria-label="Close Workflow Designer"
-            >
-              <Cross1Icon />
-            </Button>
-          </Flex>
-        </header>
+                  <ExclamationTriangleIcon />
+                  {validation.errors.length > 0
+                    ? `${validation.errors.length} error${validation.errors.length !== 1 ? 's' : ''}`
+                    : `${validation.warnings.length} warning${validation.warnings.length !== 1 ? 's' : ''}`}
+                </Button>
+              </Popover.Trigger>
+              <Popover.Content size="1" maxWidth="480px">
+                <Flex direction="column" gap="2">
+                  {validation.errors.length > 0 && (
+                    <Flex direction="column" gap="1">
+                      <Text size="1" weight="bold" color="red">
+                        Errors
+                      </Text>
+                      {validation.errors.map((e, i) => (
+                        <Flex key={`e-${i}`} gap="2" align="start">
+                          {e.stepName && (
+                            <Badge size="1" color="red" variant="soft">
+                              {e.stepName}
+                            </Badge>
+                          )}
+                          <Text size="1">{e.message}</Text>
+                        </Flex>
+                      ))}
+                    </Flex>
+                  )}
+                  {validation.warnings.length > 0 && (
+                    <Flex direction="column" gap="1">
+                      <Text size="1" weight="bold" color="amber">
+                        Warnings
+                      </Text>
+                      {validation.warnings.map((w, i) => (
+                        <Flex key={`w-${i}`} gap="2" align="start">
+                          {w.stepName && (
+                            <Badge size="1" color="amber" variant="soft">
+                              {w.stepName}
+                            </Badge>
+                          )}
+                          <Text size="1">{w.message}</Text>
+                        </Flex>
+                      ))}
+                    </Flex>
+                  )}
+                </Flex>
+              </Popover.Content>
+            </Popover.Root>
+          )}
+          <Button
+            variant="ghost"
+            color="gray"
+            size="2"
+            onClick={undo}
+            disabled={!canUndo}
+            aria-label="Undo"
+            title="Undo (⌘Z)"
+          >
+            <ResetIcon />
+          </Button>
+          <Button
+            variant="ghost"
+            color="gray"
+            size="2"
+            onClick={redo}
+            disabled={!canRedo}
+            aria-label="Redo"
+            title="Redo (⌘⇧Z)"
+          >
+            <ReloadIcon />
+          </Button>
+          <Button variant="soft" size="2" onClick={handleSave}>
+            Save
+          </Button>
+        </Flex>
+      </header>
 
-        {/* Body — list view delegates to ContextSpineDesigner; diagram view
-            uses WorkflowDiagramView with the same palette docked below. */}
-        <div className="flex-1 min-h-0 flex overflow-hidden">
-          {view === 'list' ? (
-            <ContextSpineDesigner
+      {/* Body — list view delegates to ContextSpineDesigner; diagram view
+          uses WorkflowDiagramView with the same palette docked below. */}
+      <div className="flex-1 min-h-0 flex overflow-hidden">
+        {view === 'list' ? (
+          <ContextSpineDesigner
+            draft={draft}
+            setDraft={setDraftWithHistory}
+            tools={toolsMap}
+            validation={validation}
+            runnableTools={runnableTools}
+            heuristicNames={heuristicNames}
+            onAddBlock={handleAddBlock}
+            onRemoveStep={handleRemoveStep}
+            onMoveStep={handleMoveStep}
+            onSave={handleSave}
+          />
+        ) : (
+          <div className="flex-1 flex flex-col min-h-0">
+            <WorkflowDiagramView
               draft={draft}
               setDraft={setDraftWithHistory}
               tools={toolsMap}
-              validation={validation}
-              runnableTools={runnableTools}
-              heuristicNames={heuristicNames}
-              onAddBlock={handleAddBlock}
+              selectedStep={selectedStep}
+              onSelectStep={setSelectedStep}
               onRemoveStep={handleRemoveStep}
               onMoveStep={handleMoveStep}
-              onSave={handleSave}
+              errorSteps={errorSteps}
+              warnSteps={warnSteps}
+              stepIssueByIndex={stepIssueByIndex}
             />
-          ) : (
-            <div className="flex-1 flex flex-col min-h-0">
-              <WorkflowDiagramView
-                draft={draft}
-                setDraft={setDraftWithHistory}
+            <div className="border-t border-neutral-5 bg-[var(--gray-2)] px-3 py-2 max-h-56 overflow-y-auto shrink-0">
+              <BlockPalette
+                onAddBlock={handleAddBlock}
                 tools={toolsMap}
-                selectedStep={selectedStep}
-                onSelectStep={setSelectedStep}
-                onRemoveStep={handleRemoveStep}
-                onMoveStep={handleMoveStep}
-                errorSteps={errorSteps}
-                warnSteps={warnSteps}
-                stepIssueByIndex={stepIssueByIndex}
+                runnableTools={runnableTools}
+                lastStepTool={
+                  draft.steps.length > 0 ? draft.steps[draft.steps.length - 1].tool : undefined
+                }
               />
-              <div className="border-t border-neutral-5 bg-[var(--gray-2)] px-3 py-2 max-h-56 overflow-y-auto shrink-0">
-                <BlockPalette
-                  onAddBlock={handleAddBlock}
-                  tools={toolsMap}
-                  runnableTools={runnableTools}
-                  lastStepTool={
-                    draft.steps.length > 0 ? draft.steps[draft.steps.length - 1].tool : undefined
-                  }
-                />
-              </div>
             </div>
-          )}
-        </div>
-      </Dialog.Content>
-    </Dialog.Root>
+          </div>
+        )}
+      </div>
+    </div>
   )
 }
 

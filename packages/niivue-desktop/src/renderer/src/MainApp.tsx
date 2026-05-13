@@ -154,6 +154,9 @@ function MainApp(): JSX.Element {
   const designerInitialDefinition = designerActive ? workspaceMode.initialDefinition : null
   const galleryOpen = workspaceMode.kind === 'gallery'
   const wizardActive = !!wizardParams
+  const designerOverWizard =
+    workspaceMode.kind === 'designer' && workspaceMode.parent.kind === 'wizard'
+  const workflowShellActive = galleryOpen || wizardActive || designerActive
 
   // Heuristic designer state
   const [heuristicDesignerOpen, setHeuristicDesignerOpen] = useState(false)
@@ -1532,10 +1535,11 @@ function MainApp(): JSX.Element {
 
       {/* 2) Main content: sidebar & viewer & right panel */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar (left) — hidden while a workflow shell occupies the
-            center pane; the wizard has its own step rail and the gallery
-            has no use for the viewer-oriented sidebar. */}
-        {!galleryOpen && !wizardActive && (
+        {/* Sidebar (left) — hidden while any workflow shell (gallery,
+            wizard, or designer) occupies the center pane; the shells
+            either have their own navigation or don't need the
+            viewer-oriented sidebar. */}
+        {!workflowShellActive && (
           <div className="flex-shrink-0 overflow-auto">
             <Sidebar
               onRemoveMesh={handleRemoveMesh}
@@ -1677,10 +1681,31 @@ function MainApp(): JSX.Element {
               />
             </div>
           )}
+          {designerActive && (
+            <div className="absolute inset-0 z-20">
+              <WorkflowDesignerDialog
+                open={true}
+                onClose={closeDesignerMode}
+                onSave={(schema) => {
+                  electron.ipcRenderer
+                    .invoke('workflow:save', schema)
+                    .then(() => {
+                      console.log('Workflow saved:', schema)
+                      closeDesignerMode()
+                    })
+                    .catch((err: Error) => {
+                      console.error('Failed to save workflow:', err)
+                    })
+                }}
+                initialDefinition={designerInitialDefinition}
+                backTarget={designerOverWizard ? 'wizard' : 'viewer'}
+              />
+            </div>
+          )}
         </div>
         {/* Right Panel (controls, volume, mesh, atlas, segmentation) —
             hidden while a workflow shell occupies the center pane. */}
-        {rightPanelOpen && !galleryOpen && !wizardActive && (
+        {rightPanelOpen && !workflowShellActive && (
           <div className="flex-shrink-0 w-80 bg-white border-l border-gray-300 overflow-auto">
             <RightPanel
               activeTab={rightPanelTab}
@@ -1796,22 +1821,6 @@ function MainApp(): JSX.Element {
         modelName={segmentationModelName}
         onCancel={handleCancelSegmentation}
         canCancel={true}
-      />
-      <WorkflowDesignerDialog
-        open={designerActive}
-        onClose={closeDesignerMode}
-        onSave={(schema) => {
-          electron.ipcRenderer
-            .invoke('workflow:save', schema)
-            .then(() => {
-              console.log('Workflow saved:', schema)
-              closeDesignerMode()
-            })
-            .catch((err: Error) => {
-              console.error('Failed to save workflow:', err)
-            })
-        }}
-        initialDefinition={designerInitialDefinition}
       />
       <HeuristicDesigner
         open={heuristicDesignerOpen}
