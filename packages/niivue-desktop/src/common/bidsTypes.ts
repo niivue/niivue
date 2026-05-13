@@ -37,6 +37,13 @@ export const SUFFIXES_BY_DATATYPE: Record<BidsDatatype, BidsSuffix[]> = {
 
 export type BidsConfidence = 'high' | 'medium' | 'low'
 
+/**
+ * User-staged sidecar edits. The hot-path fields below are named for
+ * autocomplete in tooling, but the BIDS Prep tree editor surfaces any
+ * sidecar key for batch editing — the index signature keeps the type
+ * open so {@link SeriesSidecarData}'s `{...original, ...overrides}` merge
+ * in `bidsWriter` can carry arbitrary additions back out to disk.
+ */
 export interface EditableSidecarFields {
   RepetitionTime?: number
   EchoTime?: number
@@ -44,6 +51,7 @@ export interface EditableSidecarFields {
   PhaseEncodingDirection?: string
   TotalReadoutTime?: number
   SliceTiming?: number[]
+  [key: string]: unknown
 }
 
 export interface SeriesSidecarData {

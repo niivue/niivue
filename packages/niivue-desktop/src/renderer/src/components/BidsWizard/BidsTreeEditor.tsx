@@ -1,8 +1,15 @@
-import React, { useCallback, useMemo } from 'react'
-import { Text, TextField, Callout } from '@radix-ui/themes'
-import { InfoCircledIcon } from '@radix-ui/react-icons'
+import React, { useCallback, useMemo, useState } from 'react'
+import { Text, TextField, Button, Callout, Badge } from '@radix-ui/themes'
+import { InfoCircledIcon, ChevronDownIcon, ChevronRightIcon } from '@radix-ui/react-icons'
 import type { BidsSeriesMapping, DetectedSubject } from '../../../../common/bidsTypes.js'
 import { StepBidsPreview } from './StepBidsPreview.js'
+import {
+  mappingsToTreeFiles,
+  groupTreeFiles,
+  applySidecarOverrideBatch,
+  buildInspectorRows,
+  type TreeFile
+} from './bidsTreeEditorModel.js'
 
 interface AdapterProps {
   context: Record<string, unknown>
@@ -11,34 +18,24 @@ interface AdapterProps {
   onLoadFile?: (niftiPath: string) => Promise<void>
 }
 
-/**
- * Apply a subject-label rename across every mapping that currently carries
- * `oldLabel`, and update the matching DetectedSubject entry. Returns the
- * new arrays untouched if no change occurred so the engine doesn't fire a
- * pointless re-render / heuristic refire.
- */
-function renameSubject(
+// ── Subject/session relabel helpers (pure, exported for unit tests) ────
+
+export function renameSubject(
   oldLabel: string,
   newLabel: string,
   mappings: BidsSeriesMapping[],
   subjects: DetectedSubject[]
 ): { mappings: BidsSeriesMapping[]; subjects: DetectedSubject[] } {
   if (!newLabel || newLabel === oldLabel) return { mappings, subjects }
-  const updatedMappings = mappings.map((m) =>
-    m.subject === oldLabel ? { ...m, subject: newLabel } : m
-  )
-  const updatedSubjects = subjects.map((s) =>
-    s.label === oldLabel ? { ...s, label: newLabel } : s
-  )
-  return { mappings: updatedMappings, subjects: updatedSubjects }
+  return {
+    mappings: mappings.map((m) =>
+      m.subject === oldLabel ? { ...m, subject: newLabel } : m
+    ),
+    subjects: subjects.map((s) => (s.label === oldLabel ? { ...s, label: newLabel } : s))
+  }
 }
 
-/**
- * Apply a session-label rename within a single subject. Sessions are scoped
- * per-subject (sub-01 ses-01 and sub-02 ses-01 are independent), so the
- * rename is gated on both subject label + old session label.
- */
-function renameSession(
+export function renameSession(
   subjectLabel: string,
   oldSession: string,
   newSession: string,
@@ -46,22 +43,26 @@ function renameSession(
   subjects: DetectedSubject[]
 ): { mappings: BidsSeriesMapping[]; subjects: DetectedSubject[] } {
   if (newSession === oldSession) return { mappings, subjects }
-  const updatedMappings = mappings.map((m) =>
-    m.subject === subjectLabel && m.session === oldSession ? { ...m, session: newSession } : m
-  )
-  const updatedSubjects = subjects.map((s) => {
-    if (s.label !== subjectLabel) return s
-    return {
-      ...s,
-      sessions: s.sessions.map((ses) =>
-        ses.label === oldSession ? { ...ses, label: newSession } : ses
-      )
-    }
-  })
-  return { mappings: updatedMappings, subjects: updatedSubjects }
+  return {
+    mappings: mappings.map((m) =>
+      m.subject === subjectLabel && m.session === oldSession
+        ? { ...m, session: newSession }
+        : m
+    ),
+    subjects: subjects.map((s) => {
+      if (s.label !== subjectLabel) return s
+      return {
+        ...s,
+        sessions: s.sessions.map((ses) =>
+          ses.label === oldSession ? { ...ses, label: newSession } : ses
+        )
+      }
+    })
+  }
 }
 
-/** Internal: relabel UI used by the prep editor above the thumbnail tree. */
+// ── Subject relabel form ───────────────────────────────────────────────
+
 function SubjectRelabelForm({
   mappings,
   subjects,
@@ -73,28 +74,13 @@ function SubjectRelabelForm({
 }): React.ReactElement | null {
   if (subjects.length === 0) return null
 
-  const handleSubjectChange = (oldLabel: string, raw: string): void => {
-    const newLabel = raw.replace(/[^a-zA-Z0-9]/g, '')
-    const next = renameSubject(oldLabel, newLabel, mappings, subjects)
-    onUpdate(next.mappings, next.subjects)
-  }
-
-  const handleSessionChange = (
-    subjectLabel: string,
-    oldSession: string,
-    raw: string
-  ): void => {
-    const newSession = raw.replace(/[^a-zA-Z0-9]/g, '')
-    const next = renameSession(subjectLabel, oldSession, newSession, mappings, subjects)
-    onUpdate(next.mappings, next.subjects)
-  }
+  const sanitize = (raw: string): string => raw.replace(/[^a-zA-Z0-9]/g, '')
 
   return (
     <div className="flex flex-col gap-2">
       <Text size="2" weight="medium">Subjects & sessions</Text>
       <Text size="1" color="gray">
-        Rename the subject label or session label and every file in the proposed BIDS
-        tree updates to match. Changes apply on write.
+        Rename a subject or session and every file in the tree below updates to match.
       </Text>
       <div className="border border-[var(--gray-5)] rounded overflow-hidden">
         <table className="w-full text-xs">
@@ -113,7 +99,15 @@ function SubjectRelabelForm({
                   <TextField.Root
                     size="1"
                     value={sub.label}
-                    onChange={(e) => handleSubjectChange(sub.label, e.target.value)}
+                    onChange={(e) => {
+                      const next = renameSubject(
+                        sub.label,
+                        sanitize(e.target.value),
+                        mappings,
+                        subjects
+                      )
+                      onUpdate(next.mappings, next.subjects)
+                    }}
                   />
                 </td>
                 <td className="px-2 py-1">
@@ -127,9 +121,16 @@ function SubjectRelabelForm({
                           <TextField.Root
                             size="1"
                             value={ses.label}
-                            onChange={(e) =>
-                              handleSessionChange(sub.label, ses.label, e.target.value)
-                            }
+                            onChange={(e) => {
+                              const next = renameSession(
+                                sub.label,
+                                ses.label,
+                                sanitize(e.target.value),
+                                mappings,
+                                subjects
+                              )
+                              onUpdate(next.mappings, next.subjects)
+                            }}
                             style={{ width: 60 }}
                           />
                         </div>
@@ -146,16 +147,318 @@ function SubjectRelabelForm({
   )
 }
 
-/**
- * BIDS Prep — pre-write editor. Surfaces the thumbnail tree the user already
- * knows from StepBidsPreview, and adds a subject/session relabel pane above
- * it. Edits mutate `series_list` and `subjects` in workflow context so the
- * downstream bids-write step picks them up automatically.
- *
- * Sidecar JSON edits and multi-file batch operations land in a follow-up
- * commit on top of a shared BidsTreeEditor — keeping this adapter small for
- * now lets the workflow's new shape ship without blocking on the full UX.
- */
+// ── Hierarchical file tree (left pane) ─────────────────────────────────
+
+interface TreeProps {
+  files: TreeFile[]
+  selectedKeys: Set<string>
+  onToggle: (key: string) => void
+  onSelectMany: (keys: string[], next: boolean) => void
+}
+
+function FileTree({ files, selectedKeys, onToggle, onSelectMany }: TreeProps): React.ReactElement {
+  const groups = useMemo(() => groupTreeFiles(files), [files])
+  const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
+
+  const toggleCollapsed = (key: string): void => {
+    setCollapsed((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
+  const subjectAllSelected = (subject: string): boolean => {
+    const subjectKeys = files.filter((f) => f.subject === subject).map((f) => f.key)
+    return subjectKeys.length > 0 && subjectKeys.every((k) => selectedKeys.has(k))
+  }
+
+  return (
+    <div className="border border-[var(--gray-5)] rounded p-2 overflow-y-auto"
+         style={{ maxHeight: 480, minHeight: 240 }}>
+      {groups.length === 0 && (
+        <Text size="1" color="gray">
+          No files yet — heuristics may still be running. If this stays empty, go back to
+          Filter and confirm at least one series is selected.
+        </Text>
+      )}
+      {groups.map((g) => {
+        const subjectKey = `sub:${g.subject}`
+        const subjectCollapsed = collapsed.has(subjectKey)
+        const subjectFileKeys = files.filter((f) => f.subject === g.subject).map((f) => f.key)
+        return (
+          <div key={subjectKey} className="mb-1">
+            <div className="flex items-center gap-1 hover:bg-[var(--gray-3)] rounded px-1">
+              <button
+                type="button"
+                onClick={() => toggleCollapsed(subjectKey)}
+                className="cursor-pointer flex items-center"
+                aria-label={subjectCollapsed ? 'Expand' : 'Collapse'}
+              >
+                {subjectCollapsed ? <ChevronRightIcon /> : <ChevronDownIcon />}
+              </button>
+              <input
+                type="checkbox"
+                checked={subjectAllSelected(g.subject)}
+                onChange={(e) => onSelectMany(subjectFileKeys, e.target.checked)}
+                className="w-3 h-3"
+              />
+              <Text size="2" weight="medium" className="font-mono">sub-{g.subject}</Text>
+              <Badge size="1" variant="soft" color="gray">{subjectFileKeys.length}</Badge>
+            </div>
+            {!subjectCollapsed &&
+              g.sessions.map((sess) => {
+                const sessionKey = `${subjectKey}/ses:${sess.session || '_'}`
+                const sessionCollapsed = collapsed.has(sessionKey)
+                const sessionFileKeys = sess.datatypes.flatMap((dt) => dt.files.map((f) => f.key))
+                return (
+                  <div key={sessionKey} className="ml-4">
+                    <div className="flex items-center gap-1 hover:bg-[var(--gray-3)] rounded px-1">
+                      <button
+                        type="button"
+                        onClick={() => toggleCollapsed(sessionKey)}
+                        className="cursor-pointer flex items-center"
+                      >
+                        {sessionCollapsed ? <ChevronRightIcon /> : <ChevronDownIcon />}
+                      </button>
+                      <input
+                        type="checkbox"
+                        checked={sessionFileKeys.length > 0 && sessionFileKeys.every((k) => selectedKeys.has(k))}
+                        onChange={(e) => onSelectMany(sessionFileKeys, e.target.checked)}
+                        className="w-3 h-3"
+                      />
+                      <Text size="1" color="gray" className="font-mono">
+                        {sess.session ? `ses-${sess.session}` : '(no session)'}
+                      </Text>
+                    </div>
+                    {!sessionCollapsed &&
+                      sess.datatypes.map((dt) => {
+                        const dtKey = `${sessionKey}/dt:${dt.datatype}`
+                        const dtCollapsed = collapsed.has(dtKey)
+                        const dtFileKeys = dt.files.map((f) => f.key)
+                        return (
+                          <div key={dtKey} className="ml-4">
+                            <div className="flex items-center gap-1 hover:bg-[var(--gray-3)] rounded px-1">
+                              <button
+                                type="button"
+                                onClick={() => toggleCollapsed(dtKey)}
+                                className="cursor-pointer flex items-center"
+                              >
+                                {dtCollapsed ? <ChevronRightIcon /> : <ChevronDownIcon />}
+                              </button>
+                              <input
+                                type="checkbox"
+                                checked={dtFileKeys.length > 0 && dtFileKeys.every((k) => selectedKeys.has(k))}
+                                onChange={(e) => onSelectMany(dtFileKeys, e.target.checked)}
+                                className="w-3 h-3"
+                              />
+                              <Text size="1" color="blue" className="font-mono">{dt.datatype}/</Text>
+                            </div>
+                            {!dtCollapsed &&
+                              dt.files.map((f) => (
+                                <div
+                                  key={f.key}
+                                  className={`ml-6 flex items-center gap-1 hover:bg-[var(--gray-3)] rounded px-1 ${
+                                    selectedKeys.has(f.key) ? 'bg-[var(--accent-3)]' : ''
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedKeys.has(f.key)}
+                                    onChange={() => onToggle(f.key)}
+                                    className="w-3 h-3"
+                                  />
+                                  <Text size="1" className="font-mono truncate">{f.filename}</Text>
+                                </div>
+                              ))}
+                          </div>
+                        )
+                      })}
+                  </div>
+                )
+              })}
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ── Inspector pane (right) ─────────────────────────────────────────────
+
+interface InspectorProps {
+  files: TreeFile[]
+  selectedKeys: Set<string>
+  onApplyEdit: (keys: string[], field: string, value: unknown) => void
+}
+
+function Inspector({ files, selectedKeys, onApplyEdit }: InspectorProps): React.ReactElement {
+  const selectedFiles = useMemo(
+    () => files.filter((f) => selectedKeys.has(f.key)),
+    [files, selectedKeys]
+  )
+  const rows = useMemo(() => buildInspectorRows(selectedFiles), [selectedFiles])
+  const [newField, setNewField] = useState('')
+  const [newValue, setNewValue] = useState('')
+
+  if (selectedFiles.length === 0) {
+    return (
+      <div className="border border-[var(--gray-5)] rounded p-3 flex items-center justify-center"
+           style={{ minHeight: 240 }}>
+        <Text size="1" color="gray">
+          Select one or more files in the tree to edit their sidecar fields.
+        </Text>
+      </div>
+    )
+  }
+
+  const keys = [...selectedKeys]
+
+  // Sidecar values can be strings, numbers, arrays, or objects. The
+  // inspector input is text, so we parse on commit: numeric-looking input
+  // becomes a number, JSON-looking input is JSON.parse'd, everything else
+  // stays as a string. This mirrors what dcm2niix sidecars hold.
+  const parseValue = (raw: string): unknown => {
+    const trimmed = raw.trim()
+    if (trimmed === '') return undefined
+    if (/^-?\d+(\.\d+)?$/.test(trimmed)) return Number(trimmed)
+    if (trimmed.startsWith('[') || trimmed.startsWith('{')) {
+      try {
+        return JSON.parse(trimmed)
+      } catch {
+        return raw
+      }
+    }
+    return raw
+  }
+
+  const stringify = (v: unknown): string => {
+    if (v === undefined || v === null) return ''
+    if (typeof v === 'string') return v
+    if (typeof v === 'number' || typeof v === 'boolean') return String(v)
+    return JSON.stringify(v)
+  }
+
+  return (
+    <div className="border border-[var(--gray-5)] rounded p-3 flex flex-col gap-3"
+         style={{ minHeight: 240 }}>
+      <div className="flex items-center justify-between">
+        <Text size="2" weight="medium">
+          Sidecar editor — {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
+        </Text>
+      </div>
+      <div className="overflow-y-auto" style={{ maxHeight: 400 }}>
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-[var(--gray-5)]">
+              <th className="text-left px-1 py-1 font-medium w-1/3">Field</th>
+              <th className="text-left px-1 py-1 font-medium">Value</th>
+              <th className="px-1 py-1 w-12"></th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <InspectorRowEditor
+                key={row.field}
+                field={row.field}
+                varies={row.varies}
+                value={row.value}
+                stringify={stringify}
+                onCommit={(v) => onApplyEdit(keys, row.field, parseValue(v))}
+                onClear={() => onApplyEdit(keys, row.field, undefined)}
+              />
+            ))}
+            <tr>
+              <td className="px-1 py-1">
+                <TextField.Root
+                  size="1"
+                  placeholder="New field"
+                  value={newField}
+                  onChange={(e) => setNewField(e.target.value)}
+                />
+              </td>
+              <td className="px-1 py-1">
+                <TextField.Root
+                  size="1"
+                  placeholder="Value"
+                  value={newValue}
+                  onChange={(e) => setNewValue(e.target.value)}
+                />
+              </td>
+              <td className="px-1 py-1">
+                <Button
+                  size="1"
+                  variant="soft"
+                  disabled={!newField}
+                  onClick={() => {
+                    onApplyEdit(keys, newField, parseValue(newValue))
+                    setNewField('')
+                    setNewValue('')
+                  }}
+                >
+                  Add
+                </Button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  )
+}
+
+function InspectorRowEditor({
+  field,
+  varies,
+  value,
+  stringify,
+  onCommit,
+  onClear
+}: {
+  field: string
+  varies: boolean
+  value: unknown
+  stringify: (v: unknown) => string
+  onCommit: (raw: string) => void
+  onClear: () => void
+}): React.ReactElement {
+  const [draft, setDraft] = useState<string | null>(null)
+  const display = draft ?? (varies ? '' : stringify(value))
+
+  return (
+    <tr className="border-b border-[var(--gray-4)]">
+      <td className="px-1 py-1 font-mono text-[var(--gray-11)]">{field}</td>
+      <td className="px-1 py-1">
+        <TextField.Root
+          size="1"
+          value={display}
+          placeholder={varies ? '(varies — type to set all)' : ''}
+          onChange={(e) => setDraft(e.target.value)}
+          onBlur={() => {
+            if (draft === null) return
+            onCommit(draft)
+            setDraft(null)
+          }}
+        />
+      </td>
+      <td className="px-1 py-1 text-right">
+        <Button
+          size="1"
+          variant="ghost"
+          color="gray"
+          onClick={onClear}
+          title="Remove override and fall back to the DICOM-origin value"
+        >
+          ✕
+        </Button>
+      </td>
+    </tr>
+  )
+}
+
+// ── Prep editor (composes relabel form + tree + inspector + preview) ───
+
 export function BidsPrepEditor({
   context,
   onFieldChange,
@@ -168,6 +471,47 @@ export function BidsPrepEditor({
   const subjects = useMemo(
     () => (context.subjects as DetectedSubject[]) || [],
     [context.subjects]
+  )
+
+  const files = useMemo(() => mappingsToTreeFiles(mappings), [mappings])
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
+
+  // Drop selections that no longer correspond to a file (e.g. user excluded a
+  // series in the Filter step then came back here).
+  const validSelected = useMemo(() => {
+    const valid = new Set<string>()
+    const fileKeys = new Set(files.map((f) => f.key))
+    for (const k of selectedKeys) if (fileKeys.has(k)) valid.add(k)
+    return valid
+  }, [files, selectedKeys])
+
+  const toggle = useCallback((key: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }, [])
+
+  const selectMany = useCallback((keys: string[], on: boolean) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      for (const k of keys) {
+        if (on) next.add(k)
+        else next.delete(k)
+      }
+      return next
+    })
+  }, [])
+
+  const handleApplyEdit = useCallback(
+    (keys: string[], field: string, value: unknown) => {
+      const nextMappings = applySidecarOverrideBatch(mappings, keys, field, value)
+      if (nextMappings === mappings) return
+      void onFieldChange('series_list', nextMappings)
+    },
+    [mappings, onFieldChange]
   )
 
   const handleRelabel = useCallback(
@@ -187,6 +531,19 @@ export function BidsPrepEditor({
         subjects={subjects}
         onUpdate={handleRelabel}
       />
+      <div className="grid grid-cols-2 gap-3">
+        <FileTree
+          files={files}
+          selectedKeys={validSelected}
+          onToggle={toggle}
+          onSelectMany={selectMany}
+        />
+        <Inspector
+          files={files}
+          selectedKeys={validSelected}
+          onApplyEdit={handleApplyEdit}
+        />
+      </div>
       <StepBidsPreview
         context={context}
         onFieldChange={(field, value) => {
@@ -198,12 +555,8 @@ export function BidsPrepEditor({
   )
 }
 
-/**
- * BIDS View — post-write editor. Renders after executeAllSteps has produced
- * `bids_dir`. This commit ships the section shell + path readout; the disk
- * tree walker + staged-edit applier (bids:read-tree, bids:apply-staged-edits)
- * land in a follow-up commit.
- */
+// ── View editor (post-write; disk operations land in next commit) ──────
+
 export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
   const bidsDir = (context.bids_dir as string) || ''
 
@@ -232,15 +585,11 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
           <InfoCircledIcon />
         </Callout.Icon>
         <Callout.Text>
-          Disk tree editor is coming in a follow-up. For now, click Finish to close —
-          your dataset is on disk at the path above and the post-pass (scans.tsv,
+          On-disk tree editor with staged edits is coming in a follow-up commit. For now
+          your dataset is on disk at the path above; the BIDS post-pass (scans.tsv,
           B0Field*) has already run.
         </Callout.Text>
       </Callout.Root>
     </div>
   )
 }
-
-// Re-export the pure helpers so unit tests can exercise the rename logic
-// without mounting React.
-export { renameSubject, renameSession }

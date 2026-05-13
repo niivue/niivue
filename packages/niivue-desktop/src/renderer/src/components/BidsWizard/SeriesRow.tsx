@@ -4,10 +4,21 @@ import { ChevronDownIcon, ChevronRightIcon } from '@radix-ui/react-icons'
 import type {
   BidsSeriesMapping,
   BidsDatatype,
-  BidsSuffix,
-  EditableSidecarFields
+  BidsSuffix
 } from '../../../../common/bidsTypes.js'
 import { SUFFIXES_BY_DATATYPE } from './bidsTreeUtil.js'
+
+// Hot-path sidecar keys edited by the inline SeriesRow editor. Declared
+// locally as a string-literal union because EditableSidecarFields now has
+// an open index signature (`[key: string]: unknown`) — `keyof` on that
+// resolves to `string | number`, which is too loose for this list.
+type SeriesRowSidecarKey =
+  | 'RepetitionTime'
+  | 'EchoTime'
+  | 'FlipAngle'
+  | 'PhaseEncodingDirection'
+  | 'TotalReadoutTime'
+  | 'SliceTiming'
 
 interface SeriesRowProps {
   mapping: BidsSeriesMapping
@@ -26,7 +37,7 @@ const confidenceColors: Record<string, string> = {
 }
 
 const EDITABLE_SIDECAR_FIELDS: {
-  key: keyof EditableSidecarFields
+  key: SeriesRowSidecarKey
   label: string
   type: 'number' | 'text'
   readOnly?: boolean
@@ -59,7 +70,7 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
     return () => clearTimeout(timer)
   }, [highlighted, onClearHighlight])
 
-  const getSidecarValue = (key: keyof EditableSidecarFields): string => {
+  const getSidecarValue = (key: SeriesRowSidecarKey): string => {
     if (!sidecar) return ''
     const override = sidecar.overrides[key]
     if (override !== undefined) {
