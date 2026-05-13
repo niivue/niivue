@@ -1533,7 +1533,11 @@ function MainApp(): JSX.Element {
             onModelsChanged={() => setModelsVersion((v) => v + 1)}
           />
         </div>
-        {/* Viewer (center) */}
+        {/* Viewer (center) — workflow shells overlay the viewer in-place
+            rather than mounting as modal dialogs, so they get the full
+            available pane and resize with the window. The viewer DOM
+            stays mounted underneath so its WebGL context survives a
+            round-trip through a workflow. */}
         <div className="flex-1 relative overflow-hidden">
           {documents.map((doc) => (
             <div
@@ -1549,9 +1553,30 @@ function MainApp(): JSX.Element {
               />
             </div>
           ))}
+          {galleryOpen && (
+            <div className="absolute inset-0 z-10">
+              <WorkflowTemplateGallery
+                onClose={closeWorkspaceMode}
+                onSelect={(choice: TemplateChoice) => {
+                  if (choice.kind === 'run-workflow') {
+                    openWizardMode(choice.workflowName, choice.inputs)
+                  } else if (
+                    choice.kind === 'customize' ||
+                    choice.kind === 'use-as-template' ||
+                    choice.kind === 'edit-user'
+                  ) {
+                    openDesignerMode(choice.definition)
+                  } else if (choice.kind === 'blank' || choice.kind === 'advanced') {
+                    openDesignerMode(null)
+                  }
+                }}
+              />
+            </div>
+          )}
         </div>
-        {/* Right Panel (controls, volume, mesh, atlas, segmentation) */}
-        {rightPanelOpen && (
+        {/* Right Panel (controls, volume, mesh, atlas, segmentation) —
+            hidden while a workflow shell occupies the center pane. */}
+        {rightPanelOpen && !galleryOpen && (
           <div className="flex-shrink-0 w-80 bg-white border-l border-gray-300 overflow-auto">
             <RightPanel
               activeTab={rightPanelTab}
@@ -1735,23 +1760,6 @@ function MainApp(): JSX.Element {
               openDesignerMode(definition, { fromWizard: true })
             }
           )
-        }}
-      />
-      <WorkflowTemplateGallery
-        open={galleryOpen}
-        onClose={closeWorkspaceMode}
-        onSelect={(choice: TemplateChoice) => {
-          if (choice.kind === 'run-workflow') {
-            openWizardMode(choice.workflowName, choice.inputs)
-          } else if (
-            choice.kind === 'customize' ||
-            choice.kind === 'use-as-template' ||
-            choice.kind === 'edit-user'
-          ) {
-            openDesignerMode(choice.definition)
-          } else if (choice.kind === 'blank' || choice.kind === 'advanced') {
-            openDesignerMode(null)
-          }
         }}
       />
       <WorkflowDesignerDialog
