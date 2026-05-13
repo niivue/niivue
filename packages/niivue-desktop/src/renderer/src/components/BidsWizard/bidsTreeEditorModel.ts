@@ -19,6 +19,11 @@ export interface TreeFile {
    *  this is original + overrides merged; for View it will be the on-disk
    *  JSON merged with staged ops. */
   sidecar: Record<string, unknown>
+  /** Absolute disk path to the JSON sidecar this row was built from. For
+   *  Prep this is the dcm2niix scratch JSON in /tmp/bids-convert-*; for
+   *  View it's the in-dataset sidecar. Surfaced in the inspector so users
+   *  know which on-disk file backs the row. */
+  sidecarPath?: string
 }
 
 /** Hierarchical grouping the tree component renders: subject → session → datatype → files. */
@@ -58,7 +63,8 @@ export function mappingsToTreeFiles(mappings: BidsSeriesMapping[]): TreeFile[] {
       datatype: m.datatype,
       filename: bidsPath.split('/').pop() ?? bidsPath,
       bidsPath,
-      sidecar: { ...originalUserVisible, ...overrides }
+      sidecar: { ...originalUserVisible, ...overrides },
+      sidecarPath: m.sidecarPath
     })
   }
   return files

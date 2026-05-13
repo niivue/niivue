@@ -348,6 +348,11 @@ function Inspector({ files, selectedKeys, onApplyEdit }: InspectorProps): React.
     return JSON.stringify(v)
   }
 
+  const singleFile = selectedFiles.length === 1 ? selectedFiles[0] : null
+  const distinctSidecarPaths = Array.from(
+    new Set(selectedFiles.map((f) => f.sidecarPath).filter((p): p is string => !!p))
+  )
+
   return (
     <div className="border border-[var(--gray-5)] rounded p-3 flex flex-col gap-3"
          style={{ minHeight: 240 }}>
@@ -356,6 +361,21 @@ function Inspector({ files, selectedKeys, onApplyEdit }: InspectorProps): React.
           Sidecar editor — {selectedFiles.length} file{selectedFiles.length !== 1 ? 's' : ''} selected
         </Text>
       </div>
+      {distinctSidecarPaths.length > 0 && (
+        <div className="flex flex-col gap-0.5 -mt-1">
+          <Text size="1" color="gray">Source JSON{distinctSidecarPaths.length !== 1 ? 's' : ''}:</Text>
+          {distinctSidecarPaths.slice(0, 3).map((p) => (
+            <Text key={p} size="1" className="font-mono text-[var(--gray-11)] truncate" title={p}>
+              {p}
+            </Text>
+          ))}
+          {distinctSidecarPaths.length > 3 && (
+            <Text size="1" color="gray">
+              +{distinctSidecarPaths.length - 3} more
+            </Text>
+          )}
+        </div>
+      )}
       <div className="overflow-y-auto" style={{ maxHeight: 400 }}>
         <table className="w-full text-xs">
           <thead>
@@ -412,6 +432,35 @@ function Inspector({ files, selectedKeys, onApplyEdit }: InspectorProps): React.
           </tbody>
         </table>
       </div>
+      {singleFile && <RawJsonView file={singleFile} />}
+    </div>
+  )
+}
+
+/** Read-only pretty-printed JSON view of a single file's merged sidecar,
+ *  collapsed by default so it doesn't crowd the field editor. Lets the
+ *  user see the complete dcm2niix sidecar in one place. */
+function RawJsonView({ file }: { file: TreeFile }): React.ReactElement {
+  const [open, setOpen] = useState(false)
+  const json = useMemo(() => JSON.stringify(file.sidecar, null, 2), [file.sidecar])
+  return (
+    <div className="border-t border-[var(--gray-5)] pt-2">
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className="flex items-center gap-1 cursor-pointer text-xs text-[var(--gray-11)] hover:text-[var(--gray-12)]"
+      >
+        {open ? <ChevronDownIcon /> : <ChevronRightIcon />}
+        <span>Raw JSON ({Object.keys(file.sidecar).length} keys)</span>
+      </button>
+      {open && (
+        <pre
+          className="mt-1 text-[11px] font-mono bg-[var(--gray-2)] border border-[var(--gray-5)] rounded p-2 overflow-auto"
+          style={{ maxHeight: 240 }}
+        >
+{json}
+        </pre>
+      )}
     </div>
   )
 }
@@ -613,7 +662,8 @@ function diskToTreeFile(f: BidsDiskFile, stagedForFile: Map<string, unknown> | u
     datatype: f.datatype,
     filename: f.filename,
     bidsPath: f.bidsPath,
-    sidecar: merged
+    sidecar: merged,
+    sidecarPath: f.sidecarPath ?? undefined
   }
 }
 
