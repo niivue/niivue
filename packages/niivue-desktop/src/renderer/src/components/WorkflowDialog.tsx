@@ -20,6 +20,7 @@ import { StepClassification } from './BidsWizard/StepClassification.js'
 import { StepSubjectSession } from './BidsWizard/StepSubjectSession.js'
 import { StepSkullStrip } from './BidsWizard/StepSkullStrip.js'
 import { StepBidsPreview } from './BidsWizard/StepBidsPreview.js'
+import { BidsPrepEditor, BidsViewEditor } from './BidsWizard/BidsTreeEditor.js'
 import { BidsSidecarFixForm } from './BidsWizard/BidsSidecarFixForm.js'
 import { BidsSeriesFilter } from './BidsSeriesFilter.js'
 import { VolumePickerField } from './Wizard/fields/VolumePickerField.js'
@@ -455,6 +456,8 @@ const COMPONENT_REGISTRY: Record<string, React.FC<CustomComponentProps>> = {
   'subject-session-editor': SubjectSessionAdapter,
   'skull-strip-editor': SkullStripAdapter,
   'bids-preview': StepBidsPreview,
+  'bids-prep-editor': BidsPrepEditor,
+  'bids-view-editor': BidsViewEditor,
   'bids-sidecar-fix': BidsSidecarFixAdapter,
   'volume-picker': VolumePickerField
 }
@@ -526,6 +529,12 @@ export function WorkflowDialog({
   const isPreparing = engine.status === 'preparing'
   const isRunning = engine.status === 'running'
   const isCompleted = engine.status === 'completed'
+  // A postCompletion section (e.g. BIDS View) renders its component AFTER
+  // executeAllSteps finishes — it edits already-produced output rather than
+  // gathering inputs. We swap CompletionScreen for the section's component
+  // and surface a "Finish" button via the wizard footer.
+  const currentSectionDef = sections[engine.currentSection]
+  const inPostCompletionSection = isCompleted && currentSectionDef?.postCompletion === true
 
   return (
     <WizardShell
@@ -539,8 +548,8 @@ export function WorkflowDialog({
       canProceed={!isPreparing && !isRunning && engine.missingInputs.length === 0}
       loading={isRunning}
       lastStepLabel={sections[engine.currentSection]?.buttonText || 'Run'}
-      onComplete={handleComplete}
-      hideFooter={isCompleted}
+      onComplete={inPostCompletionSection ? engine.handleClose : handleComplete}
+      hideFooter={isCompleted && !inPostCompletionSection}
     >
       {/* Preparing state */}
       {isPreparing && (
@@ -554,8 +563,11 @@ export function WorkflowDialog({
         </div>
       )}
 
-      {/* Form content */}
-      {!isPreparing && engine.definition && !isCompleted && sections[engine.currentSection] && (
+      {/* Form content — also rendered while in a postCompletion section so
+          its custom component (e.g. BIDS View) gets the just-populated
+          context (bids_dir from the write step's outputMappings). */}
+      {!isPreparing && engine.definition && sections[engine.currentSection] &&
+        (!isCompleted || inPostCompletionSection) && (
         <FormSection
           section={sections[engine.currentSection]}
           definition={engine.definition}
@@ -657,8 +669,10 @@ export function WorkflowDialog({
         </Callout.Root>
       )}
 
-      {/* Completion screen */}
-      {isCompleted && (
+      {/* Completion screen — only when there is no postCompletion section
+          (the postCompletion section IS the completion view for workflows
+          that define one). */}
+      {isCompleted && !inPostCompletionSection && (
         <CompletionScreen
           context={engine.context}
           outputs={engine.completedOutputs}

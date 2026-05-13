@@ -87,10 +87,10 @@
         "component": "bids-series-filter"
       },
       {
-        "title": "BIDSUI",
-        "description": "Review the proposed BIDS layout with thumbnails before processing",
+        "title": "BIDS Prep",
+        "description": "Review the proposed BIDS layout and edit subject labels, session labels, and sidecar fields before writing to disk",
         "fields": ["series_list", "subjects"],
-        "component": "bids-preview"
+        "component": "bids-prep-editor"
       },
       {
         "title": "Skull Strip",
@@ -103,6 +103,14 @@
         "description": "Configure dataset metadata and write to disk",
         "fields": ["dataset_name", "dataset_version", "license", "authors", "readme", "output_dir"],
         "buttonText": "Write BIDS"
+      },
+      {
+        "title": "BIDS View",
+        "description": "Browse the written dataset and stage edits to filenames or sidecars; apply to commit changes to disk",
+        "fields": ["bids_dir"],
+        "component": "bids-view-editor",
+        "buttonText": "Finish",
+        "postCompletion": true
       }
     ]
   },

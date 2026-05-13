@@ -144,6 +144,14 @@ export interface FormSectionDef {
   fields: string[]
   component?: string
   buttonText?: string
+  /**
+   * Sections with `postCompletion: true` render AFTER the workflow's engine
+   * steps have finished executing. The last *non*-postCompletion section is
+   * treated as the trigger for executeAllSteps; once steps complete the
+   * dialog advances to the postCompletion section (e.g. a "BIDS View" disk
+   * editor that reads bids_dir produced by the write step).
+   */
+  postCompletion?: boolean
 }
 
 export type Binding = { ref: string } | { constant: unknown }

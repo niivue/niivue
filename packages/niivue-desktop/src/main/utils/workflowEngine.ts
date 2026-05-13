@@ -391,6 +391,14 @@ export async function executeStep(
 export interface ExecuteAllResult {
   outputs: Record<string, unknown>
   stepOutputs: Record<string, Record<string, unknown>>
+  /**
+   * Snapshot of the run's context AFTER all steps executed. Carries any
+   * outputMappings that landed in context (e.g. `bids_dir` produced by
+   * bids-write) so the UI can hand them straight to a postCompletion
+   * section's component without a separate get-state call against a run
+   * that activeRuns has already deleted.
+   */
+  context: Record<string, unknown>
 }
 
 export async function executeAllSteps(runId: string): Promise<ExecuteAllResult> {
@@ -437,15 +445,17 @@ export async function executeAllSteps(runId: string): Promise<ExecuteAllResult> 
       outputs[key] = resolveBinding({ ref: outputDef.ref }, state)
     }
 
-    // Snapshot step outputs before activeRuns is cleared so the caller (UI
-    // completion screen) can scan all step results, not just the workflow's
-    // declared top-level outputs.
+    // Snapshot step outputs and context before activeRuns is cleared so the
+    // caller (UI completion screen, or a postCompletion section that needs
+    // bids_dir from a write step's outputMappings) can read them without a
+    // follow-up get-state on a deleted run.
     const stepOutputs: Record<string, Record<string, unknown>> = {}
     for (const [name, val] of Object.entries(state.stepOutputs)) {
       stepOutputs[name] = val
     }
+    const contextSnapshot = { ...state.context }
 
-    return { outputs, stepOutputs }
+    return { outputs, stepOutputs, context: contextSnapshot }
   } finally {
     clearRunCache(runId)
     activeRuns.delete(runId)

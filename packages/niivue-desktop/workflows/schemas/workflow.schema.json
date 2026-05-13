@@ -160,6 +160,10 @@
         "buttonText": {
           "type": "string",
           "description": "Custom label for the primary action button when this is the last section (defaults to 'Run')"
+        },
+        "postCompletion": {
+          "type": "boolean",
+          "description": "If true, this section renders AFTER engine steps execute. The last non-postCompletion section triggers executeAllSteps; the dialog advances here when complete."
         }
       }
     },

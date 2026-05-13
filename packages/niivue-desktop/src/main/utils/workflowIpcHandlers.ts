@@ -116,10 +116,14 @@ export function registerWorkflowIpcHandlers(): void {
 
   ipcMain.handle('workflow:execute-all', async (_evt, payload: { runId: string }) => {
     // executeAllSteps deletes the run from activeRuns when it finishes, so
-    // we capture step outputs from its return value rather than calling
+    // we capture outputs/context from its return value rather than calling
     // getRunState afterwards (which would always be undefined).
     const result = await executeAllSteps(payload.runId)
-    return { outputs: result.outputs, stepOutputs: result.stepOutputs }
+    return {
+      outputs: result.outputs,
+      stepOutputs: result.stepOutputs,
+      runState: { context: result.context, stepOutputs: result.stepOutputs }
+    }
   })
 
   ipcMain.handle('workflow:run-ready-steps', async (_evt, payload: { runId: string; maxStepIndex?: number }) => {

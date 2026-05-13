@@ -228,7 +228,13 @@ export function useWizardEngine(
   )
 
   const sections = definition?.form?.sections ?? []
-  const isLastSection = currentSection >= sections.length - 1
+  // The "engine-final" section is the last one that DOESN'T have
+  // postCompletion: true. Anything after it is a post-execution view
+  // (e.g. BIDS View reading bids_dir produced by the write step).
+  const firstPostCompletionIdx = sections.findIndex((s) => s.postCompletion)
+  const lastEngineSectionIdx =
+    firstPostCompletionIdx === -1 ? sections.length - 1 : firstPostCompletionIdx - 1
+  const isLastSection = currentSection >= lastEngineSectionIdx
 
   const handleNext = useCallback(async (): Promise<void> => {
     if (!runId) return
@@ -237,12 +243,19 @@ export function useWizardEngine(
     setError(null)
 
     if (isLastSection) {
-      // Final step: execute all remaining workflow steps
+      // Final engine step: execute all remaining workflow steps. If a
+      // post-completion section exists, advance into it so the user can
+      // edit the just-written output without leaving the dialog.
       try {
         const result = await electron.ipcRenderer.invoke('workflow:execute-all', { runId })
+        if (result.runState?.context) setContext(result.runState.context)
+        if (result.runState?.stepOutputs) setStepOutputs(result.runState.stepOutputs)
         setStatus('completed')
         setCompletedOutputs(result.outputs ?? null)
         setCompletedStepOutputs(result.stepOutputs ?? null)
+        if (firstPostCompletionIdx > currentSection) {
+          setCurrentSection(firstPostCompletionIdx)
+        }
       } catch (err) {
         setStatus('error')
         setError(err instanceof Error ? err.message : String(err))
@@ -275,7 +288,7 @@ export function useWizardEngine(
     if (definition && sections[nextSection]) {
       await runSectionHeuristics(runId, definition, sections[nextSection])
     }
-  }, [currentSection, isLastSection, runId, definition, sections])
+  }, [currentSection, isLastSection, runId, definition, sections, firstPostCompletionIdx])
 
   const handleBack = useCallback((): void => {
     if (currentSection > 0) {

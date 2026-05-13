@@ -132,26 +132,28 @@ describe('dicom-to-bids runtime wiring', () => {
     // but the dicom-to-bids workflow already collects `dicom_dir` via its
     // workflow inputs (the menu's native folder dialog prompts the user).
     // Auto-synthesizing a form section for it would surface a second prompt
-    // ("asked twice for DICOM") and — worse — push the BidsSeriesFilter
-    // section back, so `selected_series` never gets seeded before convert
-    // runs, leaving BIDSUI empty downstream.
+    // ("asked twice for DICOM") and — worse — push the BIDS Prep section
+    // back, so `selected_series` never gets seeded before convert runs,
+    // leaving the editor empty downstream.
     const def = getWorkflowDefinitions().get('dicom-to-bids')
     expect(def, 'dicom-to-bids workflow not loaded').toBeTruthy()
     const sections = def!.form?.sections ?? []
     const sectionTitles = sections.map((s) => s.title)
     expect(
       sectionTitles,
-      'unexpected synthetic sections were inserted alongside the declared four'
-    ).toEqual(['Filter', 'BIDSUI', 'Skull Strip', 'Write BIDS'])
+      'unexpected synthetic sections were inserted alongside the declared five'
+    ).toEqual(['Filter', 'BIDS Prep', 'Skull Strip', 'Write BIDS', 'BIDS View'])
     const sectionFields = sections.flatMap((s) => s.fields)
     expect(
       sectionFields,
       'a form section was synthesized for the workflow-level dicom_dir input'
     ).not.toContain('dicom_dir')
-    expect(
-      sectionFields,
-      'a form section was synthesized for bids_dir (produced by bids-write, not user-supplied)'
-    ).not.toContain('bids_dir')
+    // bids_dir IS now intentionally declared on the BIDS View section as the
+    // disk root the editor operates on — the loader should NOT have synthesized
+    // an extra section for it.
+    const bidsDirSections = sections.filter((s) => s.fields.includes('bids_dir'))
+    expect(bidsDirSections, 'bids_dir should only appear on BIDS View').toHaveLength(1)
+    expect(bidsDirSections[0].title).toBe('BIDS View')
   })
 })
 
