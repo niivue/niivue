@@ -14,7 +14,7 @@ export function WizardStepIndicator({
   onStepClick
 }: WizardStepIndicatorProps): React.ReactElement {
   return (
-    <nav className="flex flex-col gap-1 py-2">
+    <nav aria-label="Wizard steps" className="flex flex-col gap-1 py-2">
       {steps.map((step, i) => {
         const isCompleted = i < currentStep
         const isCurrent = i === currentStep
@@ -26,6 +26,8 @@ export function WizardStepIndicator({
             type="button"
             disabled={!isClickable}
             onClick={() => isClickable && onStepClick(i)}
+            aria-current={isCurrent ? 'step' : undefined}
+            aria-label={`Step ${i + 1}: ${step.label}${isCompleted ? ' (completed)' : ''}`}
             className={
               'flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition-colors duration-150 ' +
               (isCurrent

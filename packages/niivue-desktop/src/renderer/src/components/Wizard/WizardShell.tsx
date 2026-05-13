@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react'
-import { Theme } from '@radix-ui/themes'
+import { Dialog, VisuallyHidden } from '@radix-ui/themes'
 import { WizardProvider, type WizardStep } from './WizardContext.js'
 import { WizardHeader } from './WizardHeader.js'
 import { WizardStepIndicator } from './WizardStepIndicator.js'
@@ -84,9 +84,31 @@ export function WizardShell({
 
   if (!open) return null
 
+  const currentStepDef = steps[currentStep]
+  const accessibleDescription =
+    currentStepDef?.description || `Step ${currentStep + 1} of ${steps.length}.`
+
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-surface">
-      <Theme style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+    <Dialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
+      <Dialog.Content
+        maxWidth="95vw"
+        style={{
+          width: '95vw',
+          height: '90vh',
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+        // Long-running workflows (multi-minute imports) must not be dismissed by
+        // a stray click on the overlay — only the explicit X / Cancel close it.
+        onPointerDownOutside={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <VisuallyHidden>
+          <Dialog.Title>{title}</Dialog.Title>
+          <Dialog.Description>{accessibleDescription}</Dialog.Description>
+        </VisuallyHidden>
+
         <WizardProvider
           value={{
             currentStep,
@@ -146,7 +168,7 @@ export function WizardShell({
             />
           )}
         </WizardProvider>
-      </Theme>
-    </div>
+      </Dialog.Content>
+    </Dialog.Root>
   )
 }

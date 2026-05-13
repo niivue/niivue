@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Button, Heading, Text, Card, Badge, Theme } from '@radix-ui/themes'
+import { Button, Heading, Text, Card, Badge, Dialog, VisuallyHidden } from '@radix-ui/themes'
 import {
   Cross1Icon,
   RocketIcon,
@@ -108,8 +108,24 @@ export function WorkflowTemplateGallery({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-surface">
-      <Theme style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}>
+    <Dialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
+      <Dialog.Content
+        maxWidth="95vw"
+        style={{
+          width: '95vw',
+          height: '90vh',
+          padding: 0,
+          display: 'flex',
+          flexDirection: 'column'
+        }}
+      >
+        <VisuallyHidden>
+          <Dialog.Title>Create Workflow</Dialog.Title>
+          <Dialog.Description>
+            Pick an existing workflow template, customize one, or start a new workflow from scratch.
+          </Dialog.Description>
+        </VisuallyHidden>
+
         {/* Header */}
         <header className="flex items-center justify-between px-6 py-4 border-b border-neutral-5 shrink-0 bg-panel">
           <div className="flex items-center gap-3">
@@ -275,7 +291,7 @@ export function WorkflowTemplateGallery({
             )}
           </div>
         </div>
-      </Theme>
-    </div>
+      </Dialog.Content>
+    </Dialog.Root>
   )
 }
