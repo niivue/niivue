@@ -37,18 +37,6 @@
       "description": "Directory containing output files"
     }
   },
-  "block": {
-    "id": "skull-strip-allineate",
-    "label": "Skull-strip (MNI152)",
-    "description": "Strip skull by registering to the MNI152 template and applying its brain mask",
-    "category": "Processing",
-    "icon": "TransformIcon",
-    "defaults": {
-      "cost": "ls"
-    },
-    "exposedFields": ["nifti_paths", "output_dir"],
-    "hiddenFields": ["cost", "nifti_path"]
-  },
   "exec": {
     "binary": {
       "name": "allineate",

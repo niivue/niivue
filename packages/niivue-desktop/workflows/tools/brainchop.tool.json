@@ -46,11 +46,10 @@
     "category": "Processing",
     "icon": "ScissorsIcon",
     "defaults": {
-      "model": "brain-extract-mindgrab",
-      "dilation": 3
+      "model": "brain-extract-mindgrab"
     },
-    "exposedFields": [],
-    "hiddenFields": ["nifti_paths", "nifti_path", "model", "dilation", "output_path"],
+    "exposedFields": ["dilation"],
+    "hiddenFields": ["nifti_paths", "nifti_path", "model", "output_path"],
     "requiredContextFields": ["series_list", "subjects"],
     "contextFields": {
       "series_list": {
@@ -64,6 +63,14 @@
         "label": "Subjects",
         "description": "Detected subjects and sessions grouped by PatientID and AcquisitionDate",
         "heuristic": "detect-subjects"
+      },
+      "dilation": {
+        "type": "number",
+        "label": "Mask dilation (mm)",
+        "description": "Brain-mask dilation in mm (volume is conformed to 1mm isotropic, so 1 mm = 1 voxel)",
+        "default": 3,
+        "min": 0,
+        "max": 10
       }
     },
     "formComponent": "skull-strip-editor"
