@@ -1,12 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import {
-  Button,
-  Heading,
-  Text,
-  Card,
-  Badge,
-  Theme
-} from '@radix-ui/themes'
+import { Button, Heading, Text, Card, Badge, Theme } from '@radix-ui/themes'
 import {
   Cross1Icon,
   RocketIcon,
@@ -104,7 +97,8 @@ export function WorkflowTemplateGallery({
   }
 
   const handleDelete = async (wf: WorkflowListItem): Promise<void> => {
-    if (!confirm(`Delete workflow "${wf.description || wf.name}"?\n\nThis cannot be undone.`)) return
+    if (!confirm(`Delete workflow "${wf.description || wf.name}"?\n\nThis cannot be undone.`))
+      return
     try {
       await electron.ipcRenderer.invoke('workflow:delete', wf.name)
       setWorkflows((prev) => prev.filter((w) => w.name !== wf.name))
@@ -124,7 +118,13 @@ export function WorkflowTemplateGallery({
               Create Workflow
             </Heading>
           </div>
-          <Button variant="ghost" color="gray" size="2" onClick={onClose}>
+          <Button
+            variant="ghost"
+            color="gray"
+            size="2"
+            onClick={onClose}
+            aria-label="Close Create Workflow"
+          >
             <Cross1Icon />
           </Button>
         </header>
@@ -143,7 +143,9 @@ export function WorkflowTemplateGallery({
             </div>
 
             {loading ? (
-              <Text size="2" className="text-neutral-8">Loading workflows...</Text>
+              <Text size="2" className="text-neutral-8">
+                Loading workflows...
+              </Text>
             ) : (
               <div className="flex flex-col gap-8">
                 {/* Existing workflow templates by category */}
@@ -153,14 +155,24 @@ export function WorkflowTemplateGallery({
                     <div key={category}>
                       <div className="flex items-center gap-2 mb-3">
                         <span className="text-[var(--accent-9)]">{meta.icon}</span>
-                        <Heading size="3" className="text-neutral-11">{category}</Heading>
-                        <Badge variant="soft" size="1" color={meta.color as 'blue' | 'violet' | 'green'}>
+                        <Heading size="3" className="text-neutral-11">
+                          {category}
+                        </Heading>
+                        <Badge
+                          variant="soft"
+                          size="1"
+                          color={meta.color as 'blue' | 'violet' | 'green'}
+                        >
                           {wfs.length}
                         </Badge>
                       </div>
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {wfs.map((wf) => (
-                          <Card key={wf.name} size="2" className="hover:shadow-md transition-shadow">
+                          <Card
+                            key={wf.name}
+                            size="2"
+                            className="hover:shadow-md transition-shadow"
+                          >
                             <div className="flex flex-col gap-3">
                               <div className="flex items-center gap-2">
                                 <div className="flex-1">
@@ -172,7 +184,9 @@ export function WorkflowTemplateGallery({
                                   </Text>
                                 </div>
                                 {wf.userCreated && (
-                                  <Badge variant="soft" size="1" color="green">Custom</Badge>
+                                  <Badge variant="soft" size="1" color="green">
+                                    Custom
+                                  </Badge>
                                 )}
                               </div>
                               <div className="flex items-center gap-2">
@@ -221,7 +235,9 @@ export function WorkflowTemplateGallery({
 
                 {/* Start from scratch */}
                 <div>
-                  <Heading size="3" className="text-neutral-11 mb-3">Build Your Own</Heading>
+                  <Heading size="3" className="text-neutral-11 mb-3">
+                    Build Your Own
+                  </Heading>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Card
                       size="2"

@@ -31,7 +31,12 @@ import {
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
 import { Badge, Text } from '@radix-ui/themes'
-import { TrashIcon, ChevronUpIcon, ChevronDownIcon } from '@radix-ui/react-icons'
+import {
+  TrashIcon,
+  ChevronUpIcon,
+  ChevronDownIcon,
+  ExclamationTriangleIcon
+} from '@radix-ui/react-icons'
 import type { ToolDefinition } from '../../../common/workflowTypes.js'
 import {
   detectBlockForStep,
@@ -80,6 +85,8 @@ interface StepNodeData extends Record<string, unknown> {
   selected: boolean
   hasError: boolean
   hasWarning: boolean
+  /** First validation error/warning message for this step, surfaced inline under the header. */
+  issue?: { kind: 'error' | 'warning'; message: string }
   /**
    * input name → annotation describing where the value comes from. `null`
    * means the input is unbound or wired from another step (the latter is
@@ -105,6 +112,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
     selected,
     hasError,
     hasWarning,
+    issue,
     inputAnnotations,
     onSelect,
     onRemove,
@@ -160,6 +168,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
             onMove(-1)
           }}
           disabled={index === 0}
+          aria-label="Move step earlier"
           title="Move earlier"
           style={{
             background: 'transparent',
@@ -178,6 +187,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
             onMove(1)
           }}
           disabled={index === totalSteps - 1}
+          aria-label="Move step later"
           title="Move later"
           style={{
             background: 'transparent',
@@ -195,6 +205,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
             e.stopPropagation()
             onRemove()
           }}
+          aria-label={`Remove step ${step.name || index + 1}`}
           title="Remove step"
           style={{
             background: 'transparent',
@@ -208,6 +219,29 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
           <TrashIcon />
         </button>
       </div>
+
+      {/* Inline validation message — surfaced on the offending node so authors
+          don't have to open the header popover to discover what's wrong. */}
+      {issue && (
+        <div
+          role={issue.kind === 'error' ? 'alert' : 'status'}
+          style={{
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 6,
+            padding: '6px 10px',
+            background: issue.kind === 'error' ? 'var(--red-3)' : 'var(--amber-3)',
+            color: issue.kind === 'error' ? 'var(--red-11)' : 'var(--amber-11)',
+            borderBottom: '1px solid var(--gray-5)'
+          }}
+          title={issue.message}
+        >
+          <ExclamationTriangleIcon style={{ marginTop: 2, flexShrink: 0 }} />
+          <Text size="1" style={{ lineHeight: 1.3, minWidth: 0 }}>
+            {issue.message}
+          </Text>
+        </div>
+      )}
 
       {/* Inputs / Outputs side-by-side */}
       <div style={{ display: 'flex', padding: '6px 0' }}>
@@ -410,11 +444,7 @@ function DeletableEdge({
         >
           {typeLabel && (
             <span
-              title={
-                isCoercion
-                  ? `${sourceType} → ${targetType} (coerced)`
-                  : `${sourceType}`
-              }
+              title={isCoercion ? `${sourceType} → ${targetType} (coerced)` : `${sourceType}`}
               style={{
                 fontSize: 10,
                 lineHeight: 1,
@@ -433,6 +463,7 @@ function DeletableEdge({
           )}
           <button
             onClick={handleDelete}
+            aria-label="Delete connection"
             title="Delete connection"
             className="workflow-edge-delete"
             style={{
@@ -476,6 +507,8 @@ interface WorkflowDiagramViewProps {
   errorSteps: Set<number>
   /** Steps with non-fatal validation warnings (e.g. type-mismatch coercion). */
   warnSteps?: Set<number>
+  /** Per-step-index validation issue (first error or warning), shown inline on the node. */
+  stepIssueByIndex?: Map<number, { kind: 'error' | 'warning'; message: string }>
 }
 
 // ── Component ────────────────────────────────────────────────────────
@@ -489,7 +522,8 @@ export function WorkflowDiagramView({
   onRemoveStep,
   onMoveStep,
   errorSteps,
-  warnSteps
+  warnSteps,
+  stepIssueByIndex
 }: WorkflowDiagramViewProps): React.ReactElement {
   // Build nodes: one per step, laid out left-to-right.
   const nodes = useMemo<Node<StepNodeData>[]>(() => {
@@ -541,6 +575,7 @@ export function WorkflowDiagramView({
           selected: selectedStep === i,
           hasError: errorSteps.has(i),
           hasWarning: warnSteps?.has(i) ?? false,
+          issue: stepIssueByIndex?.get(i),
           inputAnnotations,
           onSelect: (): void => onSelectStep(selectedStep === i ? null : i),
           onRemove: (): void => onRemoveStep(i),
@@ -557,6 +592,7 @@ export function WorkflowDiagramView({
     selectedStep,
     errorSteps,
     warnSteps,
+    stepIssueByIndex,
     onSelectStep,
     onRemoveStep,
     onMoveStep
@@ -607,8 +643,7 @@ export function WorkflowDiagramView({
         const isArray = !!sourceType && sourceType.endsWith('[]')
         const compatible =
           !sourceType || !targetType ? true : isTypeCompatible(sourceType, targetType)
-        const isCoercion =
-          !!sourceType && !!targetType && sourceType !== targetType && compatible
+        const isCoercion = !!sourceType && !!targetType && sourceType !== targetType && compatible
 
         const color = compatible
           ? outDef

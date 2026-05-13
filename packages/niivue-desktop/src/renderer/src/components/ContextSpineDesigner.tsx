@@ -793,6 +793,7 @@ export function ContextSpineDesigner({
                                       <button
                                         type="button"
                                         className="cursor-pointer"
+                                        aria-label="Edit form field"
                                         title="Edit form field"
                                       >
                                         <Badge

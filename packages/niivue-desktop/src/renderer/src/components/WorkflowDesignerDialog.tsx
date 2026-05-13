@@ -10,9 +10,18 @@
 // Power users who want to edit JSON directly should open the .workflow.json
 // file in their text editor.
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react'
-import { Dialog, Button, Text, Flex, SegmentedControl, Popover, Badge } from '@radix-ui/themes'
-import { Cross1Icon, ExclamationTriangleIcon } from '@radix-ui/react-icons'
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
+import {
+  Dialog,
+  Button,
+  Text,
+  Flex,
+  SegmentedControl,
+  Popover,
+  Badge,
+  VisuallyHidden
+} from '@radix-ui/themes'
+import { Cross1Icon, ExclamationTriangleIcon, ResetIcon, ReloadIcon } from '@radix-ui/react-icons'
 import type { ToolDefinition } from '../../../common/workflowTypes.js'
 import {
   blockToStepDraft,
@@ -233,37 +242,155 @@ export function WorkflowDesignerDialog({
   const [heuristicNames, setHeuristicNames] = useState<string[]>([])
   const [validation, setValidation] = useState<ValidationResult>({ errors: [], warnings: [] })
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [savedAt, setSavedAt] = useState<number | null>(null)
   const [view, setView] = useState<'list' | 'diagram'>('list')
   const [selectedStep, setSelectedStep] = useState<number | null>(null)
 
+  // Snapshot of the draft at last open / last successful save. We compare the
+  // current draft against this to decide whether the close button should warn
+  // about discarding changes. JSON-stringify is fine — the draft is plain data.
+  const baselineDraftRef = useRef<string>(JSON.stringify(DEFAULT_DRAFT))
+  const dirty = useMemo(() => JSON.stringify(draft) !== baselineDraftRef.current, [draft])
+
+  // Undo/redo stacks (capped at 50 entries each) hold JSON-stringified drafts.
+  // historyTick exists only to re-render when canUndo/canRedo change — the
+  // stacks themselves live in refs so the wrapped setter can read them
+  // synchronously inside the functional updater.
+  const undoStackRef = useRef<string[]>([])
+  const redoStackRef = useRef<string[]>([])
+  const lastPushAtRef = useRef<number>(0)
+  const [historyTick, setHistoryTick] = useState(0)
+  const HISTORY_MAX = 50
+  const COALESCE_MS = 600
+
+  // Wrap setDraft so every user-driven edit also pushes the prior state onto
+  // the undo stack (with rapid edits coalesced into a single entry).
+  const setDraftWithHistory: React.Dispatch<React.SetStateAction<WorkflowDraft>> = useCallback(
+    (updater) => {
+      setDraft((prev) => {
+        const next =
+          typeof updater === 'function'
+            ? (updater as (p: WorkflowDraft) => WorkflowDraft)(prev)
+            : updater
+        const prevStr = JSON.stringify(prev)
+        const nextStr = JSON.stringify(next)
+        if (prevStr === nextStr) return prev
+        const now = Date.now()
+        const coalesce =
+          now - lastPushAtRef.current < COALESCE_MS && undoStackRef.current.length > 0
+        if (!coalesce) {
+          const trimmed = undoStackRef.current.slice(-(HISTORY_MAX - 1))
+          undoStackRef.current = [...trimmed, prevStr]
+        }
+        lastPushAtRef.current = now
+        if (redoStackRef.current.length > 0) redoStackRef.current = []
+        setHistoryTick((t) => t + 1)
+        return next
+      })
+    },
+    []
+  )
+
+  const undo = useCallback(() => {
+    const stack = undoStackRef.current
+    if (stack.length === 0) return
+    setDraft((current) => {
+      const prevStr = stack[stack.length - 1]
+      undoStackRef.current = stack.slice(0, -1)
+      redoStackRef.current = [...redoStackRef.current, JSON.stringify(current)]
+      lastPushAtRef.current = 0
+      setHistoryTick((t) => t + 1)
+      return JSON.parse(prevStr) as WorkflowDraft
+    })
+  }, [])
+
+  const redo = useCallback(() => {
+    const stack = redoStackRef.current
+    if (stack.length === 0) return
+    setDraft((current) => {
+      const nextStr = stack[stack.length - 1]
+      redoStackRef.current = stack.slice(0, -1)
+      undoStackRef.current = [...undoStackRef.current, JSON.stringify(current)]
+      lastPushAtRef.current = 0
+      setHistoryTick((t) => t + 1)
+      return JSON.parse(nextStr) as WorkflowDraft
+    })
+  }, [])
+
+  // Recompute on history changes so the buttons enable/disable correctly.
+  // `historyTick` is the dependency that triggers re-evaluation; the refs
+  // themselves don't notify React when their `.current` mutates.
+  const canUndo = useMemo(() => undoStackRef.current.length > 0, [historyTick])
+  const canRedo = useMemo(() => redoStackRef.current.length > 0, [historyTick])
+
   const toolsMap = useMemo(() => new Map(tools.map((t) => [t.name, t])), [tools])
 
-  // Indices of steps that show up in any validation error message. We match
-  // by step name, which is what validator messages embed.
+  // Map step name → first error / warning message, used to badge nodes and
+  // surface the offending message inline on the diagram. Built once per
+  // validation result so the diagram doesn't substring-match step names
+  // (which produced false positives when one name was a prefix of another,
+  // e.g. `convert` matching `convert_t1`).
+  const stepErrorByName = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const e of validation.errors) {
+      if (e.stepName && !map.has(e.stepName)) map.set(e.stepName, e.message)
+    }
+    return map
+  }, [validation.errors])
+
+  const stepWarnByName = useMemo(() => {
+    const map = new Map<string, string>()
+    for (const w of validation.warnings) {
+      if (w.stepName && !map.has(w.stepName)) map.set(w.stepName, w.message)
+    }
+    return map
+  }, [validation.warnings])
+
   const errorSteps = useMemo(() => {
     const set = new Set<number>()
     draft.steps.forEach((step, i) => {
-      if (validation.errors.some((e) => e.message.includes(step.name))) set.add(i)
+      if (stepErrorByName.has(step.name)) set.add(i)
     })
     return set
-  }, [draft.steps, validation.errors])
+  }, [draft.steps, stepErrorByName])
 
-  // Indices of steps with non-fatal warnings (e.g. type-coercion mismatches).
-  // Suppressed when the same step already has a fatal error.
+  // Non-fatal warnings suppressed when the same step already has a fatal error.
   const warnSteps = useMemo(() => {
     const set = new Set<number>()
     draft.steps.forEach((step, i) => {
       if (errorSteps.has(i)) return
-      if (validation.warnings.some((w) => w.message.includes(step.name))) set.add(i)
+      if (stepWarnByName.has(step.name)) set.add(i)
     })
     return set
-  }, [draft.steps, validation.warnings, errorSteps])
+  }, [draft.steps, stepWarnByName, errorSteps])
+
+  // Per-step error/warning messages keyed by step index, for inline display
+  // on the diagram nodes (PR1 #6).
+  const stepIssueByIndex = useMemo(() => {
+    const map = new Map<number, { kind: 'error' | 'warning'; message: string }>()
+    draft.steps.forEach((step, i) => {
+      const err = stepErrorByName.get(step.name)
+      if (err) {
+        map.set(i, { kind: 'error', message: err })
+        return
+      }
+      const warn = stepWarnByName.get(step.name)
+      if (warn) map.set(i, { kind: 'warning', message: warn })
+    })
+    return map
+  }, [draft.steps, stepErrorByName, stepWarnByName])
 
   // Reset draft / load tools when dialog opens
   useEffect(() => {
     if (!open) {
       setDraft({ ...DEFAULT_DRAFT })
       setSaveError(null)
+      setSavedAt(null)
+      baselineDraftRef.current = JSON.stringify(DEFAULT_DRAFT)
+      undoStackRef.current = []
+      redoStackRef.current = []
+      lastPushAtRef.current = 0
+      setHistoryTick((t) => t + 1)
       return
     }
 
@@ -277,9 +404,15 @@ export function WorkflowDesignerDialog({
       .then((names: string[]) => setHeuristicNames(names))
       .catch(() => setHeuristicNames([]))
 
-    if (initialDefinition) {
-      setDraft(definitionToDraft(initialDefinition))
-    }
+    const initialDraft = initialDefinition
+      ? definitionToDraft(initialDefinition)
+      : { ...DEFAULT_DRAFT }
+    setDraft(initialDraft)
+    baselineDraftRef.current = JSON.stringify(initialDraft)
+    undoStackRef.current = []
+    redoStackRef.current = []
+    lastPushAtRef.current = 0
+    setHistoryTick((t) => t + 1)
   }, [open, initialDefinition])
 
   // Once tools are loaded, repair any missing block-default bindings on the
@@ -321,7 +454,7 @@ export function WorkflowDesignerDialog({
       const isHeadless = block.exposedFields.length === 0 && !block.formComponent
       const formSection: FormSectionDraft | null = isHeadless ? null : blockToFormSection(block)
 
-      setDraft((prev) => {
+      setDraftWithHistory((prev) => {
         const mergedFields = { ...prev.contextFields }
         for (const [name, field] of Object.entries(newContextFields)) {
           if (!(name in mergedFields)) mergedFields[name] = field
@@ -344,30 +477,36 @@ export function WorkflowDesignerDialog({
         }
       })
     },
-    [draft, toolsMap]
+    [draft, toolsMap, setDraftWithHistory]
   )
 
-  const handleRemoveStep = useCallback((index: number): void => {
-    setDraft((prev) => ({
-      ...prev,
-      steps: prev.steps.filter((_, i) => i !== index),
-      sections: prev.sections.filter((_, i) => i !== index)
-    }))
-  }, [])
+  const handleRemoveStep = useCallback(
+    (index: number): void => {
+      setDraftWithHistory((prev) => ({
+        ...prev,
+        steps: prev.steps.filter((_, i) => i !== index),
+        sections: prev.sections.filter((_, i) => i !== index)
+      }))
+    },
+    [setDraftWithHistory]
+  )
 
-  const handleMoveStep = useCallback((index: number, direction: -1 | 1): void => {
-    const target = index + direction
-    setDraft((prev) => {
-      const steps = [...prev.steps]
-      const sections = [...prev.sections]
-      if (target < 0 || target >= steps.length) return prev
-      ;[steps[index], steps[target]] = [steps[target], steps[index]]
-      if (sections[index] && sections[target]) {
-        ;[sections[index], sections[target]] = [sections[target], sections[index]]
-      }
-      return { ...prev, steps, sections }
-    })
-  }, [])
+  const handleMoveStep = useCallback(
+    (index: number, direction: -1 | 1): void => {
+      const target = index + direction
+      setDraftWithHistory((prev) => {
+        const steps = [...prev.steps]
+        const sections = [...prev.sections]
+        if (target < 0 || target >= steps.length) return prev
+        ;[steps[index], steps[target]] = [steps[target], steps[index]]
+        if (sections[index] && sections[target]) {
+          ;[sections[index], sections[target]] = [sections[target], sections[index]]
+        }
+        return { ...prev, steps, sections }
+      })
+    },
+    [setDraftWithHistory]
+  )
 
   // ── Save ────────────────────────────────────────────────────────────
 
@@ -382,12 +521,59 @@ export function WorkflowDesignerDialog({
       return
     }
     onSave?.(draftToSchema(draft))
+    // Mark the current draft as the new baseline so the dirty indicator
+    // clears and the close-confirmation won't trigger on a saved draft.
+    baselineDraftRef.current = JSON.stringify(draft)
+    setSavedAt(Date.now())
   }, [draft, validation, onSave])
+
+  // Auto-clear the save toast after a few seconds.
+  useEffect(() => {
+    if (savedAt === null) return
+    const t = setTimeout(() => setSavedAt(null), 3000)
+    return (): void => clearTimeout(t)
+  }, [savedAt])
+
+  // Intercepts every close path (X button, ESC, backdrop). Warns before
+  // discarding unsaved changes; on confirm, proceeds with onClose().
+  const requestClose = useCallback((): void => {
+    if (
+      dirty &&
+      !window.confirm('You have unsaved changes. Discard them and close the designer?')
+    ) {
+      return
+    }
+    onClose()
+  }, [dirty, onClose])
+
+  // Global ⌘/Ctrl-Z and ⌘/Ctrl-Shift-Z keybindings, scoped to the open
+  // dialog. We skip when the focus target is an editable element so we
+  // don't fight a native text-input undo (those have their own history).
+  useEffect(() => {
+    if (!open) return
+    const handler = (e: KeyboardEvent): void => {
+      if (!(e.metaKey || e.ctrlKey)) return
+      if (e.key !== 'z' && e.key !== 'Z') return
+      const target = e.target as HTMLElement | null
+      if (target) {
+        const tag = target.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return
+      }
+      e.preventDefault()
+      if (e.shiftKey) {
+        redo()
+      } else {
+        undo()
+      }
+    }
+    window.addEventListener('keydown', handler)
+    return (): void => window.removeEventListener('keydown', handler)
+  }, [open, undo, redo])
 
   if (!open) return null
 
   return (
-    <Dialog.Root open={open} onOpenChange={(o) => !o && onClose()}>
+    <Dialog.Root open={open} onOpenChange={(o) => !o && requestClose()}>
       <Dialog.Content
         maxWidth="95vw"
         style={{
@@ -398,17 +584,32 @@ export function WorkflowDesignerDialog({
           flexDirection: 'column'
         }}
       >
-        <Dialog.Title style={{ display: 'none' }}>Workflow Designer</Dialog.Title>
-        <Dialog.Description style={{ display: 'none' }}>
-          Visual designer for building custom workflows from tool blocks.
-        </Dialog.Description>
+        <VisuallyHidden>
+          <Dialog.Title>Workflow Designer</Dialog.Title>
+          <Dialog.Description>
+            Visual designer for building custom workflows from tool blocks.
+          </Dialog.Description>
+        </VisuallyHidden>
 
         {/* Header */}
         <header className="flex items-center justify-between px-4 py-2 border-b border-neutral-5">
           <Flex gap="3" align="center">
-            <Text size="3" weight="bold">
-              Workflow Designer
-            </Text>
+            <Flex gap="1" align="center">
+              <Text size="3" weight="bold">
+                Workflow Designer
+              </Text>
+              {dirty && (
+                <Text
+                  size="3"
+                  weight="bold"
+                  color="amber"
+                  title="Unsaved changes"
+                  aria-label="Unsaved changes"
+                >
+                  •
+                </Text>
+              )}
+            </Flex>
             <SegmentedControl.Root
               size="1"
               value={view}
@@ -422,6 +623,11 @@ export function WorkflowDesignerDialog({
             {saveError && (
               <Text size="1" color="red">
                 {saveError}
+              </Text>
+            )}
+            {savedAt !== null && !saveError && !dirty && (
+              <Text size="1" color="green" role="status" aria-live="polite">
+                Saved.
               </Text>
             )}
             {(validation.errors.length > 0 || validation.warnings.length > 0) && (
@@ -478,10 +684,38 @@ export function WorkflowDesignerDialog({
                 </Popover.Content>
               </Popover.Root>
             )}
+            <Button
+              variant="ghost"
+              color="gray"
+              size="2"
+              onClick={undo}
+              disabled={!canUndo}
+              aria-label="Undo"
+              title="Undo (⌘Z)"
+            >
+              <ResetIcon />
+            </Button>
+            <Button
+              variant="ghost"
+              color="gray"
+              size="2"
+              onClick={redo}
+              disabled={!canRedo}
+              aria-label="Redo"
+              title="Redo (⌘⇧Z)"
+            >
+              <ReloadIcon />
+            </Button>
             <Button variant="soft" size="2" onClick={handleSave}>
               Save
             </Button>
-            <Button variant="ghost" color="gray" size="2" onClick={onClose}>
+            <Button
+              variant="ghost"
+              color="gray"
+              size="2"
+              onClick={requestClose}
+              aria-label="Close Workflow Designer"
+            >
               <Cross1Icon />
             </Button>
           </Flex>
@@ -493,7 +727,7 @@ export function WorkflowDesignerDialog({
           {view === 'list' ? (
             <ContextSpineDesigner
               draft={draft}
-              setDraft={setDraft}
+              setDraft={setDraftWithHistory}
               tools={toolsMap}
               validation={validation}
               runnableTools={runnableTools}
@@ -507,7 +741,7 @@ export function WorkflowDesignerDialog({
             <div className="flex-1 flex flex-col min-h-0">
               <WorkflowDiagramView
                 draft={draft}
-                setDraft={setDraft}
+                setDraft={setDraftWithHistory}
                 tools={toolsMap}
                 selectedStep={selectedStep}
                 onSelectStep={setSelectedStep}
@@ -515,6 +749,7 @@ export function WorkflowDesignerDialog({
                 onMoveStep={handleMoveStep}
                 errorSteps={errorSteps}
                 warnSteps={warnSteps}
+                stepIssueByIndex={stepIssueByIndex}
               />
               <div className="border-t border-neutral-5 bg-[var(--gray-2)] px-3 py-2 max-h-56 overflow-y-auto shrink-0">
                 <BlockPalette
