@@ -16,6 +16,7 @@ import {
   Background,
   Controls,
   Handle,
+  Panel,
   Position,
   BaseEdge,
   EdgeLabelRenderer,
@@ -54,6 +55,19 @@ function typeColorVar(type: string): string {
   return `var(--${c}-9)`
 }
 
+/** Constants are stored JSON-stringified; show a short, readable preview. */
+function truncateForTooltip(value: string): string {
+  let display = value
+  try {
+    const parsed = JSON.parse(value)
+    if (typeof parsed === 'string') display = parsed
+    else display = JSON.stringify(parsed)
+  } catch {
+    // not JSON — show raw
+  }
+  return display.length > 80 ? `${display.slice(0, 77)}…` : display
+}
+
 // ── Step node ────────────────────────────────────────────────────────
 
 interface StepNodeData extends Record<string, unknown> {
@@ -66,8 +80,15 @@ interface StepNodeData extends Record<string, unknown> {
   selected: boolean
   hasError: boolean
   hasWarning: boolean
-  /** input name → 'wf-input' | 'context' | null (drawn as a badge on the handle) */
-  inputAnnotations: Record<string, 'wf-input' | 'context' | null>
+  /**
+   * input name → annotation describing where the value comes from. `null`
+   * means the input is unbound or wired from another step (the latter is
+   * shown as a graph edge instead of a badge).
+   */
+  inputAnnotations: Record<
+    string,
+    { kind: 'wf-input' | 'context' | 'constant'; tooltip: string } | null
+  >
   onSelect: () => void
   onRemove: () => void
   onMove: (direction: -1 | 1) => void
@@ -228,15 +249,26 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
                   <Text size="1" style={{ color: 'var(--gray-12)', flex: 1, minWidth: 0 }} truncate>
                     {(def as { label?: string }).label || name}
                   </Text>
-                  {annot === 'wf-input' && (
-                    <Badge variant="soft" size="1" color="iris">
-                      in
-                    </Badge>
+                  {annot?.kind === 'wf-input' && (
+                    <span title={annot.tooltip} style={{ display: 'inline-flex' }}>
+                      <Badge variant="soft" size="1" color="iris">
+                        in
+                      </Badge>
+                    </span>
                   )}
-                  {annot === 'context' && (
-                    <Badge variant="soft" size="1" color="orange">
-                      form
-                    </Badge>
+                  {annot?.kind === 'context' && (
+                    <span title={annot.tooltip} style={{ display: 'inline-flex' }}>
+                      <Badge variant="soft" size="1" color="orange">
+                        form
+                      </Badge>
+                    </span>
+                  )}
+                  {annot?.kind === 'constant' && (
+                    <span title={annot.tooltip} style={{ display: 'inline-flex' }}>
+                      <Badge variant="soft" size="1" color="grass">
+                        =
+                      </Badge>
+                    </span>
                   )}
                 </div>
               )
@@ -465,16 +497,31 @@ export function WorkflowDiagramView({
       const tool = tools.get(step.tool)
       const block = detectBlockForStep(step, tools)
 
-      const inputAnnotations: Record<string, 'wf-input' | 'context' | null> = {}
+      const inputAnnotations: StepNodeData['inputAnnotations'] = {}
       for (const [inputName, binding] of Object.entries(step.inputs)) {
-        if (binding.mode !== 'ref' || !binding.value) {
+        if (!binding.value) {
           inputAnnotations[inputName] = null
           continue
         }
+        if (binding.mode === 'constant') {
+          inputAnnotations[inputName] = {
+            kind: 'constant',
+            tooltip: `Constant value: ${truncateForTooltip(binding.value)}`
+          }
+          continue
+        }
         if (binding.value.startsWith('inputs.')) {
-          inputAnnotations[inputName] = 'wf-input'
+          const wfInput = binding.value.slice('inputs.'.length)
+          inputAnnotations[inputName] = {
+            kind: 'wf-input',
+            tooltip: `Workflow input: ${wfInput}`
+          }
         } else if (binding.value.startsWith('context.')) {
-          inputAnnotations[inputName] = 'context'
+          const ctxField = binding.value.slice('context.'.length)
+          inputAnnotations[inputName] = {
+            kind: 'context',
+            tooltip: `Form / context field: ${ctxField}`
+          }
         } else {
           inputAnnotations[inputName] = null
         }
@@ -707,6 +754,57 @@ export function WorkflowDiagramView({
       >
         <Background gap={16} />
         <Controls showInteractive={false} />
+        <Panel position="top-right">
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              padding: '6px 10px',
+              borderRadius: 6,
+              background: 'var(--color-panel-translucent)',
+              border: '1px solid var(--gray-5)',
+              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+              fontSize: 11,
+              color: 'var(--gray-11)'
+            }}
+            title="How inputs get their values"
+          >
+            <Text size="1" weight="medium" style={{ color: 'var(--gray-12)' }}>
+              Input source:
+            </Text>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Badge variant="soft" size="1" color="iris">
+                in
+              </Badge>
+              <Text size="1">workflow input</Text>
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Badge variant="soft" size="1" color="orange">
+                form
+              </Badge>
+              <Text size="1">user form</Text>
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <Badge variant="soft" size="1" color="grass">
+                =
+              </Badge>
+              <Text size="1">constant</Text>
+            </span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <span
+                style={{
+                  display: 'inline-block',
+                  width: 18,
+                  height: 2,
+                  background: 'var(--gray-9)',
+                  borderRadius: 1
+                }}
+              />
+              <Text size="1">step output</Text>
+            </span>
+          </div>
+        </Panel>
       </ReactFlow>
     </div>
   )
