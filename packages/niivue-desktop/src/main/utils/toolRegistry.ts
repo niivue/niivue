@@ -7,6 +7,7 @@ import { writeDataset } from './bidsWriter.js'
 import { autoFixUnambiguous } from './bidsSidecarFixer.js'
 import { validateBidsDirectory } from './bidsExternalValidator.js'
 import { invokeRenderer } from './rendererBridge.js'
+import { nodePostPassFs, runPostPass } from './bidsPostpass/index.js'
 import type {
   BidsDatasetConfig,
   BidsSeriesMapping,
@@ -266,6 +267,36 @@ const atlasParcellateExecutor: ToolExecutor = async (inputs) => {
   }
 }
 
+/**
+ * bids-postpass — aggregate scans.tsv and wire B0FieldIdentifier/
+ * B0FieldSource across a written BIDS root. Writes happen in-process
+ * via fs.writeFileSync (atomic-on-rename would need an OperationContext
+ * we don't have yet; failures are per-session and surface in `failures`).
+ */
+const bidsPostpassExecutor: ToolExecutor = async (inputs) => {
+  const bidsDir = inputs.bids_dir as string
+  if (!bidsDir || typeof bidsDir !== 'string') {
+    throw new Error('bids-postpass: bids_dir input is required')
+  }
+
+  const result = await runPostPass(
+    bidsDir,
+    async (filePath, content) => {
+      fs.mkdirSync(path.dirname(filePath), { recursive: true })
+      fs.writeFileSync(filePath, content, 'utf-8')
+    },
+    nodePostPassFs
+  )
+
+  return {
+    bids_dir: bidsDir,
+    session_count: result.sessionCount,
+    scans_tsv_writes: result.scansTsvWrites,
+    b0_field_edits: result.b0FieldEdits,
+    failures: result.failures
+  }
+}
+
 // ── Tool executor registry ──────────────────────────────────────────
 
 const toolExecutors = new Map<string, ToolExecutor>([
@@ -273,6 +304,7 @@ const toolExecutors = new Map<string, ToolExecutor>([
   ['bids-validate', bidsValidateExecutor],
   ['bids-write', bidsWriteExecutor],
   ['bids-fix-sidecars', bidsFixSidecarsExecutor],
+  ['bids-postpass', bidsPostpassExecutor],
   ['atlas-parcellate', atlasParcellateExecutor]
 ])
 

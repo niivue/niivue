@@ -12,6 +12,11 @@ import type {
 } from '../../common/bidsTypes.js'
 import { writeDataset } from './bidsWriter.js'
 import { generateBidsFilename } from './bidsWriter.js'
+import { validateBidsDirectoryInProcess } from './bidsInProcessValidator.js'
+
+// Set BIDS_VALIDATOR_USE_CLI=1 to force the legacy shell-out path
+// (useful for A/B comparisons when triaging an in-process regression).
+const USE_LEGACY_CLI = process.env.BIDS_VALIDATOR_USE_CLI === '1'
 
 
 interface BidsValidatorIssue {
@@ -110,6 +115,9 @@ export async function validateBidsDirectory(
   mappings: BidsSeriesMapping[]
 ): Promise<BidsValidationResult> {
   debugLog(`validateBidsDirectory called with: ${dirPath}`)
+  if (!USE_LEGACY_CLI) {
+    return validateBidsDirectoryInProcess(dirPath, mappings)
+  }
   const cmd = findBidsValidator()
   if (!cmd) {
     return {

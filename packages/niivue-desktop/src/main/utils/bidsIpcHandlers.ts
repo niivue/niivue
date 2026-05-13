@@ -26,6 +26,7 @@ import {
   readSidecar,
   updateSidecar
 } from './bidsSidecarFixer.js'
+import { nodePostPassFs, runPostPass } from './bidsPostpass/index.js'
 import type {
   BidsConvertAndClassifyPayload,
   BidsWritePayload,
@@ -267,6 +268,29 @@ export function registerBidsIpcHandlers(): void {
       return { success: true, outputDir: result.outputDir, filesCopied: result.filesCopied }
     } catch (err) {
       debugLog(`bids:write error: ${err instanceof Error ? err.message : String(err)}`)
+      const msg = err instanceof Error ? err.message : String(err)
+      return { success: false, error: msg }
+    }
+  })
+
+  /**
+   * Run the import post-pass on a written BIDS root: aggregate
+   * `<sub>[_<ses>]_scans.tsv` and wire B0FieldIdentifier/B0FieldSource
+   * across fmap/target sidecars. Returns counts so the UI can surface
+   * "Wrote N scans.tsv files, edited M sidecars".
+   */
+  ipcMain.handle('bids:run-postpass', async (_evt, payload: { bidsDir: string }) => {
+    try {
+      const result = await runPostPass(
+        payload.bidsDir,
+        async (filePath, content) => {
+          fs.mkdirSync(path.dirname(filePath), { recursive: true })
+          fs.writeFileSync(filePath, content, 'utf-8')
+        },
+        nodePostPassFs
+      )
+      return { success: true, ...result }
+    } catch (err) {
       const msg = err instanceof Error ? err.message : String(err)
       return { success: false, error: msg }
     }

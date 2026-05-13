@@ -49,6 +49,7 @@
     "presentation:html": "npx --yes @marp-team/marp-cli@latest docs/presentation.md --html --allow-local-files"
   },
   "dependencies": {
+    "@bids/validator": "npm:@jsr/bids__validator@^3.0.0-alpha.3",
     "@electron-toolkit/preload": "^3.0.1",
     "@electron-toolkit/utils": "^3.0.0",
     "@niivue/niimath": "^0.3.0",
