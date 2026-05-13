@@ -153,6 +153,73 @@ Then Phase 2 in two-week increments.
 
 ---
 
+## PR 15 — Main-area workflow shell
+
+The Gallery / Wizard / Designer all live in `95vw × 90vh` (or full-viewport) modals layered over the viewer. That carves a fixed-aspect window inside an already-windowed app — tables clip, the diagram can't use a widescreen monitor, and we end up running Visual #14's two parallel containment metaphors. The fix is to stop layering: the workflow UIs *replace* the viewer in the center pane rather than floating above it.
+
+### Goals
+
+- Workflow UIs get the full available main-area size (and resize with the window).
+- One containment metaphor for "long-running flow," not two.
+- Modal affordance preserved via a workspace-mode top bar (`← Back to viewer`).
+- No regressions for post-completion handoffs (BIDS View loading volumes into the viewer behind the modal still has to work).
+
+### Approach
+
+Add a workspace-mode discriminator at `MainApp.tsx`:
+
+```ts
+type WorkspaceMode =
+  | { kind: 'viewer' }
+  | { kind: 'gallery' }
+  | { kind: 'wizard'; workflowName: string; inputs: Record<string, unknown> }
+  | { kind: 'designer'; initialDefinition: Record<string, unknown> | null }
+```
+
+`workflowOpen` / `templateGalleryOpen` / `workflowDesignerOpen` collapse into one `mode` state. The center pane at `MainApp.tsx:1491-1506` becomes:
+
+```tsx
+{mode.kind === 'viewer' && <ViewerStack />}
+{mode.kind === 'gallery' && <WorkflowTemplateGallery ... />}
+{mode.kind === 'wizard' && <WorkflowDialog ... />}
+{mode.kind === 'designer' && <WorkflowDesignerDialog ... />}
+```
+
+Components drop their `Dialog.Root` / `Dialog.Content` wrapper (PR3) and their `fixed inset-0` shell. Each becomes a plain `flex flex-col h-full` panel that fills whatever the host gives it. Their headers get a `← Back to viewer` button on the left (replacing the X), and the existing title moves next to it.
+
+### Affordance and side-pane policy
+
+- **Tabs bar (top)** stays visible in all modes — switching tabs while a wizard is running cancels the run with a confirmation, consistent with #11.
+- **Left sidebar** is hidden in `designer` (canvas wants the width) and `wizard` (wizard has its own step rail). Visible in `gallery` (cheap to keep, useful for context).
+- **Right panel** is hidden in `designer` / `wizard` / `gallery`; restored on return to `viewer`.
+- **Post-completion BIDS View** still works because returning to `viewer` mode re-mounts the viewer with the volumes already loaded by `onLoadFile`.
+
+### Cancel semantics
+
+Modal close was implicit: unmount → viewer was always still there. Inline cancel has to choose a destination:
+
+- From `gallery`: → `viewer`.
+- From `wizard` (no run in progress): → `gallery` (lets author pick another workflow without losing app state).
+- From `wizard` (run in progress): confirmation, then cancel run → `viewer`.
+- From `designer`: → previous mode (`gallery` if entered from gallery, `viewer` otherwise) via a small stack.
+
+### Files affected
+
+- `MainApp.tsx` — collapse the 3 booleans into `mode`, hoist mount logic into the center pane.
+- `WorkflowTemplateGallery.tsx`, `WizardShell.tsx`, `WorkflowDesignerDialog.tsx` — drop `Dialog.Root` wrapper; convert to fill-host panels; replace X with `← Back to viewer`.
+- New: `WorkspaceShell.tsx` — owns the back-button + mode-aware title bar that the three panels share.
+
+### Risk / sequence
+
+1. **Land the `mode` discriminator first** (no behavior change — Dialogs still open from the new state). Verifies routing.
+2. **Move the gallery inline** (lowest risk, no in-progress state).
+3. **Move the wizard inline** (needs the run-in-progress confirmation flow from #11; this PR is the right time to land #11 too).
+4. **Move the designer inline** (carries the most internal state — undo/redo, dirty tracking from PR1 still applies).
+
+Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is whatever you're doing right now"), and #13's `max-w-4xl` opt-out becomes unnecessary because there's no artificial 95vw cap.
+
+---
+
 ## Appendix: raw issue inventory
 
 ### Designer IA & interaction
