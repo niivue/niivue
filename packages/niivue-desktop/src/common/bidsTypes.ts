@@ -287,6 +287,40 @@ export interface QualityMetrics {
   pass: boolean
 }
 
+/**
+ * One row in the on-disk BIDS tree, returned by `bids:read-tree`. Mirrors
+ * the renderer-side TreeFile shape but uses absolute disk paths for the
+ * `key`, since the renderer needs to round-trip edits back to specific
+ * files on disk.
+ */
+export interface BidsDiskFile {
+  /** Absolute path to the NIfTI on disk — also the row's stable key. */
+  niftiPath: string
+  /** Absolute path to the JSON sidecar, or null if no sidecar exists. */
+  sidecarPath: string | null
+  /** Path relative to the dataset root (e.g. `sub-01/anat/sub-01_T1w.nii.gz`). */
+  bidsPath: string
+  subject: string
+  session: string
+  datatype: string
+  filename: string
+  /** Parsed sidecar JSON, or `{}` if no sidecar exists. */
+  sidecar: Record<string, unknown>
+}
+
+/** A single staged sidecar edit, addressed by absolute JSON path. */
+export interface SidecarStagedEdit {
+  sidecarPath: string
+  field: string
+  /** `undefined`/`null` deletes the key; matches updateSidecar semantics. */
+  value: unknown
+}
+
+export interface BidsApplyEditsResult {
+  applied: number
+  failed: { sidecarPath: string; field: string; error: string }[]
+}
+
 /** Persistable BIDS wizard state for save/restore via NVDocument.customData */
 export interface BidsWizardState {
   mappings: BidsSeriesMapping[]

@@ -1,7 +1,13 @@
-import React, { useCallback, useMemo, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import { Text, TextField, Button, Callout, Badge } from '@radix-ui/themes'
 import { InfoCircledIcon, ChevronDownIcon, ChevronRightIcon } from '@radix-ui/react-icons'
-import type { BidsSeriesMapping, DetectedSubject } from '../../../../common/bidsTypes.js'
+import type {
+  BidsApplyEditsResult,
+  BidsDiskFile,
+  BidsSeriesMapping,
+  DetectedSubject,
+  SidecarStagedEdit
+} from '../../../../common/bidsTypes.js'
 import { StepBidsPreview } from './StepBidsPreview.js'
 import {
   mappingsToTreeFiles,
@@ -10,6 +16,8 @@ import {
   buildInspectorRows,
   type TreeFile
 } from './bidsTreeEditorModel.js'
+
+const electron = window.electron
 
 interface AdapterProps {
   context: Record<string, unknown>
@@ -555,10 +563,173 @@ export function BidsPrepEditor({
   )
 }
 
-// ── View editor (post-write; disk operations land in next commit) ──────
+// ── View editor (post-write, on-disk; stages edits, applies on save) ───
+
+/**
+ * Staged-edit shape: outer key = absolute sidecar path, inner = field → value.
+ * `undefined` is the sentinel for "delete this key from the JSON on save",
+ * matching updateSidecar's semantics. Edits live entirely in renderer state
+ * until the user clicks "Save edits", which calls bids:apply-staged-edits
+ * and re-reads the tree.
+ */
+type Staged = Map<string, Map<string, unknown>>
+
+function setStagedEdit(prev: Staged, sidecarPath: string, field: string, value: unknown): Staged {
+  const next = new Map(prev)
+  const inner = new Map(next.get(sidecarPath) ?? [])
+  inner.set(field, value)
+  next.set(sidecarPath, inner)
+  return next
+}
+
+function countStagedEdits(staged: Staged): number {
+  let n = 0
+  for (const inner of staged.values()) n += inner.size
+  return n
+}
+
+function flattenStaged(staged: Staged): SidecarStagedEdit[] {
+  const out: SidecarStagedEdit[] = []
+  for (const [sidecarPath, inner] of staged) {
+    for (const [field, value] of inner) {
+      out.push({ sidecarPath, field, value })
+    }
+  }
+  return out
+}
+
+function diskToTreeFile(f: BidsDiskFile, stagedForFile: Map<string, unknown> | undefined): TreeFile {
+  const merged: Record<string, unknown> = { ...f.sidecar }
+  if (stagedForFile) {
+    for (const [k, v] of stagedForFile) {
+      if (v === undefined) delete merged[k]
+      else merged[k] = v
+    }
+  }
+  return {
+    key: f.niftiPath,
+    subject: f.subject,
+    session: f.session,
+    datatype: f.datatype,
+    filename: f.filename,
+    bidsPath: f.bidsPath,
+    sidecar: merged
+  }
+}
 
 export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
   const bidsDir = (context.bids_dir as string) || ''
+  const [diskFiles, setDiskFiles] = useState<BidsDiskFile[]>([])
+  const [loading, setLoading] = useState(false)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [staged, setStaged] = useState<Staged>(new Map())
+  const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set())
+  const [saveStatus, setSaveStatus] = useState<
+    | { kind: 'idle' }
+    | { kind: 'saving' }
+    | { kind: 'done'; result: BidsApplyEditsResult }
+    | { kind: 'error'; message: string }
+  >({ kind: 'idle' })
+
+  const reload = useCallback(async (): Promise<void> => {
+    if (!bidsDir) return
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const result = await electron.ipcRenderer.invoke('bids:read-tree', bidsDir)
+      if (result.success) {
+        setDiskFiles(result.files as BidsDiskFile[])
+      } else {
+        setLoadError(result.error ?? 'Failed to read BIDS tree')
+      }
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setLoading(false)
+    }
+  }, [bidsDir])
+
+  useEffect(() => {
+    void reload()
+  }, [reload])
+
+  // Build TreeFiles with staged overrides merged in so the inspector reads
+  // what WILL be on disk after save.
+  const files = useMemo(
+    () => diskFiles.map((f) => diskToTreeFile(f, f.sidecarPath ? staged.get(f.sidecarPath) : undefined)),
+    [diskFiles, staged]
+  )
+  // Map TreeFile.key (niftiPath) → sidecarPath for edit routing.
+  const sidecarByKey = useMemo(() => {
+    const m = new Map<string, string>()
+    for (const f of diskFiles) if (f.sidecarPath) m.set(f.niftiPath, f.sidecarPath)
+    return m
+  }, [diskFiles])
+
+  const validSelected = useMemo(() => {
+    const valid = new Set<string>()
+    const fileKeys = new Set(files.map((f) => f.key))
+    for (const k of selectedKeys) if (fileKeys.has(k)) valid.add(k)
+    return valid
+  }, [files, selectedKeys])
+
+  const toggle = useCallback((key: string) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }, [])
+
+  const selectMany = useCallback((keys: string[], on: boolean) => {
+    setSelectedKeys((prev) => {
+      const next = new Set(prev)
+      for (const k of keys) {
+        if (on) next.add(k)
+        else next.delete(k)
+      }
+      return next
+    })
+  }, [])
+
+  const handleApplyEdit = useCallback(
+    (keys: string[], field: string, value: unknown) => {
+      setStaged((prev) => {
+        let next = prev
+        for (const key of keys) {
+          const sidecarPath = sidecarByKey.get(key)
+          if (!sidecarPath) continue
+          next = setStagedEdit(next, sidecarPath, field, value)
+        }
+        return next
+      })
+      setSaveStatus({ kind: 'idle' })
+    },
+    [sidecarByKey]
+  )
+
+  const handleSave = useCallback(async () => {
+    setSaveStatus({ kind: 'saving' })
+    try {
+      const edits = flattenStaged(staged)
+      const result = (await electron.ipcRenderer.invoke('bids:apply-staged-edits', {
+        edits
+      })) as BidsApplyEditsResult
+      setSaveStatus({ kind: 'done', result })
+      if (result.failed.length === 0) {
+        setStaged(new Map())
+      }
+      await reload()
+    } catch (err) {
+      setSaveStatus({ kind: 'error', message: err instanceof Error ? err.message : String(err) })
+    }
+  }, [staged, reload])
+
+  const handleDiscard = useCallback(() => {
+    setStaged(new Map())
+    setSaveStatus({ kind: 'idle' })
+  }, [])
 
   if (!bidsDir) {
     return (
@@ -574,22 +745,86 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
     )
   }
 
+  const stagedCount = countStagedEdits(staged)
+
   return (
     <div className="flex flex-col gap-3">
-      <Text size="2" weight="medium">BIDS dataset written</Text>
-      <div className="rounded border border-[var(--green-6)] bg-[var(--green-3)] p-3">
-        <Text size="2" className="font-mono text-[var(--green-11)]">{bidsDir}</Text>
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex flex-col">
+          <Text size="2" weight="medium">BIDS dataset on disk</Text>
+          <Text size="1" color="gray" className="font-mono">{bidsDir}</Text>
+        </div>
+        <div className="flex items-center gap-2">
+          {stagedCount > 0 && (
+            <Badge color="amber" variant="soft">{stagedCount} pending</Badge>
+          )}
+          <Button
+            size="1"
+            variant="soft"
+            color="gray"
+            disabled={stagedCount === 0 || saveStatus.kind === 'saving'}
+            onClick={handleDiscard}
+          >
+            Discard
+          </Button>
+          <Button
+            size="1"
+            disabled={stagedCount === 0 || saveStatus.kind === 'saving'}
+            onClick={() => void handleSave()}
+          >
+            {saveStatus.kind === 'saving' ? 'Saving…' : 'Save edits'}
+          </Button>
+        </div>
       </div>
-      <Callout.Root color="blue" size="1">
-        <Callout.Icon>
-          <InfoCircledIcon />
-        </Callout.Icon>
-        <Callout.Text>
-          On-disk tree editor with staged edits is coming in a follow-up commit. For now
-          your dataset is on disk at the path above; the BIDS post-pass (scans.tsv,
-          B0Field*) has already run.
-        </Callout.Text>
-      </Callout.Root>
+
+      {loadError && (
+        <Callout.Root color="red" size="1">
+          <Callout.Icon><InfoCircledIcon /></Callout.Icon>
+          <Callout.Text>{loadError}</Callout.Text>
+        </Callout.Root>
+      )}
+
+      {saveStatus.kind === 'done' && saveStatus.result.failed.length === 0 && (
+        <Callout.Root color="green" size="1">
+          <Callout.Icon><InfoCircledIcon /></Callout.Icon>
+          <Callout.Text>Wrote {saveStatus.result.applied} edit{saveStatus.result.applied !== 1 ? 's' : ''} to disk.</Callout.Text>
+        </Callout.Root>
+      )}
+
+      {saveStatus.kind === 'done' && saveStatus.result.failed.length > 0 && (
+        <Callout.Root color="red" size="1">
+          <Callout.Icon><InfoCircledIcon /></Callout.Icon>
+          <Callout.Text>
+            {saveStatus.result.applied} applied, {saveStatus.result.failed.length} failed. Failed
+            edits remain staged so you can fix and retry.
+          </Callout.Text>
+        </Callout.Root>
+      )}
+
+      {saveStatus.kind === 'error' && (
+        <Callout.Root color="red" size="1">
+          <Callout.Icon><InfoCircledIcon /></Callout.Icon>
+          <Callout.Text>{saveStatus.message}</Callout.Text>
+        </Callout.Root>
+      )}
+
+      {loading && files.length === 0 ? (
+        <Text size="1" color="gray">Loading dataset…</Text>
+      ) : (
+        <div className="grid grid-cols-2 gap-3">
+          <FileTree
+            files={files}
+            selectedKeys={validSelected}
+            onToggle={toggle}
+            onSelectMany={selectMany}
+          />
+          <Inspector
+            files={files}
+            selectedKeys={validSelected}
+            onApplyEdit={handleApplyEdit}
+          />
+        </div>
+      )}
     </div>
   )
 }

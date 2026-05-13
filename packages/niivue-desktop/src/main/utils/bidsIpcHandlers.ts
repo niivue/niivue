@@ -27,12 +27,15 @@ import {
   updateSidecar
 } from './bidsSidecarFixer.js'
 import { nodePostPassFs, runPostPass } from './bidsPostpass/index.js'
+import { readBidsTree } from './bidsTreeReader.js'
 import type {
   BidsConvertAndClassifyPayload,
   BidsWritePayload,
   BidsValidatePayload,
   BidsSeriesMapping,
-  BidsValidationResult
+  BidsValidationResult,
+  BidsApplyEditsResult,
+  SidecarStagedEdit
 } from '../../common/bidsTypes.js'
 
 export function registerBidsIpcHandlers(): void {
@@ -327,6 +330,51 @@ export function registerBidsIpcHandlers(): void {
   ipcMain.handle('bids:parse-event-file', async (_evt, filePath: string) => {
     return parseEventFile(filePath)
   })
+
+  /**
+   * Walk a BIDS dataset on disk and return one row per NIfTI with its
+   * sidecar JSON parsed. Used by the BIDS View step to render the same
+   * tree+inspector UI the Prep step uses, but over real on-disk files.
+   */
+  ipcMain.handle('bids:read-tree', async (_evt, dirPath: string) => {
+    try {
+      const files = readBidsTree(dirPath)
+      return { success: true, files }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
+    }
+  })
+
+  /**
+   * Apply a batch of staged sidecar edits. Edits are grouped by sidecar
+   * path so each JSON file is read/written once even if the user touched
+   * multiple fields in it. Continues on per-file failure and reports
+   * which ops failed — the UI then lets the user retry or clear them.
+   */
+  ipcMain.handle(
+    'bids:apply-staged-edits',
+    async (_evt, payload: { edits: SidecarStagedEdit[] }): Promise<BidsApplyEditsResult> => {
+      const byPath = new Map<string, Record<string, unknown>>()
+      for (const e of payload.edits) {
+        const bucket = byPath.get(e.sidecarPath) ?? {}
+        bucket[e.field] = e.value
+        byPath.set(e.sidecarPath, bucket)
+      }
+      let applied = 0
+      const failed: BidsApplyEditsResult['failed'] = []
+      for (const [sidecarPath, updates] of byPath) {
+        const result = updateSidecar(sidecarPath, updates)
+        if (result.ok) {
+          applied += Object.keys(updates).length
+        } else {
+          for (const field of Object.keys(updates)) {
+            failed.push({ sidecarPath, field, error: result.error ?? 'unknown error' })
+          }
+        }
+      }
+      return { applied, failed }
+    }
+  )
 
   /**
    * Show directory picker for BIDS output location
