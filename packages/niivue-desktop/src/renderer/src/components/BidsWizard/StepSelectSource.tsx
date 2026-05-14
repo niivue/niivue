@@ -105,11 +105,11 @@ export function StepSelectSource({
 
       <div className="flex gap-2">
         <Button variant="soft" onClick={handleSelectFolder} disabled={loading || importing}>
-          {loading ? 'Scanning...' : 'Select DICOM Folder'}
+          {loading ? 'Scanning…' : 'Select DICOM Folder'}
         </Button>
         {onImportNifti && (
           <Button variant="outline" onClick={handleImportNifti} disabled={loading || importing}>
-            {importing ? 'Importing...' : 'Import NIfTI Folder'}
+            {importing ? 'Importing…' : 'Import NIfTI Folder'}
           </Button>
         )}
       </div>

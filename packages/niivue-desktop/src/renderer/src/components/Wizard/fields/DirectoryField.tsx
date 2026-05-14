@@ -46,7 +46,7 @@ export function DirectoryField({
           <TextField.Root
             value={value}
             onChange={(e) => onChange(e.target.value)}
-            placeholder="Select or type a directory path..."
+            placeholder="Select or type a directory path…"
             disabled={disabled}
             size="2"
             aria-invalid={ariaInvalid || undefined}

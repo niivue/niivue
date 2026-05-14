@@ -214,7 +214,7 @@ export function StepValidation({
       )}
 
       <Button onClick={handleWrite} disabled={writing}>
-        {writing ? 'Writing & Validating...' : 'Write Dataset'}
+        {writing ? 'Writing & Validating…' : 'Write Dataset'}
       </Button>
 
       {writeError && (

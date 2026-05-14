@@ -32,7 +32,7 @@ export function WizardFooter({
   // Back stays disabled while running to avoid racing the engine's section
   // transition.
   const nextDisabled = !canProceed || loading
-  const nextLabel = loading ? 'Running...' : isLastStep ? lastStepLabel : 'Next'
+  const nextLabel = loading ? 'Running…' : isLastStep ? lastStepLabel : 'Next'
 
   const nextButton = (
     <Button variant="solid" size="2" onClick={onNext} disabled={nextDisabled}>

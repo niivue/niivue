@@ -151,7 +151,7 @@ export default function NiimathConfig({
               value={selectedOperator}
               onValueChange={(val: string): void => setSelectedOperator(val)}
             >
-              <Select.Trigger placeholder="Select operator..." />
+              <Select.Trigger placeholder="Select operator…" />
               <Select.Content>
                 {NIIMATH_OPERATORS.map((op) => (
                   <Select.Item key={op.name} value={op.name}>

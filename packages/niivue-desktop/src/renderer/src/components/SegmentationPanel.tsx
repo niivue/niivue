@@ -311,7 +311,7 @@ export function SegmentationPanel({
                 {showSearch && (
                   <TextField.Root
                     size="1"
-                    placeholder="Filter labels..."
+                    placeholder="Filter labels…"
                     value={labelFilter}
                     onChange={(e) => setLabelFilter(e.target.value)}
                   />
@@ -367,7 +367,7 @@ export function SegmentationPanel({
             </Flex>
             <Progress value={progress} max={100} size="3" />
             <Text size="1" color="gray">
-              {status || 'Starting...'}
+              {status || 'Starting…'}
             </Text>
           </Flex>
         </Card>

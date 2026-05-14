@@ -66,7 +66,7 @@ export function StepConversion({
   return (
     <div className="flex flex-col gap-4 items-center py-8">
       <Text size="2" weight="bold">
-        {status === 'converting' && 'Converting DICOM to NIfTI...'}
+        {status === 'converting' && 'Converting DICOM to NIfTI…'}
         {status === 'complete' && 'Conversion Complete'}
         {status === 'error' && 'Conversion Failed'}
       </Text>

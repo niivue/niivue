@@ -454,7 +454,7 @@ function StepBasicInfo({
             type="text"
             value={state.labelsPath}
             onChange={(e) => onUpdate('labelsPath', e.target.value)}
-            placeholder="Local path or https://..."
+            placeholder="Local path or https://…"
             className="flex-1 px-3 py-2 text-sm border border-[var(--gray-6)] rounded"
           />
         </div>

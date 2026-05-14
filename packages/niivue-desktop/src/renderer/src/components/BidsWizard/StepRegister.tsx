@@ -345,7 +345,7 @@ export function StepRegister({
               className="border rounded px-2 py-1 text-xs flex-1"
               value={targetFilePath}
               onChange={(e) => setTargetFilePath(e.target.value)}
-              placeholder="Path to target NIfTI..."
+              placeholder="Path to target NIfTI…"
               disabled={running}
             />
             <Button size="1" variant="soft" onClick={() => void handleBrowseTarget()} disabled={running}>
@@ -470,7 +470,7 @@ export function StepRegister({
           onClick={() => void handleRun()}
           disabled={running || selectedIndices.size === 0}
         >
-          {running ? 'Registering...' : `Register (${selectedIndices.size} series)`}
+          {running ? 'Registering…' : `Register (${selectedIndices.size} series)`}
         </Button>
         {running && (
           <div className="flex-1">

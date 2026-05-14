@@ -859,7 +859,7 @@ export function ContextSpineDesigner({
                                 <Select.Trigger
                                   className="flex-1"
                                   placeholder={
-                                    isRequired ? 'Select source...' : 'Select source (optional)'
+                                    isRequired ? 'Select source…' : 'Select source (optional)'
                                   }
                                   style={
                                     inp.source === 'unset' && isRequired

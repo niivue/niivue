@@ -628,7 +628,7 @@ export function WorkflowDialog({
       open={open}
       onClose={engine.handleClose}
       title={engine.definition?.description || workflowName}
-      steps={wizardSteps.length > 0 ? wizardSteps : [{ label: 'Loading...' }]}
+      steps={wizardSteps.length > 0 ? wizardSteps : [{ label: 'Loading workflow…' }]}
       currentStep={engine.currentSection}
       onStepChange={engine.goToSection}
       onNext={engine.handleNext}
@@ -715,7 +715,7 @@ export function WorkflowDialog({
                                 void engine.handleFieldChange(m.contextField, e.target.value)
                               }
                             }}
-                            placeholder="Select a directory..."
+                            placeholder="Select a directory…"
                             size="2"
                             className="flex-1"
                           />

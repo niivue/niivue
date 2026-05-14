@@ -474,7 +474,7 @@ export function HeuristicDesigner({
               <Text size="2" color="red">{jsonError}</Text>
             )}
             <Button variant="soft" size="2" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving...' : 'Save'}
+              {saving ? 'Saving…' : 'Save'}
             </Button>
             <Button variant="soft" color="gray" size="2" onClick={onClose}>
               Close
@@ -644,7 +644,7 @@ export function HeuristicDesigner({
                       rows={25}
                       size="2"
                       className="font-mono"
-                      placeholder="Paste or edit heuristic JSON here..."
+                      placeholder="Paste or edit heuristic JSON here…"
                     />
                   </div>
                 </Tabs.Content>

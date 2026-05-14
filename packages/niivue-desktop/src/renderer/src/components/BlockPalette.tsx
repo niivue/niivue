@@ -144,7 +144,7 @@ export function BlockPalette({
         <TextField.Root
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search blocks..."
+          placeholder="Search blocks…"
           size="1"
         >
           <TextField.Slot>

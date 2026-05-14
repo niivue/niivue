@@ -138,7 +138,7 @@ export function StepTaskEvents({ mappings, onUpdateMapping }: StepTaskEventsProp
                 <div className="p-3 text-xs space-y-3">
                   <div className="flex gap-2">
                     <Button size="1" variant="soft" onClick={() => handleBrowse(m)}>
-                      {evt ? 'Change file...' : 'Browse...'}
+                      {evt ? 'Change file…' : 'Browse…'}
                     </Button>
                     {evt && (
                       <>
