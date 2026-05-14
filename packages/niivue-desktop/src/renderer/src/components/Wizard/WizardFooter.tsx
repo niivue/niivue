@@ -15,8 +15,9 @@ interface WizardFooterProps {
   disabledReason?: string
   /**
    * Verb + noun label shown on the Next button while `loading` is true (e.g.
-   * "Converting series…"). Defaults to the generic "Running…" which fails the
-   * microcopy guide's verb-plus-object rule — pass a step-specific label.
+   * "Converting series…"). Falls back to "Running step…" — still verb+noun
+   * per the microcopy guide, but step-specific labels are strongly preferred
+   * since 'step' alone tells the user nothing about what's happening.
    */
   runningLabel?: string
   onBack: () => void
@@ -30,7 +31,7 @@ export function WizardFooter({
   loading,
   lastStepLabel = 'Run workflow',
   disabledReason,
-  runningLabel = 'Running…',
+  runningLabel = 'Running step…',
   onBack,
   onNext
 }: WizardFooterProps): React.ReactElement {
