@@ -194,7 +194,7 @@ export function WorkflowTemplateGallery({
           )}
 
           {loading ? (
-            <Text size="2" className="text-neutral-8">
+            <Text size="2" className="text-neutral-9">
               Loading workflows…
             </Text>
           ) : loadError ? (
@@ -240,7 +240,7 @@ export function WorkflowTemplateGallery({
                                 <Text size="3" weight="bold" className="text-neutral-12">
                                   {wf.description || wf.name}
                                 </Text>
-                                <Text size="1" className="text-neutral-8 font-mono block mt-0.5">
+                                <Text size="1" className="text-neutral-9 font-mono block mt-0.5">
                                   {wf.name}
                                 </Text>
                               </div>

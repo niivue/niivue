@@ -147,6 +147,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
       : selected
         ? 'var(--accent-8)'
         : 'var(--gray-6)'
+  const ringWidth = hasError || hasWarning || selected ? 2 : 1
 
   return (
     <div
@@ -154,7 +155,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
       style={{
         width: NODE_WIDTH,
         background: 'var(--color-panel-solid)',
-        border: `2px solid ${ringColor}`,
+        border: `${ringWidth}px solid ${ringColor}`,
         borderRadius: 8,
         boxShadow: 'var(--shadow-2)',
         cursor: 'pointer',
