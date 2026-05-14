@@ -732,7 +732,7 @@ export function WorkflowDesignerDialog({
             <ReloadIcon />
           </Button>
           <Button variant="soft" size="2" onClick={handleSave}>
-            Save
+            Save workflow
           </Button>
         </Flex>
       </header>
