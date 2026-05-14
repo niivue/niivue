@@ -62,8 +62,11 @@ export function WizardStepIndicator({
               {isCompleted ? <CheckIcon className="w-3.5 h-3.5" /> : i + 1}
             </div>
 
-            {/* Label */}
-            <div className="flex flex-col min-w-0">
+            {/* Label — hidden in icon-only mode (narrow viewport).  The aside
+                shrinks to just the numbered circle, so we drop the text
+                column entirely below md.  The full text remains in aria-label
+                for screen readers. */}
+            <div className="hidden md:flex flex-col min-w-0">
               <Text size="2" weight={isCurrent ? 'medium' : 'regular'} className="truncate">
                 {step.label}
               </Text>

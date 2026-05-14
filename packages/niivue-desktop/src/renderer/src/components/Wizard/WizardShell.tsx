@@ -163,9 +163,11 @@ export function WizardShell({
 
         {/* Body: step rail + content */}
         <div className="flex flex-1 min-h-0">
-          {/* Left step rail */}
+          {/* Left step rail. Collapses to an icon-only column below the md
+              breakpoint so a narrow window doesn't lose form real estate to a
+              full-width rail. */}
           {steps.length > 1 && (
-            <aside className="w-56 shrink-0 border-r border-neutral-5 bg-neutral-2 py-4 overflow-hidden">
+            <aside className="w-16 md:w-56 shrink-0 border-r border-neutral-5 bg-neutral-2 py-4 overflow-hidden">
               <WizardStepIndicator
                 steps={steps}
                 currentStep={currentStep}
