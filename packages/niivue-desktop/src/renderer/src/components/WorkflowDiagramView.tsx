@@ -63,6 +63,19 @@ const NODE_WIDTH = 240
 const NODE_X_GAP = 320
 const NODE_Y_GAP = 40
 
+// Internal node geometry — kept in one place so step nodes and source
+// nodes stay visually aligned. Tweak here, not in the JSX.
+const NODE_RADIUS = 8
+const NODE_INNER_RADIUS = '6px 6px 0 0'
+const NODE_HEADER_PADDING = '8px 10px'
+const NODE_BODY_PADDING = '6px 0'
+const NODE_ROW_PADDING = '6px 10px'
+const NODE_FOOTER_PADDING = '6px 10px 8px'
+const NODE_HEADER_GAP = 8
+const NODE_ROW_GAP = 6
+const NODE_IO_GAP = 4
+const NODE_IO_ROW_MIN_HEIGHT = 18
+
 /** Map a TYPE_COLORS value (Radix color name) to a CSS variable.
  *  Step 9 = solid brand (handles, badges). Step 8 = UI element (edge
  *  strokes, borders) — softer so a busy graph doesn't read as confetti. */
@@ -170,7 +183,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
         width: NODE_WIDTH,
         background: 'var(--color-panel-solid)',
         border: `${ringWidth}px solid ${ringColor}`,
-        borderRadius: 8,
+        borderRadius: NODE_RADIUS,
         boxShadow: 'var(--shadow-2)',
         cursor: 'pointer',
         fontFamily: 'inherit'
@@ -181,11 +194,11 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
-          padding: '8px 10px',
+          gap: NODE_HEADER_GAP,
+          padding: NODE_HEADER_PADDING,
           borderBottom: '1px solid var(--gray-5)',
           background: selected ? 'var(--accent-3)' : 'var(--gray-2)',
-          borderRadius: '6px 6px 0 0'
+          borderRadius: NODE_INNER_RADIUS
         }}
       >
         <span style={{ color: selected ? 'var(--accent-11)' : 'var(--gray-11)' }}>{blockIcon}</span>
@@ -256,8 +269,8 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
           style={{
             display: 'flex',
             alignItems: 'flex-start',
-            gap: 6,
-            padding: '6px 10px',
+            gap: NODE_ROW_GAP,
+            padding: NODE_ROW_PADDING,
             background: issue.kind === 'error' ? 'var(--red-3)' : 'var(--amber-3)',
             color: issue.kind === 'error' ? 'var(--red-11)' : 'var(--amber-11)',
             borderBottom: '1px solid var(--gray-5)'
@@ -272,9 +285,9 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
       )}
 
       {/* Inputs / Outputs side-by-side */}
-      <div style={{ display: 'flex', padding: '6px 0' }}>
+      <div style={{ display: 'flex', padding: NODE_BODY_PADDING }}>
         {/* Inputs column */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: NODE_IO_GAP }}>
           {inputs.length === 0 ? (
             <Text size="1" style={{ color: 'var(--gray-9)', padding: '0 12px' }}>
               —
@@ -291,8 +304,8 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
                     paddingRight: 6,
                     display: 'flex',
                     alignItems: 'center',
-                    gap: 4,
-                    minHeight: 18
+                    gap: NODE_IO_GAP,
+                    minHeight: NODE_IO_ROW_MIN_HEIGHT
                   }}
                 >
                   <Handle
@@ -325,7 +338,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
         </div>
 
         {/* Outputs column */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: NODE_IO_GAP }}>
           {outputs.length === 0 ? (
             <Text
               size="1"
@@ -344,8 +357,8 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'flex-end',
-                  gap: 4,
-                  minHeight: 18
+                  gap: NODE_IO_GAP,
+                  minHeight: NODE_IO_ROW_MIN_HEIGHT
                 }}
                 title={`${name}: ${TYPE_LABELS[def.type] || def.type}`}
               >
@@ -376,7 +389,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
           gray-12 contrast keeps it from disappearing into chrome. */}
       <div
         style={{
-          padding: '6px 10px 8px',
+          padding: NODE_FOOTER_PADDING,
           borderTop: '1px solid var(--gray-4)',
           background: 'var(--gray-1)',
           borderRadius: '0 0 6px 6px'
@@ -429,7 +442,7 @@ function SourceNode({ data }: NodeProps<Node<SourceNodeData>>): React.ReactEleme
         width: NODE_WIDTH,
         background: 'var(--color-panel-solid)',
         border: `2px solid var(--${accent}-7)`,
-        borderRadius: 8,
+        borderRadius: NODE_RADIUS,
         boxShadow: 'var(--shadow-2)',
         fontFamily: 'inherit'
       }}
@@ -438,12 +451,12 @@ function SourceNode({ data }: NodeProps<Node<SourceNodeData>>): React.ReactEleme
         style={{
           display: 'flex',
           alignItems: 'center',
-          gap: 8,
-          padding: '8px 10px',
+          gap: NODE_HEADER_GAP,
+          padding: NODE_HEADER_PADDING,
           borderBottom: '1px solid var(--gray-5)',
           background: `var(--${accent}-3)`,
           color: `var(--${accent}-11)`,
-          borderRadius: '6px 6px 0 0'
+          borderRadius: NODE_INNER_RADIUS
         }}
       >
         <Icon />
@@ -452,7 +465,14 @@ function SourceNode({ data }: NodeProps<Node<SourceNodeData>>): React.ReactEleme
         </Text>
       </div>
 
-      <div style={{ padding: '6px 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div
+        style={{
+          padding: NODE_BODY_PADDING,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: NODE_IO_GAP
+        }}
+      >
         {entries.length === 0 ? (
           <Text size="1" style={{ color: 'var(--gray-9)', padding: '0 12px' }}>
             None defined
@@ -470,8 +490,8 @@ function SourceNode({ data }: NodeProps<Node<SourceNodeData>>): React.ReactEleme
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'flex-end',
-                  gap: 6,
-                  minHeight: 18,
+                  gap: NODE_ROW_GAP,
+                  minHeight: NODE_IO_ROW_MIN_HEIGHT,
                   opacity: inUse ? 1 : 0.6
                 }}
                 title={`${entry.name}: ${TYPE_LABELS[entry.type] || entry.type}`}
