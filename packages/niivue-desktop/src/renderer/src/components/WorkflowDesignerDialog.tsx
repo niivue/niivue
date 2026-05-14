@@ -24,6 +24,7 @@ import {
   blockToContextFields,
   blockToFormSection,
   repairBlockDefaults,
+  getWorkflowBlocks,
   type WorkflowBlock,
   type WorkflowDraft,
   type BindingDraft,
@@ -487,6 +488,19 @@ export function WorkflowDesignerDialog({
     [draft, toolsMap, setDraftWithHistory]
   )
 
+  // Look up a palette block by its id and append it as a new step. Used by the
+  // diagram view's drag-and-drop handler — the canvas only ships the id across
+  // the dataTransfer boundary, so the dialog (which owns the blocks list) does
+  // the resolution.
+  const handleAddBlockById = useCallback(
+    (blockId: string): void => {
+      const block = getWorkflowBlocks(toolsMap).find((b) => b.id === blockId)
+      if (!block) return
+      handleAddBlock(block)
+    },
+    [toolsMap, handleAddBlock]
+  )
+
   const handleRemoveStep = useCallback(
     (index: number): void => {
       setDraftWithHistory((prev) => ({
@@ -754,6 +768,7 @@ export function WorkflowDesignerDialog({
               warnSteps={warnSteps}
               stepIssueByIndex={stepIssueByIndex}
               onOpenGallery={onOpenGallery}
+              onAddBlockById={handleAddBlockById}
             />
             <div className="border-t border-neutral-5 bg-[var(--gray-2)] px-3 py-2 max-h-56 overflow-y-auto shrink-0">
               <BlockPalette

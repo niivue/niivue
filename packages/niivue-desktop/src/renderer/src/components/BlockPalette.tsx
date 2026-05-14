@@ -1,10 +1,5 @@
 import React, { useState, useMemo } from 'react'
-import {
-  Text,
-  TextField,
-  Badge,
-  Tooltip
-} from '@radix-ui/themes'
+import { Text, TextField, Badge, Tooltip } from '@radix-ui/themes'
 import {
   MagnifyingGlassIcon,
   UploadIcon,
@@ -58,6 +53,10 @@ const ICON_MAP: Record<string, React.ReactNode> = {
 export function getBlockIcon(iconName: string): React.ReactNode {
   return ICON_MAP[iconName] || <MixerHorizontalIcon />
 }
+
+/** dataTransfer key used when dragging a palette block onto the diagram canvas.
+ *  Both ends agree on this string so the canvas can ignore unrelated drops. */
+export const BLOCK_DRAG_MIME = 'application/x-niivue-workflow-block'
 
 const CATEGORY_COLORS: Record<BlockCategory, string> = {
   Import: 'blue',
@@ -177,7 +176,12 @@ export function BlockPalette({
                 <Text size="1" weight="bold" className="text-neutral-10 uppercase tracking-wider">
                   {category}
                 </Text>
-                <Badge variant="soft" size="1" color={color as 'blue' | 'violet' | 'yellow' | 'green'} className="ml-auto">
+                <Badge
+                  variant="soft"
+                  size="1"
+                  color={color as 'blue' | 'violet' | 'yellow' | 'green'}
+                  className="ml-auto"
+                >
                   {blocks.length}
                 </Badge>
               </button>
@@ -200,12 +204,23 @@ export function BlockPalette({
                               : 'hover:bg-[var(--gray-3)]'
                           } ${runnable ? '' : 'opacity-60'}`}
                           onClick={() => onAddBlock(block)}
+                          draggable
+                          onDragStart={(e): void => {
+                            e.dataTransfer.setData(BLOCK_DRAG_MIME, block.id)
+                            e.dataTransfer.effectAllowed = 'copy'
+                          }}
                         >
-                          <span className={isCompatible ? 'text-[var(--accent-9)]' : 'text-neutral-9'}>
+                          <span
+                            className={isCompatible ? 'text-[var(--accent-9)]' : 'text-neutral-9'}
+                          >
                             {getBlockIcon(block.icon || '')}
                           </span>
                           <div className="flex-1 min-w-0">
-                            <Text size="1" weight="medium" className="text-neutral-12 truncate block">
+                            <Text
+                              size="1"
+                              weight="medium"
+                              className="text-neutral-12 truncate block"
+                            >
                               {block.label}
                             </Text>
                           </div>

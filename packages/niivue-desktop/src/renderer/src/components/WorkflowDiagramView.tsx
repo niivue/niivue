@@ -50,7 +50,7 @@ import {
   type WorkflowDraft
 } from '../../../common/workflowBlocks.js'
 import { isTypeCompatible } from '../../../common/typeCompatibility.js'
-import { getBlockIcon } from './BlockPalette.js'
+import { getBlockIcon, BLOCK_DRAG_MIME } from './BlockPalette.js'
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -523,6 +523,10 @@ interface WorkflowDiagramViewProps {
   /** Open the workflow template gallery — used by the empty-state CTA so an
    *  author who landed on a blank designer can pivot to starting from a template. */
   onOpenGallery?: () => void
+  /** Drop handler invoked when a palette block is dragged onto the canvas.
+   *  Receives the block id from the dataTransfer payload; the dialog owns the
+   *  blocks list and is responsible for resolving the id and appending a step. */
+  onAddBlockById?: (blockId: string) => void
 }
 
 // ── Component ────────────────────────────────────────────────────────
@@ -538,7 +542,8 @@ export function WorkflowDiagramView({
   errorSteps,
   warnSteps,
   stepIssueByIndex,
-  onOpenGallery
+  onOpenGallery,
+  onAddBlockById
 }: WorkflowDiagramViewProps): React.ReactElement {
   // Build nodes: one per step, laid out left-to-right.
   const nodes = useMemo<Node<StepNodeData>[]>(() => {
@@ -786,7 +791,9 @@ export function WorkflowDiagramView({
           </div>
           <div className="flex items-center gap-1 text-[var(--accent-11)]">
             <ArrowDownIcon />
-            <Text size="2" weight="medium">Palette</Text>
+            <Text size="2" weight="medium">
+              Palette
+            </Text>
           </div>
           {onOpenGallery && (
             <button
@@ -803,8 +810,33 @@ export function WorkflowDiagramView({
 
   // ── Render ─────────────────────────────────────────────────────────
 
+  const handleDragOver = useCallback(
+    (e: React.DragEvent<HTMLDivElement>): void => {
+      if (!onAddBlockById) return
+      if (!Array.from(e.dataTransfer.types).includes(BLOCK_DRAG_MIME)) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+    },
+    [onAddBlockById]
+  )
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>): void => {
+      if (!onAddBlockById) return
+      const blockId = e.dataTransfer.getData(BLOCK_DRAG_MIME)
+      if (!blockId) return
+      e.preventDefault()
+      onAddBlockById(blockId)
+    },
+    [onAddBlockById]
+  )
+
   return (
-    <div style={{ flex: 1, height: '100%', minHeight: 0 }}>
+    <div
+      style={{ flex: 1, height: '100%', minHeight: 0 }}
+      onDragOver={handleDragOver}
+      onDrop={handleDrop}
+    >
       <ReactFlow
         nodes={nodes}
         edges={edges}
