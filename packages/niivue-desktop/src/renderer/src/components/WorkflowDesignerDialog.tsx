@@ -52,6 +52,9 @@ interface WorkflowDesignerDialogProps {
    * sees they'll return to the wizard they were running.
    */
   backTarget?: string
+  /** Open the workflow template gallery — surfaced to empty-state CTAs in
+   *  both designer views so a fresh author can pivot to a template. */
+  onOpenGallery?: () => void
 }
 
 // ── Constants ────────────────────────────────────────────────────────
@@ -232,6 +235,7 @@ function draftToSchema(draft: WorkflowDraft): Record<string, unknown> {
 export function WorkflowDesignerDialog({
   open,
   onClose,
+  onOpenGallery,
   onSave,
   initialDefinition,
   backTarget = 'viewer'
@@ -734,6 +738,7 @@ export function WorkflowDesignerDialog({
             onRemoveStep={handleRemoveStep}
             onMoveStep={handleMoveStep}
             onSave={handleSave}
+            onOpenGallery={onOpenGallery}
           />
         ) : (
           <div className="flex-1 flex flex-col min-h-0">
@@ -748,6 +753,7 @@ export function WorkflowDesignerDialog({
               errorSteps={errorSteps}
               warnSteps={warnSteps}
               stepIssueByIndex={stepIssueByIndex}
+              onOpenGallery={onOpenGallery}
             />
             <div className="border-t border-neutral-5 bg-[var(--gray-2)] px-3 py-2 max-h-56 overflow-y-auto shrink-0">
               <BlockPalette

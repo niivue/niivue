@@ -1700,6 +1700,7 @@ function MainApp(): JSX.Element {
                 }}
                 initialDefinition={designerInitialDefinition}
                 backTarget={designerOverWizard ? 'wizard' : 'viewer'}
+                onOpenGallery={openGalleryMode}
               />
             </div>
           )}

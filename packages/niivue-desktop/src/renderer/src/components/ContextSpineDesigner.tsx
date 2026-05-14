@@ -18,7 +18,8 @@ import {
   DragHandleDots2Icon,
   PersonIcon,
   InfoCircledIcon,
-  MagicWandIcon
+  MagicWandIcon,
+  RocketIcon
 } from '@radix-ui/react-icons'
 import type { ToolDefinition, ToolParameterDef } from '../../../common/workflowTypes.js'
 import type { ValidationResult } from '../../../common/workflowValidator.js'
@@ -62,6 +63,8 @@ interface ContextSpineDesignerProps {
   onRemoveStep: (index: number) => void
   onMoveStep: (index: number, direction: -1 | 1) => void
   onSave: () => void
+  /** Open the workflow template gallery — used by the empty-state CTA. */
+  onOpenGallery?: () => void
 }
 
 // ── Input source info ────────────────────────────────────────────────
@@ -190,7 +193,8 @@ export function ContextSpineDesigner({
   heuristicNames = [],
   onAddBlock,
   onRemoveStep,
-  onMoveStep
+  onMoveStep,
+  onOpenGallery
 }: ContextSpineDesignerProps): React.ReactElement {
   const [selectedStep, setSelectedStep] = useState<number | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
@@ -499,10 +503,34 @@ export function ContextSpineDesigner({
 
         <div className="flex-1 p-4 flex flex-col gap-3">
           {draft.steps.length === 0 ? (
-            <div className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-              <Text size="3" className="text-neutral-8">
-                Start by adding a tool from the palette below
-              </Text>
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-4 max-w-md text-center border-2 border-dashed border-[var(--gray-6)] rounded-lg px-8 py-10 bg-[var(--color-background)]">
+                <div className="w-12 h-12 rounded-full bg-[var(--accent-3)] flex items-center justify-center text-[var(--accent-11)]">
+                  <RocketIcon width="24" height="24" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Text size="4" weight="bold" className="text-neutral-12">
+                    Build your first pipeline
+                  </Text>
+                  <Text size="2" className="text-neutral-9">
+                    Open the tool palette below to add your first step.
+                  </Text>
+                </div>
+                <button
+                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-[var(--accent-9)] hover:bg-[var(--accent-10)] text-white text-sm font-medium"
+                  onClick={() => setShowPalette(true)}
+                >
+                  <PlusIcon /> Open Tool Palette
+                </button>
+                {onOpenGallery && (
+                  <button
+                    className="text-sm text-[var(--accent-11)] hover:underline"
+                    onClick={onOpenGallery}
+                  >
+                    Or browse templates →
+                  </button>
+                )}
+              </div>
             </div>
           ) : (
             draft.steps.map((step, i) => {

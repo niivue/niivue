@@ -35,7 +35,9 @@ import {
   TrashIcon,
   ChevronUpIcon,
   ChevronDownIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  RocketIcon,
+  ArrowDownIcon
 } from '@radix-ui/react-icons'
 import type { ToolDefinition } from '../../../common/workflowTypes.js'
 import {
@@ -509,6 +511,9 @@ interface WorkflowDiagramViewProps {
   warnSteps?: Set<number>
   /** Per-step-index validation issue (first error or warning), shown inline on the node. */
   stepIssueByIndex?: Map<number, { kind: 'error' | 'warning'; message: string }>
+  /** Open the workflow template gallery — used by the empty-state CTA so an
+   *  author who landed on a blank designer can pivot to starting from a template. */
+  onOpenGallery?: () => void
 }
 
 // ── Component ────────────────────────────────────────────────────────
@@ -523,7 +528,8 @@ export function WorkflowDiagramView({
   onMoveStep,
   errorSteps,
   warnSteps,
-  stepIssueByIndex
+  stepIssueByIndex,
+  onOpenGallery
 }: WorkflowDiagramViewProps): React.ReactElement {
   // Build nodes: one per step, laid out left-to-right.
   const nodes = useMemo<Node<StepNodeData>[]>(() => {
@@ -752,18 +758,32 @@ export function WorkflowDiagramView({
 
   if (draft.steps.length === 0) {
     return (
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          background: 'var(--gray-2)'
-        }}
-      >
-        <Text size="3" style={{ color: 'var(--gray-9)' }}>
-          Add a tool from the palette to start building your pipeline
-        </Text>
+      <div className="flex-1 flex items-center justify-center bg-[var(--gray-2)] p-8">
+        <div className="flex flex-col items-center gap-4 max-w-md text-center border-2 border-dashed border-[var(--gray-6)] rounded-lg px-8 py-10 bg-[var(--color-background)]">
+          <div className="w-12 h-12 rounded-full bg-[var(--accent-3)] flex items-center justify-center text-[var(--accent-11)]">
+            <RocketIcon width="24" height="24" />
+          </div>
+          <div className="flex flex-col gap-1">
+            <Text size="4" weight="bold" className="text-neutral-12">
+              Build your first pipeline
+            </Text>
+            <Text size="2" className="text-neutral-9">
+              Pick a tool from the palette below to add your first step.
+            </Text>
+          </div>
+          <div className="flex items-center gap-1 text-[var(--accent-11)]">
+            <ArrowDownIcon />
+            <Text size="2" weight="medium">Palette</Text>
+          </div>
+          {onOpenGallery && (
+            <button
+              className="text-sm text-[var(--accent-11)] hover:underline"
+              onClick={onOpenGallery}
+            >
+              Or browse templates →
+            </button>
+          )}
+        </div>
       </div>
     )
   }
