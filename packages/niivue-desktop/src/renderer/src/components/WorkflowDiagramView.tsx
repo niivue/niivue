@@ -6,9 +6,11 @@
 // Connecting two handles writes the corresponding ref into the target
 // step's input binding; deleting an edge clears that binding.
 //
-// Refs to workflow inputs (`inputs.X`) or context fields (`context.X`)
-// are not drawn as edges — they appear as a small badge on the input
-// handle so the diagram stays readable.
+// Refs to workflow inputs (`inputs.X`) and context fields (`context.X`)
+// render as edges from two synthetic "source pool" nodes on the left so
+// every binding is visible as a graph connection. Constants still show
+// as a small `=` badge on the input row because they have no off-step
+// source to draw a wire from.
 
 import React, { useMemo, useCallback } from 'react'
 import {
@@ -39,7 +41,9 @@ import {
   RocketIcon,
   ArrowDownIcon,
   ArrowRightIcon,
-  Cross1Icon
+  Cross1Icon,
+  EnterIcon,
+  PersonIcon
 } from '@radix-ui/react-icons'
 import type { ToolDefinition } from '../../../common/workflowTypes.js'
 import {
@@ -98,14 +102,11 @@ interface StepNodeData extends Record<string, unknown> {
   /** First validation error/warning message for this step, surfaced inline under the header. */
   issue?: { kind: 'error' | 'warning'; message: string }
   /**
-   * input name → annotation describing where the value comes from. `null`
-   * means the input is unbound or wired from another step (the latter is
-   * shown as a graph edge instead of a badge).
+   * input name → annotation describing the binding when it can't be shown
+   * as a graph edge (i.e. constants). Step→step, workflow-input, and
+   * form-field bindings all render as edges instead.
    */
-  inputAnnotations: Record<
-    string,
-    { kind: 'wf-input' | 'context' | 'constant'; tooltip: string } | null
-  >
+  inputAnnotations: Record<string, { kind: 'constant'; tooltip: string } | null>
   onSelect: () => void
   onRemove: () => void
   onMove: (direction: -1 | 1) => void
@@ -304,20 +305,6 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
                   <Text size="1" style={{ color: 'var(--gray-12)', flex: 1, minWidth: 0 }} truncate>
                     {(def as { label?: string }).label || name}
                   </Text>
-                  {annot?.kind === 'wf-input' && (
-                    <span title={annot.tooltip} style={{ display: 'inline-flex' }}>
-                      <Badge variant="soft" size="1" color="iris">
-                        in
-                      </Badge>
-                    </span>
-                  )}
-                  {annot?.kind === 'context' && (
-                    <span title={annot.tooltip} style={{ display: 'inline-flex' }}>
-                      <Badge variant="soft" size="1" color="orange">
-                        form
-                      </Badge>
-                    </span>
-                  )}
                   {annot?.kind === 'constant' && (
                     <span title={annot.tooltip} style={{ display: 'inline-flex' }}>
                       <Badge variant="soft" size="1" color="grass">
@@ -394,7 +381,113 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
   )
 }
 
-const nodeTypes = { step: StepNode }
+// ── Source pool node ─────────────────────────────────────────────────
+//
+// Synthetic node rendered on the left edge of the canvas grouping
+// workflow inputs or form/context fields. Each entry gets one source
+// handle so the otherwise-invisible `inputs.X` / `context.X` bindings
+// show up as proper graph edges instead of small badges on the
+// consuming step's input row.
+
+interface SourceNodeEntry {
+  name: string
+  type: string
+  label: string
+}
+
+interface SourceNodeData extends Record<string, unknown> {
+  title: string
+  kind: 'wf-input' | 'context'
+  entries: SourceNodeEntry[]
+  /** Set of entry names that have at least one outgoing edge. Used to
+   *  dim unused entries so authors can see at a glance what's wired. */
+  usedNames: Set<string>
+}
+
+function SourceNode({ data }: NodeProps<Node<SourceNodeData>>): React.ReactElement {
+  const { title, kind, entries, usedNames } = data
+  const accent = kind === 'wf-input' ? 'iris' : 'orange'
+  const accentVar = `var(--${accent}-9)`
+  const Icon = kind === 'wf-input' ? EnterIcon : PersonIcon
+
+  return (
+    <div
+      style={{
+        width: NODE_WIDTH,
+        background: 'var(--color-panel-solid)',
+        border: `2px solid var(--${accent}-7)`,
+        borderRadius: 8,
+        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        fontFamily: 'inherit'
+      }}
+    >
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 8,
+          padding: '8px 10px',
+          borderBottom: '1px solid var(--gray-5)',
+          background: `var(--${accent}-3)`,
+          color: `var(--${accent}-11)`,
+          borderRadius: '6px 6px 0 0'
+        }}
+      >
+        <Icon />
+        <Text size="2" weight="bold" style={{ flex: 1, minWidth: 0 }} truncate>
+          {title}
+        </Text>
+      </div>
+
+      <div style={{ padding: '6px 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {entries.length === 0 ? (
+          <Text size="1" style={{ color: 'var(--gray-9)', padding: '0 12px' }}>
+            None defined
+          </Text>
+        ) : (
+          entries.map((entry) => {
+            const inUse = usedNames.has(entry.name)
+            return (
+              <div
+                key={entry.name}
+                style={{
+                  position: 'relative',
+                  paddingLeft: 6,
+                  paddingRight: 14,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'flex-end',
+                  gap: 6,
+                  minHeight: 18,
+                  opacity: inUse ? 1 : 0.6
+                }}
+                title={`${entry.name}: ${TYPE_LABELS[entry.type] || entry.type}`}
+              >
+                <Text size="1" style={{ color: 'var(--gray-12)' }}>
+                  {entry.label}
+                </Text>
+                <Handle
+                  type="source"
+                  position={Position.Right}
+                  id={`out:${entry.name}`}
+                  style={{
+                    background: typeColorVar(entry.type),
+                    width: 10,
+                    height: 10,
+                    border: `2px solid ${accentVar}`,
+                    right: -6
+                  }}
+                />
+              </div>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
+const nodeTypes = { step: StepNode, source: SourceNode }
 
 // ── Deletable edge ───────────────────────────────────────────────────
 //
@@ -572,12 +665,42 @@ export function WorkflowDiagramView({
   onSwitchToListView,
   runnableTools
 }: WorkflowDiagramViewProps): React.ReactElement {
-  // Build nodes: one per step, laid out left-to-right.
-  const nodes = useMemo<Node<StepNodeData>[]>(() => {
-    return draft.steps.map((step, i) => {
+  // Names of workflow inputs / context fields that are actually referenced
+  // by at least one step input. The synthetic source nodes dim entries that
+  // nothing's pointed at yet so authors can see at a glance what's wired.
+  const usedWfInputs = useMemo(() => {
+    const used = new Set<string>()
+    for (const step of draft.steps) {
+      for (const binding of Object.values(step.inputs)) {
+        if (binding.mode !== 'ref' || !binding.value) continue
+        if (binding.value.startsWith('inputs.')) used.add(binding.value.slice('inputs.'.length))
+      }
+    }
+    return used
+  }, [draft.steps])
+
+  const usedCtxFields = useMemo(() => {
+    const used = new Set<string>()
+    for (const step of draft.steps) {
+      for (const binding of Object.values(step.inputs)) {
+        if (binding.mode !== 'ref' || !binding.value) continue
+        if (binding.value.startsWith('context.')) used.add(binding.value.slice('context.'.length))
+      }
+    }
+    return used
+  }, [draft.steps])
+
+  // Build nodes: one per step, laid out left-to-right; plus synthetic
+  // source pool nodes on the left for workflow inputs and form fields.
+  const nodes = useMemo<Node[]>(() => {
+    const stepNodes: Node<StepNodeData>[] = draft.steps.map((step, i) => {
       const tool = tools.get(step.tool)
       const block = detectBlockForStep(step, tools)
 
+      // Annotate inputs that aren't satisfied by a graph edge. With the
+      // synthetic source nodes in place, `inputs.X` and `context.X`
+      // bindings show up as visible edges, so suppress the corresponding
+      // badges to avoid duplicating the same info.
       const inputAnnotations: StepNodeData['inputAnnotations'] = {}
       for (const [inputName, binding] of Object.entries(step.inputs)) {
         if (!binding.value) {
@@ -591,21 +714,9 @@ export function WorkflowDiagramView({
           }
           continue
         }
-        if (binding.value.startsWith('inputs.')) {
-          const wfInput = binding.value.slice('inputs.'.length)
-          inputAnnotations[inputName] = {
-            kind: 'wf-input',
-            tooltip: `Workflow input: ${wfInput}`
-          }
-        } else if (binding.value.startsWith('context.')) {
-          const ctxField = binding.value.slice('context.'.length)
-          inputAnnotations[inputName] = {
-            kind: 'context',
-            tooltip: `Form / context field: ${ctxField}`
-          }
-        } else {
-          inputAnnotations[inputName] = null
-        }
+        // wf-input / context bindings are now represented as edges from
+        // synthetic source nodes, so don't badge them again.
+        inputAnnotations[inputName] = null
       }
 
       return {
@@ -634,8 +745,58 @@ export function WorkflowDiagramView({
         draggable: true
       }
     })
+
+    const wfInputEntries = Object.entries(draft.workflowInputs).map(([name, def]) => ({
+      name,
+      type: def.type,
+      label: name
+    }))
+    const ctxFieldEntries = Object.entries(draft.contextFields).map(([name, def]) => ({
+      name,
+      type: def.type,
+      label: def.label || name
+    }))
+
+    const sourceNodes: Node<SourceNodeData>[] = []
+    if (wfInputEntries.length > 0) {
+      sourceNodes.push({
+        id: 'src-wfinputs',
+        type: 'source',
+        position: { x: -NODE_X_GAP, y: 0 },
+        data: {
+          title: 'Workflow Inputs',
+          kind: 'wf-input',
+          entries: wfInputEntries,
+          usedNames: usedWfInputs
+        },
+        selectable: false,
+        draggable: true
+      })
+    }
+    if (ctxFieldEntries.length > 0) {
+      // Stack the form-fields node below the workflow-inputs node; if there
+      // are no workflow inputs, anchor it at the top instead.
+      const yOffset = wfInputEntries.length > 0 ? wfInputEntries.length * 28 + 80 : 0
+      sourceNodes.push({
+        id: 'src-ctxfields',
+        type: 'source',
+        position: { x: -NODE_X_GAP, y: yOffset },
+        data: {
+          title: 'Form Fields',
+          kind: 'context',
+          entries: ctxFieldEntries,
+          usedNames: usedCtxFields
+        },
+        selectable: false,
+        draggable: true
+      })
+    }
+
+    return [...sourceNodes, ...stepNodes]
   }, [
     draft.steps,
+    draft.workflowInputs,
+    draft.contextFields,
     tools,
     selectedStep,
     errorSteps,
@@ -644,7 +805,9 @@ export function WorkflowDiagramView({
     onSelectStep,
     onRemoveStep,
     onMoveStep,
-    runnableTools
+    runnableTools,
+    usedWfInputs,
+    usedCtxFields
   ])
 
   // Clear the input binding for a target step. Used by both the inline
@@ -668,7 +831,28 @@ export function WorkflowDiagramView({
     [setDraft]
   )
 
-  // Build edges from step.X.outputs.Y refs.
+  // Clear a single binding regardless of where its source came from.
+  // Used by the synthetic-edge × button and by React Flow's keyboard
+  // delete path for input-pool / form-pool edges.
+  const clearBindingByEdgeId = useCallback(
+    (edgeId: string) => {
+      // step→step edge: e-<srcIdx>-<srcOut>-<tgtIdx>-<tgtIn>
+      const stepEdge = edgeId.match(/^e-\d+-.+-(\d+)-(.+)$/)
+      // wf-input → step edge: ewi-<src>-<tgtIdx>-<tgtIn>
+      const wfiEdge = edgeId.match(/^ewi-.+-(\d+)-(.+)$/)
+      // context → step edge: ectx-<src>-<tgtIdx>-<tgtIn>
+      const ctxEdge = edgeId.match(/^ectx-.+-(\d+)-(.+)$/)
+      const m = stepEdge || wfiEdge || ctxEdge
+      if (!m) return
+      const tgtIdx = parseInt(m[1], 10)
+      const tgtIn = m[2]
+      if (Number.isNaN(tgtIdx)) return
+      clearInputBinding(tgtIdx, tgtIn)
+    },
+    [clearInputBinding]
+  )
+
+  // Build edges from step.X.outputs.Y refs and from synthetic source pools.
   const edges = useMemo<Edge[]>(() => {
     const out: Edge[] = []
     const stepIndexByName = new Map<string, number>()
@@ -677,6 +861,81 @@ export function WorkflowDiagramView({
     draft.steps.forEach((step, targetIdx) => {
       for (const [inputName, binding] of Object.entries(step.inputs)) {
         if (binding.mode !== 'ref' || !binding.value) continue
+
+        // inputs.X — edge from the Workflow Inputs synthetic node
+        if (binding.value.startsWith('inputs.')) {
+          const srcName = binding.value.slice('inputs.'.length)
+          if (!draft.workflowInputs[srcName]) continue
+          const wfDef = draft.workflowInputs[srcName]
+          const tgtTool = tools.get(step.tool)
+          const inDef = tgtTool?.inputs[inputName]
+          const sourceType = wfDef.type
+          const targetType = inDef?.type
+          const compatible =
+            !sourceType || !targetType ? true : isTypeCompatible(sourceType, targetType)
+          const isCoercion = !!sourceType && !!targetType && sourceType !== targetType && compatible
+          const color = compatible ? typeColorVar(sourceType) : 'var(--red-9)'
+          out.push({
+            id: `ewi-${srcName}-${targetIdx}-${inputName}`,
+            source: 'src-wfinputs',
+            sourceHandle: `out:${srcName}`,
+            target: `step-${targetIdx}`,
+            targetHandle: `in:${inputName}`,
+            type: 'deletable',
+            data: {
+              onDelete: (): void => clearInputBinding(targetIdx, inputName),
+              sourceType,
+              targetType,
+              edgeColor: color
+            },
+            style: {
+              stroke: color,
+              strokeWidth: !compatible ? 4 : 2,
+              strokeDasharray: isCoercion ? '4 4' : undefined
+            },
+            markerEnd: { type: MarkerType.ArrowClosed, color },
+            animated: false
+          })
+          continue
+        }
+
+        // context.X — edge from the Form Fields synthetic node
+        if (binding.value.startsWith('context.')) {
+          const srcName = binding.value.slice('context.'.length)
+          if (!draft.contextFields[srcName]) continue
+          const ctxDef = draft.contextFields[srcName]
+          const tgtTool = tools.get(step.tool)
+          const inDef = tgtTool?.inputs[inputName]
+          const sourceType = ctxDef.type
+          const targetType = inDef?.type
+          const compatible =
+            !sourceType || !targetType ? true : isTypeCompatible(sourceType, targetType)
+          const isCoercion = !!sourceType && !!targetType && sourceType !== targetType && compatible
+          const color = compatible ? typeColorVar(sourceType) : 'var(--red-9)'
+          out.push({
+            id: `ectx-${srcName}-${targetIdx}-${inputName}`,
+            source: 'src-ctxfields',
+            sourceHandle: `out:${srcName}`,
+            target: `step-${targetIdx}`,
+            targetHandle: `in:${inputName}`,
+            type: 'deletable',
+            data: {
+              onDelete: (): void => clearInputBinding(targetIdx, inputName),
+              sourceType,
+              targetType,
+              edgeColor: color
+            },
+            style: {
+              stroke: color,
+              strokeWidth: !compatible ? 4 : 2,
+              strokeDasharray: isCoercion ? '4 4' : undefined
+            },
+            markerEnd: { type: MarkerType.ArrowClosed, color },
+            animated: false
+          })
+          continue
+        }
+
         const m = binding.value.match(/^steps\.(.+)\.outputs\.(.+)$/)
         if (!m) continue
         const [, srcName, srcOut] = m
@@ -729,7 +988,7 @@ export function WorkflowDiagramView({
     })
 
     return out
-  }, [draft.steps, tools, clearInputBinding])
+  }, [draft.steps, draft.workflowInputs, draft.contextFields, tools, clearInputBinding])
 
   // ── Edge mutations ─────────────────────────────────────────────────
 
@@ -739,66 +998,90 @@ export function WorkflowDiagramView({
   const isValidConnection = useCallback(
     (conn: Connection | Edge): boolean => {
       if (!conn.source || !conn.target || !conn.sourceHandle || !conn.targetHandle) return false
-      const srcIdx = parseInt(conn.source.replace('step-', ''), 10)
+      // Target must be a step input.
+      if (!conn.target.startsWith('step-')) return false
       const tgtIdx = parseInt(conn.target.replace('step-', ''), 10)
-      if (Number.isNaN(srcIdx) || Number.isNaN(tgtIdx)) return false
-      // Self-loops aren't meaningful here.
-      if (srcIdx === tgtIdx) return false
-      const srcOut = conn.sourceHandle.replace(/^out:/, '')
+      if (Number.isNaN(tgtIdx)) return false
       const tgtIn = conn.targetHandle.replace(/^in:/, '')
-      const srcTool = tools.get(draft.steps[srcIdx]?.tool ?? '')
       const tgtTool = tools.get(draft.steps[tgtIdx]?.tool ?? '')
-      const outType = srcTool?.outputs[srcOut]?.type
       const inType = tgtTool?.inputs[tgtIn]?.type
-      // If either side's type is unknown, fall back to permissive behavior
-      // rather than blocking — unknown-type tools shouldn't become unwireable.
+      const srcOut = conn.sourceHandle.replace(/^out:/, '')
+
+      // Source: workflow inputs synthetic node
+      if (conn.source === 'src-wfinputs') {
+        const outType = draft.workflowInputs[srcOut]?.type
+        if (!outType || !inType) return true
+        return isTypeCompatible(outType, inType)
+      }
+      // Source: form-fields synthetic node
+      if (conn.source === 'src-ctxfields') {
+        const outType = draft.contextFields[srcOut]?.type
+        if (!outType || !inType) return true
+        return isTypeCompatible(outType, inType)
+      }
+
+      // Source: another step
+      if (!conn.source.startsWith('step-')) return false
+      const srcIdx = parseInt(conn.source.replace('step-', ''), 10)
+      if (Number.isNaN(srcIdx)) return false
+      if (srcIdx === tgtIdx) return false
+      const srcTool = tools.get(draft.steps[srcIdx]?.tool ?? '')
+      const outType = srcTool?.outputs[srcOut]?.type
       if (!outType || !inType) return true
       return isTypeCompatible(outType, inType)
     },
-    [draft.steps, tools]
+    [draft.steps, draft.workflowInputs, draft.contextFields, tools]
   )
 
   const onConnect = useCallback(
     (conn: Connection) => {
       if (!conn.source || !conn.target || !conn.sourceHandle || !conn.targetHandle) return
-      const srcIdx = parseInt(conn.source.replace('step-', ''), 10)
+      if (!conn.target.startsWith('step-')) return
       const tgtIdx = parseInt(conn.target.replace('step-', ''), 10)
-      if (Number.isNaN(srcIdx) || Number.isNaN(tgtIdx)) return
+      if (Number.isNaN(tgtIdx)) return
       const srcOut = conn.sourceHandle.replace(/^out:/, '')
       const tgtIn = conn.targetHandle.replace(/^in:/, '')
 
+      // Resolve the binding value based on the source node kind.
+      let bindingValue: string | null = null
+      if (conn.source === 'src-wfinputs') {
+        bindingValue = `inputs.${srcOut}`
+      } else if (conn.source === 'src-ctxfields') {
+        bindingValue = `context.${srcOut}`
+      } else if (conn.source.startsWith('step-')) {
+        const srcIdx = parseInt(conn.source.replace('step-', ''), 10)
+        if (!Number.isNaN(srcIdx)) {
+          const srcStep = draft.steps[srcIdx]
+          if (srcStep) bindingValue = `steps.${srcStep.name}.outputs.${srcOut}`
+        }
+      }
+      if (!bindingValue) return
+
       setDraft((prev) => {
-        const srcStep = prev.steps[srcIdx]
-        if (!srcStep) return prev
         const steps = [...prev.steps]
         const targetStep = steps[tgtIdx]
+        if (!targetStep) return prev
         steps[tgtIdx] = {
           ...targetStep,
           inputs: {
             ...targetStep.inputs,
-            [tgtIn]: { mode: 'ref', value: `steps.${srcStep.name}.outputs.${srcOut}` }
+            [tgtIn]: { mode: 'ref', value: bindingValue as string }
           }
         }
         return { ...prev, steps }
       })
     },
-    [setDraft]
+    [setDraft, draft.steps]
   )
 
   const onEdgesChange = useCallback(
     (changes: EdgeChange[]) => {
       for (const change of changes) {
         if (change.type !== 'remove') continue
-        // Edge id encodes target step index and input name.
-        const m = change.id.match(/^e-\d+-.+-(\d+)-(.+)$/)
-        if (!m) continue
-        const tgtIdx = parseInt(m[1], 10)
-        const tgtIn = m[2]
-        if (Number.isNaN(tgtIdx)) continue
-        clearInputBinding(tgtIdx, tgtIn)
+        clearBindingByEdgeId(change.id)
       }
     },
-    [clearInputBinding]
+    [clearBindingByEdgeId]
   )
 
   // ── Empty state ────────────────────────────────────────────────────
@@ -908,16 +1191,30 @@ export function WorkflowDiagramView({
                 Input source:
               </Text>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <Badge variant="soft" size="1" color="iris">
-                  in
-                </Badge>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 10,
+                    height: 10,
+                    background: 'var(--iris-3)',
+                    border: '2px solid var(--iris-9)',
+                    borderRadius: 2
+                  }}
+                />
                 <Text size="1">workflow input</Text>
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <Badge variant="soft" size="1" color="orange">
-                  form
-                </Badge>
-                <Text size="1">user form</Text>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 10,
+                    height: 10,
+                    background: 'var(--orange-3)',
+                    border: '2px solid var(--orange-9)',
+                    borderRadius: 2
+                  }}
+                />
+                <Text size="1">form field</Text>
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                 <Badge variant="soft" size="1" color="grass">
