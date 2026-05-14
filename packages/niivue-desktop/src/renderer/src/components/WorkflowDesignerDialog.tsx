@@ -402,15 +402,24 @@ export function WorkflowDesignerDialog({
       return
     }
 
-    electron.ipcRenderer.invoke('workflow:list-tools').then((t: ToolDefinition[]) => setTools(t))
+    electron.ipcRenderer
+      .invoke('workflow:list-tools')
+      .then((t: ToolDefinition[]) => setTools(t))
+      .catch((err) => console.error('[WorkflowDesigner] workflow:list-tools failed:', err))
     electron.ipcRenderer
       .invoke('workflow:list-runnable-tools')
       .then((names: string[]) => setRunnableTools(new Set(names)))
-      .catch(() => setRunnableTools(new Set()))
+      .catch((err) => {
+        console.error('[WorkflowDesigner] workflow:list-runnable-tools failed:', err)
+        setRunnableTools(new Set())
+      })
     electron.ipcRenderer
       .invoke('workflow:list-heuristics')
       .then((names: string[]) => setHeuristicNames(names))
-      .catch(() => setHeuristicNames([]))
+      .catch((err) => {
+        console.error('[WorkflowDesigner] workflow:list-heuristics failed:', err)
+        setHeuristicNames([])
+      })
 
     const initialDraft = initialDefinition
       ? definitionToDraft(initialDefinition)
