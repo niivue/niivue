@@ -89,8 +89,12 @@ export function BidsWizard({
 
   // Skull strip cache (persists across step navigation)
   const [skullStripCompleted, setSkullStripCompleted] = useState<Set<number>>(new Set())
-  const [skullStripOriginalPaths, setSkullStripOriginalPaths] = useState<Map<number, string>>(new Map())
-  const [skullStripUseStripped, setSkullStripUseStripped] = useState<Map<number, boolean>>(new Map())
+  const [skullStripOriginalPaths, setSkullStripOriginalPaths] = useState<Map<number, string>>(
+    new Map()
+  )
+  const [skullStripUseStripped, setSkullStripUseStripped] = useState<Map<number, boolean>>(
+    new Map()
+  )
   const [skullStripDilation, setSkullStripDilation] = useState<number>(3)
 
   // Validation
@@ -152,8 +156,17 @@ export function BidsWizard({
     }
     nv.document.customData = serializeBidsState(nv.document.customData || '', state)
   }, [
-    open, nv, mappings, fieldmapIntendedFor, demographics,
-    detectedSubjects, config, subject, session, step, dicomDir
+    open,
+    nv,
+    mappings,
+    fieldmapIntendedFor,
+    demographics,
+    detectedSubjects,
+    config,
+    subject,
+    session,
+    step,
+    dicomDir
   ])
 
   const reset = (): void => {
@@ -320,7 +333,16 @@ export function BidsWizard({
     } finally {
       setValidating(false)
     }
-  }, [mappings, config, fieldmapIntendedFor, subject, session, demographics, detectedSubjects, converted])
+  }, [
+    mappings,
+    config,
+    fieldmapIntendedFor,
+    subject,
+    session,
+    demographics,
+    detectedSubjects,
+    converted
+  ])
 
   function getStepForIssue(issue: BidsValidationIssue): number {
     if (issue.targetStep != null) return issue.targetStep
@@ -412,7 +434,10 @@ export function BidsWizard({
           onImportNifti={async (dir: string) => {
             const result = await electron.bidsImportNiftiDir(dir)
             if (!result.success) {
-              setError(result.error || 'Failed to import NIfTI directory')
+              setError(
+                result.error ||
+                  "Couldn't import the NIfTI folder. Check it contains valid .nii/.nii.gz files and try again."
+              )
               return
             }
             await handleConversionComplete(
@@ -463,10 +488,7 @@ export function BidsWizard({
         />
       )}
       {step === 4 && (
-        <StepTaskEvents
-          mappings={currentMappings}
-          onUpdateMapping={handleUpdateMapping}
-        />
+        <StepTaskEvents mappings={currentMappings} onUpdateMapping={handleUpdateMapping} />
       )}
       {step === 5 && (
         <StepSubjectSession

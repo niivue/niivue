@@ -102,10 +102,10 @@ export function StepRegister({
       }
       case 'standard': {
         // Resolve the standard image path via IPC
-        const path = await electron.ipcRenderer.invoke(
+        const path = (await electron.ipcRenderer.invoke(
           'allineate:standard-path',
           standardTemplate
-        ) as string | null
+        )) as string | null
         return path
       }
       case 'file':
@@ -114,13 +114,13 @@ export function StepRegister({
   }
 
   const handleBrowseTarget = async (): Promise<void> => {
-    const paths = await electron.ipcRenderer.invoke('dialog:openFile', {
+    const paths = (await electron.ipcRenderer.invoke('dialog:openFile', {
       title: 'Select Target/Stationary Image',
       filters: [
         { name: 'NIfTI', extensions: ['nii', 'nii.gz', 'gz'] },
         { name: 'All files', extensions: ['*'] }
       ]
-    }) as string[]
+    })) as string[]
     if (paths && paths.length > 0) {
       setTargetFilePath(paths[0])
     }
@@ -131,7 +131,7 @@ export function StepRegister({
 
     const stationaryPath = await getTargetPath()
     if (!stationaryPath) {
-      setError('No target/stationary image selected')
+      setError("Can't register — no target image selected. Pick one as the stationary reference.")
       return
     }
 
@@ -141,7 +141,9 @@ export function StepRegister({
     setPreview(null)
 
     const toProcess = mappings.filter(
-      (m) => selectedIndices.has(m.index) && !m.excluded &&
+      (m) =>
+        selectedIndices.has(m.index) &&
+        !m.excluded &&
         !(targetMode === 'series' && m.index === targetSeriesIndex)
     )
     const updatedMappings = [...mappings]
@@ -263,22 +265,26 @@ export function StepRegister({
   }
 
   // Determine which series can be registered (only exclude the target when using a series as target)
-  const registerableSeries = nonExcluded.filter((m) =>
-    !(targetMode === 'series' && m.index === targetSeriesIndex)
+  const registerableSeries = nonExcluded.filter(
+    (m) => !(targetMode === 'series' && m.index === targetSeriesIndex)
   )
 
   return (
     <div className="flex flex-col gap-3">
-      <Text size="2" weight="bold">Registration (Optional)</Text>
+      <Text size="2" weight="bold">
+        Registration (Optional)
+      </Text>
       <Text size="1" color="gray">
-        Co-register images to a target using affine registration.
-        Common use: register fMRI or DWI to an anatomical T1, or register T1 to MNI standard space.
-        You can skip this step by clicking Next.
+        Co-register images to a target using affine registration. Common use: register fMRI or DWI
+        to an anatomical T1, or register T1 to MNI standard space. You can skip this step by
+        clicking Next.
       </Text>
 
       {/* Target selection */}
       <div className="flex flex-col gap-2 p-3 bg-[var(--gray-2)] rounded border">
-        <Text size="1" weight="medium">Target (Stationary) Image</Text>
+        <Text size="1" weight="medium">
+          Target (Stationary) Image
+        </Text>
         <div className="flex items-center gap-3">
           <label className="flex items-center gap-1 text-xs">
             <input
@@ -348,7 +354,12 @@ export function StepRegister({
               placeholder="Path to target NIfTI…"
               disabled={running}
             />
-            <Button size="1" variant="soft" onClick={() => void handleBrowseTarget()} disabled={running}>
+            <Button
+              size="1"
+              variant="soft"
+              onClick={() => void handleBrowseTarget()}
+              disabled={running}
+            >
               Browse
             </Button>
           </div>
@@ -405,7 +416,9 @@ export function StepRegister({
                   />
                 </td>
                 <td className="py-1 px-2">{m.seriesDescription || `Series ${m.index}`}</td>
-                <td className="py-1 px-2">{m.datatype}/{m.suffix}</td>
+                <td className="py-1 px-2">
+                  {m.datatype}/{m.suffix}
+                </td>
                 <td className="py-1 px-2">{isBidsGuessT1(m) ? 'ls' : 'hel'}</td>
                 <td className="py-1 px-2">
                   {completed.has(m.index) ? (
@@ -439,7 +452,9 @@ export function StepRegister({
                             <button
                               className="text-[var(--purple-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)]"
                               disabled={running}
-                              onClick={() => void onLoadWithOverlay(originalPaths.get(m.index)!, m.niftiPath)}
+                              onClick={() =>
+                                void onLoadWithOverlay(originalPaths.get(m.index)!, m.niftiPath)
+                              }
                             >
                               Overlay
                             </button>
@@ -485,13 +500,20 @@ export function StepRegister({
       </div>
 
       {/* Status */}
-      {running && <Text size="1" color="gray">{status}</Text>}
+      {running && (
+        <Text size="1" color="gray">
+          {status}
+        </Text>
+      )}
 
       {/* Completion banner */}
       {showCompleteBanner && !running && (
         <div className="p-2 text-xs text-[var(--green-11)] bg-[var(--green-3)] rounded border border-[var(--green-6)] flex items-center justify-between">
           <span>Registration complete ({completed.size} series registered successfully)</span>
-          <button className="ml-2 underline text-[var(--green-11)]" onClick={() => setShowCompleteBanner(false)}>
+          <button
+            className="ml-2 underline text-[var(--green-11)]"
+            onClick={() => setShowCompleteBanner(false)}
+          >
             Dismiss
           </button>
         </div>
@@ -575,7 +597,9 @@ function RegisterPreview({
         setRegImage(regUrl)
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [original, registered])
 
   return (
@@ -583,7 +607,9 @@ function RegisterPreview({
       <div className="flex gap-3">
         <div className="flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-1">
-            <Text size="1" weight="medium">Original</Text>
+            <Text size="1" weight="medium">
+              Original
+            </Text>
             {onLoadVolume && (
               <button
                 className="text-[var(--accent-11)] hover:underline text-[10px]"
@@ -603,7 +629,9 @@ function RegisterPreview({
         </div>
         <div className="flex-1 flex flex-col">
           <div className="flex items-center justify-between mb-1">
-            <Text size="1" weight="medium">Registered</Text>
+            <Text size="1" weight="medium">
+              Registered
+            </Text>
             {onLoadVolume && (
               <button
                 className="text-[var(--accent-11)] hover:underline text-[10px]"

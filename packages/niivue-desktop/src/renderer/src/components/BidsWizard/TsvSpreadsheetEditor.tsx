@@ -95,7 +95,10 @@ export function TsvSpreadsheetEditor({
       const res = (await electron.ipcRenderer.invoke('bids:read-tsv', tsvPath)) as ReadResult
       if (cancelled) return
       if (!res?.success || !res.grid) {
-        setError(res?.error ?? 'Failed to read TSV')
+        setError(
+          res?.error ??
+            "Couldn't read the TSV file. Check it still exists and is not open elsewhere."
+        )
         setCells([])
         setOriginalGrid([])
       } else {
@@ -124,7 +127,10 @@ export function TsvSpreadsheetEditor({
     })) as WriteResult
     setSaving(false)
     if (!res?.success) {
-      setError(res?.error ?? 'Failed to write TSV')
+      setError(
+        res?.error ??
+          "Couldn't save the TSV. Check the file isn't open elsewhere and the folder is writable."
+      )
       return
     }
     setOriginalGrid(grid)
