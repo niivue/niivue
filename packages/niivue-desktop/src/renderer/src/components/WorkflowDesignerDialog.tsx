@@ -534,11 +534,14 @@ export function WorkflowDesignerDialog({
   const handleSave = useCallback((): void => {
     setSaveError(null)
     if (!draft.name.trim()) {
-      setSaveError('Please enter a workflow name before saving.')
+      setSaveError("Can't save — workflow needs a name. Add one in the details panel above.")
       return
     }
     if (validation.errors.length > 0) {
-      setSaveError(`Fix ${validation.errors.length} validation error(s) before saving.`)
+      const n = validation.errors.length
+      setSaveError(
+        `Can't save — ${n} issue${n === 1 ? '' : 's'} in the steps marked red. Open the error panel in the header to review.`
+      )
       return
     }
     onSave?.(draftToSchema(draft))

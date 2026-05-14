@@ -417,7 +417,7 @@ function MainApp(): JSX.Element {
   // Segmentation handlers
   const handleRunSegmentation = async (modelId: string): Promise<void> => {
     if (!selected || selected.volumes.length === 0) {
-      alert('Please load a volume first')
+      alert("Can't run segmentation — no volume loaded. Open a NIfTI or DICOM volume first.")
       return
     }
 

@@ -47,7 +47,7 @@ export const registerSegmentationHandlers = ({
     try {
       // Check if there's a volume loaded
       if (!nv || nv.volumes.length === 0) {
-        alert('Please load a volume first')
+        alert("Can't run segmentation — no volume loaded. Open a NIfTI or DICOM volume first.")
         return
       }
 

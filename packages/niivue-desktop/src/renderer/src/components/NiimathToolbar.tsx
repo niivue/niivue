@@ -64,7 +64,7 @@ export function NiimathToolbar({ modeMap, indexMap }: NiimathToolbarProps): JSX.
       return
     }
     if (operations.length === 0) {
-      setError('Please add at least one operation')
+      setError("Can't run — pipeline is empty. Add at least one operation above.")
       return
     }
 
