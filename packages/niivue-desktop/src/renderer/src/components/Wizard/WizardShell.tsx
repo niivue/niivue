@@ -60,12 +60,21 @@ export function WizardShell({
 }: WizardShellProps): React.ReactElement | null {
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
   const prevStep = useRef(currentStep)
+  // Highest step the user has actually advanced through. Forward step-rail
+  // clicks are gated on this so we don't let an author skip over an unfilled
+  // form, while still allowing them to revisit any step they've already
+  // completed in either direction.
+  const [maxStepReached, setMaxStepReached] = useState(currentStep)
 
   // Track direction when step changes
   if (currentStep !== prevStep.current) {
     setDirection(currentStep > prevStep.current ? 'forward' : 'backward')
     prevStep.current = currentStep
   }
+
+  useEffect(() => {
+    setMaxStepReached((prev) => (currentStep > prev ? currentStep : prev))
+  }, [currentStep])
 
   const isFirstStep = currentStep === 0
   const isLastStep = currentStep === steps.length - 1
@@ -120,11 +129,11 @@ export function WizardShell({
 
   const handleStepClick = useCallback(
     (step: number) => {
-      if (allowStepClick && step < currentStep) {
+      if (allowStepClick && step !== currentStep && step <= maxStepReached) {
         onStepChange(step)
       }
     },
-    [allowStepClick, currentStep, onStepChange]
+    [allowStepClick, currentStep, maxStepReached, onStepChange]
   )
 
   if (!open) return null
@@ -160,6 +169,7 @@ export function WizardShell({
               <WizardStepIndicator
                 steps={steps}
                 currentStep={currentStep}
+                maxStepReached={maxStepReached}
                 onStepClick={allowStepClick ? handleStepClick : undefined}
               />
             </aside>
