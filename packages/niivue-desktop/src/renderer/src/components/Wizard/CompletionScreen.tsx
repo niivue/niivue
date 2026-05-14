@@ -374,9 +374,20 @@ export function CompletionScreen({
             Edit Workflow
           </Button>
         )}
-        <Button variant="solid" size="2" onClick={onClose}>
-          Done
-        </Button>
+        {(onLoadFile || onLoadFiles) && fileList.length > 1 ? (
+          <>
+            <Button variant="soft" size="2" onClick={onClose}>
+              Done
+            </Button>
+            <Button variant="solid" size="2" onClick={handleLoadAll}>
+              Load All in Viewer
+            </Button>
+          </>
+        ) : (
+          <Button variant="solid" size="2" onClick={onClose}>
+            Done
+          </Button>
+        )}
       </div>
     </div>
   )
