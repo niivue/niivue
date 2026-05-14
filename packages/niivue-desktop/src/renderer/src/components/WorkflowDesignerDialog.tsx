@@ -778,7 +778,7 @@ export function WorkflowDesignerDialog({
             />
           )}
         </div>
-        <div className="border-t border-neutral-5 bg-[var(--gray-2)] px-3 py-2 max-h-56 overflow-y-auto shrink-0">
+        <div className="border-t border-neutral-5 bg-[var(--gray-2)] px-3 py-2 max-h-72 overflow-y-auto shrink-0">
           <BlockPalette
             onAddBlock={handleAddBlock}
             tools={toolsMap}
