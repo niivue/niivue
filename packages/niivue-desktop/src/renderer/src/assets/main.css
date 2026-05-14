@@ -63,3 +63,24 @@ body {
   outline: 2px solid var(--focus-8);
   outline-offset: 2px;
 }
+
+/* Respect the OS-level reduced-motion preference. Strip the wizard slide
+   to a plain crossfade and stop spinner/transition animations so users who
+   request reduced motion don't get vestibular triggers from our defaults. */
+@media (prefers-reduced-motion: reduce) {
+  .wizard-step-enter,
+  .wizard-step-enter-active,
+  .wizard-step-exit,
+  .wizard-step-exit-active {
+    transform: none !important;
+    transition: opacity 100ms linear !important;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
