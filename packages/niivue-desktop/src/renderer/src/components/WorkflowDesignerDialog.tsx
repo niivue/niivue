@@ -597,6 +597,9 @@ export function WorkflowDesignerDialog({
   //   Delete/Backspace → remove the selected step (diagram view only — the
   //                      list view has its own per-row delete button and
   //                      Backspace there would clash with text editing)
+  //   Alt-ArrowUp/Down → reorder the selected step in the diagram view
+  //                      (matches the chevron buttons on the node; arrows
+  //                      alone would conflict with React Flow viewport pan)
   // We skip when the focus target is an editable element so we don't fight
   // native text-input shortcuts or eat Backspace inside form fields.
   useEffect(() => {
@@ -618,6 +621,19 @@ export function WorkflowDesignerDialog({
         e.preventDefault()
         handleRemoveStep(selectedStep)
         setSelectedStep(null)
+        return
+      }
+      if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown') && !inEditable) {
+        if (view !== 'diagram' || selectedStep === null) return
+        const direction: -1 | 1 = e.key === 'ArrowUp' ? -1 : 1
+        const target = selectedStep + direction
+        if (target < 0 || target >= draft.steps.length) return
+        e.preventDefault()
+        handleMoveStep(selectedStep, direction)
+        // Keep the moved step selected so the inspector and the next
+        // Alt-arrow keep tracking the same node, not the one that swapped
+        // into its old slot.
+        setSelectedStep(target)
         return
       }
       if (!(e.metaKey || e.ctrlKey)) return
@@ -651,7 +667,8 @@ export function WorkflowDesignerDialog({
     view,
     selectedStep,
     draft.steps.length,
-    handleRemoveStep
+    handleRemoveStep,
+    handleMoveStep
   ])
 
   if (!open) return null
