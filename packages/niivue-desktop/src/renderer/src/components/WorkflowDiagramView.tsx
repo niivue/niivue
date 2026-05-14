@@ -37,7 +37,9 @@ import {
   ChevronDownIcon,
   ExclamationTriangleIcon,
   RocketIcon,
-  ArrowDownIcon
+  ArrowDownIcon,
+  ArrowRightIcon,
+  Cross1Icon
 } from '@radix-ui/react-icons'
 import type { ToolDefinition } from '../../../common/workflowTypes.js'
 import {
@@ -460,7 +462,14 @@ function DeletableEdge({
                 boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
               }}
             >
-              {isCoercion ? `${typeLabel} ⇢` : typeLabel}
+              {isCoercion ? (
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                  {typeLabel}
+                  <ArrowRightIcon width={10} height={10} />
+                </span>
+              ) : (
+                typeLabel
+              )}
             </span>
           )}
           <button
@@ -485,7 +494,7 @@ function DeletableEdge({
               boxShadow: '0 1px 2px rgba(0,0,0,0.15)'
             }}
           >
-            ×
+            <Cross1Icon width={10} height={10} />
           </button>
         </div>
       </EdgeLabelRenderer>
