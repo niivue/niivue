@@ -420,13 +420,19 @@ export function CompletionScreen({
             Edit Workflow
           </Button>
         )}
-        {(onLoadFile || onLoadFiles) && fileList.length > 1 ? (
+        {/* Loading the result back into the viewer is the natural next
+            action after a successful run, so it's the primary CTA. Done
+            is demoted to secondary whenever a load action is available —
+            even for a single-file run, where "Open in Viewer" replaces
+            "Load All in Viewer". When there's nothing loadable, Done is
+            the only option and stays primary. */}
+        {(onLoadFile || onLoadFiles) && fileList.length > 0 ? (
           <>
             <Button variant="soft" size="2" onClick={onClose}>
               Done
             </Button>
             <Button variant="solid" size="2" onClick={handleLoadAll}>
-              Load All in Viewer
+              {fileList.length > 1 ? 'Load All in Viewer' : 'Open in Viewer'}
             </Button>
           </>
         ) : (
