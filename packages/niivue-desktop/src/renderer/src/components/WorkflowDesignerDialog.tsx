@@ -554,10 +554,19 @@ export function WorkflowDesignerDialog({
       return
     }
     if (validation.errors.length > 0) {
+      // Point at the first offending step by name so the author isn't left
+      // hunting through the diagram. Also auto-select the step so the inline
+      // error badge on the node lights up — clicking save is implicit
+      // intent to navigate to whatever's blocking the save.
+      const first = validation.errors[0]
       const n = validation.errors.length
-      setSaveError(
-        `Can't save — ${n} issue${n === 1 ? '' : 's'} in the steps marked red. Open the error panel in the header to review.`
-      )
+      const where = first.stepName ? `'${first.stepName}': ${first.message}` : first.message
+      const more = n > 1 ? ` (and ${n - 1} more — see the errors panel)` : ''
+      setSaveError(`Can't save — ${where}.${more}`)
+      if (first.stepName) {
+        const idx = draft.steps.findIndex((s) => s.name === first.stepName)
+        if (idx >= 0) setSelectedStep(idx)
+      }
       return
     }
     onSave?.(draftToSchema(draft))
