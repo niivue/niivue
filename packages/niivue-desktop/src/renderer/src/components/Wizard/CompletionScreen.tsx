@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Button, Heading, Text, Badge, Callout } from '@radix-ui/themes'
+import { Button, Heading, Text, Badge } from '@radix-ui/themes'
 import { CheckCircledIcon, CheckIcon } from '@radix-ui/react-icons'
 import { Niivue, NVImage, SLICE_TYPE } from '@niivue/niivue'
 import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
@@ -41,9 +41,7 @@ function buildWrittenFileList(
     if (origPath) {
       const strippedSourcePath = origPath.replace(/\.nii(\.gz)?$/, '.brain.nii.gz')
       const stripBidsRelPath = generateBidsPath(m, 'brain')
-      const stripBidsPath = bidsDir
-        ? `${bidsDir}/${stripBidsRelPath}${ext}`
-        : strippedSourcePath
+      const stripBidsPath = bidsDir ? `${bidsDir}/${stripBidsRelPath}${ext}` : strippedSourcePath
       files.push({
         key: `${m.index}-stripped`,
         label: `${stripBidsRelPath}${ext}`,
@@ -120,7 +118,9 @@ function useSeriesPreviews(paths: string[]): Map<string, string> {
       if (cancelled || !url) return
       setImages((prev) => new Map(prev).set(path, url))
     })
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [paths.join('\n')])
 
   return images
@@ -185,10 +185,7 @@ export function CompletionScreen({
   const outDir = (outputs?.outDir as string) || ''
   const originalPaths = (context._originalPaths as Record<number, string>) || {}
   const plainVolumes = (outputs?.volumes as string[]) || []
-  const parcellationOutputs = useMemo(
-    () => collectParcellationOutputs(stepOutputs),
-    [stepOutputs]
-  )
+  const parcellationOutputs = useMemo(() => collectParcellationOutputs(stepOutputs), [stepOutputs])
   const isBidsWorkflow = mappings.length > 0
 
   const previewPaths = useMemo(() => {
@@ -199,13 +196,10 @@ export function CompletionScreen({
   }, [mappings, bidsDir, originalPaths, isBidsWorkflow, plainVolumes, parcellationOutputs])
   const previewImages = useSeriesPreviews(previewPaths)
 
-  const writtenFiles = useMemo(
-    () => {
-      const base = isBidsWorkflow ? buildWrittenFileList(mappings, bidsDir, originalPaths) : []
-      return [...base, ...parcellationOutputs]
-    },
-    [mappings, bidsDir, originalPaths, isBidsWorkflow, parcellationOutputs]
-  )
+  const writtenFiles = useMemo(() => {
+    const base = isBidsWorkflow ? buildWrittenFileList(mappings, bidsDir, originalPaths) : []
+    return [...base, ...parcellationOutputs]
+  }, [mappings, bidsDir, originalPaths, isBidsWorkflow, parcellationOutputs])
 
   const [loadedKeys, setLoadedKeys] = useState<Set<string>>(new Set())
   const loadedKeysRef = useRef(loadedKeys)
@@ -224,7 +218,9 @@ export function CompletionScreen({
       if (file.tag === 'original') {
         filePath = file.sourcePath
       } else {
-        const exists = await electron.ipcRenderer.invoke('file-exists', file.bidsPath).catch(() => false)
+        const exists = await electron.ipcRenderer
+          .invoke('file-exists', file.bidsPath)
+          .catch(() => false)
         filePath = exists ? file.bidsPath : file.sourcePath
       }
       if (onLoadFile) {
@@ -236,25 +232,22 @@ export function CompletionScreen({
     [onLoadFile, markLoaded]
   )
 
-  const handleLoadAll = useCallback(
-    async () => {
-      const items: { key: string; path: string }[] = isBidsWorkflow
-        ? writtenFiles.map((f) => ({ key: f.key, path: f.sourcePath }))
-        : plainVolumes.map((vol, i) => ({ key: String(i), path: vol }))
-      if (items.length === 0) return
-      if (onLoadFiles) {
-        await onLoadFiles(items.map((i) => i.path))
-        markLoaded(items.map((i) => i.key))
-        return
-      }
-      if (!onLoadFile) return
-      for (const item of items) {
-        await onLoadFile(item.path)
-        markLoaded([item.key])
-      }
-    },
-    [onLoadFile, onLoadFiles, isBidsWorkflow, writtenFiles, plainVolumes, markLoaded]
-  )
+  const handleLoadAll = useCallback(async () => {
+    const items: { key: string; path: string }[] = isBidsWorkflow
+      ? writtenFiles.map((f) => ({ key: f.key, path: f.sourcePath }))
+      : plainVolumes.map((vol, i) => ({ key: String(i), path: vol }))
+    if (items.length === 0) return
+    if (onLoadFiles) {
+      await onLoadFiles(items.map((i) => i.path))
+      markLoaded(items.map((i) => i.key))
+      return
+    }
+    if (!onLoadFile) return
+    for (const item of items) {
+      await onLoadFile(item.path)
+      markLoaded([item.key])
+    }
+  }, [onLoadFile, onLoadFiles, isBidsWorkflow, writtenFiles, plainVolumes, markLoaded])
 
   const displayDir = bidsDir || outDir
   const fileList = isBidsWorkflow
@@ -269,25 +262,69 @@ export function CompletionScreen({
         ...parcellationOutputs
       ]
 
+  // Surface a quick summary of what got produced so the user has tangible
+  // confirmation beyond a generic "succeeded" line. Numbers are best-effort:
+  // when we can't count files we still render the celebratory hero, just
+  // without the stats row.
+  const totalFileCount = fileList.length
+  const summaryStats: { label: string; value: string }[] = []
+  if (totalFileCount > 0) {
+    summaryStats.push({
+      label: totalFileCount === 1 ? 'file written' : 'files written',
+      value: String(totalFileCount)
+    })
+  }
+  if (isBidsWorkflow) {
+    const subjectCount = new Set(mappings.filter((m) => !m.excluded).map((m) => m.subject)).size
+    if (subjectCount > 0) {
+      summaryStats.push({
+        label: subjectCount === 1 ? 'subject' : 'subjects',
+        value: String(subjectCount)
+      })
+    }
+  }
+
   return (
     <div className="flex flex-col gap-6">
-      <Callout.Root color="green" size="2">
-        <Callout.Icon>
-          <CheckCircledIcon />
-        </Callout.Icon>
-        <Callout.Text>
-          Conversion completed successfully.
-          {displayDir && (
-            <Text size="1" className="text-neutral-9 block mt-1">{displayDir}</Text>
-          )}
-        </Callout.Text>
-      </Callout.Root>
+      <div
+        className="flex flex-col items-center text-center gap-3 px-6 py-8 rounded-xl bg-[var(--green-2)] border border-[var(--green-5)]"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="w-14 h-14 rounded-full bg-[var(--green-9)] text-white flex items-center justify-center shrink-0">
+          <CheckCircledIcon width={32} height={32} />
+        </div>
+        <Heading size="5" className="text-neutral-12">
+          {isBidsWorkflow ? 'BIDS dataset ready' : 'Conversion complete'}
+        </Heading>
+        {displayDir && (
+          <Text size="2" className="text-neutral-10 break-all max-w-xl">
+            Saved to {displayDir}
+          </Text>
+        )}
+        {summaryStats.length > 0 && (
+          <div className="flex gap-6 mt-1">
+            {summaryStats.map((s) => (
+              <div key={s.label} className="flex flex-col items-center">
+                <Text size="6" weight="bold" className="text-[var(--green-11)] leading-none">
+                  {s.value}
+                </Text>
+                <Text size="1" className="text-neutral-10 mt-0.5">
+                  {s.label}
+                </Text>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {fileList.length > 0 && (
         <div className="flex flex-col gap-3">
           <div className="flex items-center justify-between">
             <Heading size="3" className="text-neutral-12">
-              {isBidsWorkflow ? 'Open in viewer' : `${plainVolumes.length} NIfTI file${plainVolumes.length !== 1 ? 's' : ''} created`}
+              {isBidsWorkflow
+                ? 'Open in viewer'
+                : `${plainVolumes.length} NIfTI file${plainVolumes.length !== 1 ? 's' : ''} created`}
             </Heading>
             {(onLoadFile || onLoadFiles) && fileList.length > 1 && (
               <Button variant="soft" size="2" onClick={handleLoadAll}>
@@ -312,12 +349,17 @@ export function CompletionScreen({
                       className="rounded-md shrink-0"
                     />
                   ) : (
-                    <div className="rounded-md bg-neutral-12 shrink-0 flex items-center justify-center" style={{ width: 56, height: 56 }}>
+                    <div
+                      className="rounded-md bg-neutral-12 shrink-0 flex items-center justify-center"
+                      style={{ width: 56, height: 56 }}
+                    >
                       <div className="animate-spin w-3 h-3 border border-neutral-8 border-t-transparent rounded-full" />
                     </div>
                   )}
                   <div className="flex flex-col min-w-0 flex-1">
-                    <Text size="2" className="truncate text-neutral-12">{file.label}</Text>
+                    <Text size="2" className="truncate text-neutral-12">
+                      {file.label}
+                    </Text>
                     {file.tag && (
                       <Badge
                         size="1"
@@ -355,9 +397,13 @@ export function CompletionScreen({
                       }}
                     >
                       {loadedKeys.has(file.key) ? (
-                        <><CheckIcon /> Loaded</>
+                        <>
+                          <CheckIcon /> Loaded
+                        </>
+                      ) : isBidsWorkflow ? (
+                        'Open'
                       ) : (
-                        isBidsWorkflow ? 'Open' : 'Load in Viewer'
+                        'Load in Viewer'
                       )}
                     </Button>
                   )}
