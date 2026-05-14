@@ -14,6 +14,7 @@ import { Niivue } from '@niivue/niivue'
 const electron = window.electron
 import { WizardShell, type WizardStep } from './Wizard/index.js'
 import { FormSection } from './Wizard/FormSection.js'
+import { humanizeFieldName } from './Wizard/AutoField.js'
 import { CompletionScreen } from './Wizard/CompletionScreen.js'
 import { useWizardEngine } from './Wizard/useWizardEngine.js'
 import { StepClassification } from './BidsWizard/StepClassification.js'
@@ -402,14 +403,18 @@ function BidsSidecarFixAdapter({
   )
 
   if (!bidsDir) {
+    // End users see this only when the workflow is misconfigured — but the
+    // remedy lives in the designer, so the copy explains *what's missing*
+    // without naming internal context keys.
     return (
       <Callout.Root color="red">
         <Callout.Icon>
           <ExclamationTriangleIcon />
         </Callout.Icon>
         <Callout.Text>
-          No BIDS dataset directory found in the workflow context. Add a &ldquo;Write BIDS
-          Dataset&rdquo; step before this one and map its output to <code>bids_dir</code>.
+          This step needs a BIDS dataset to fix, but no earlier step has produced one yet. Ask
+          whoever built this workflow to add a &ldquo;Write BIDS Dataset&rdquo; step before this
+          one.
         </Callout.Text>
       </Callout.Root>
     )
@@ -692,13 +697,14 @@ export function WorkflowDialog({
                     ? (engine.context[m.contextField] as string) || ''
                     : ''
 
+                  // Prefer the workflow author's description; fall back to a
+                  // humanized version of the input name so end users never see
+                  // raw `output_dir` / `dicom-folder` identifiers.
+                  const label = m.description || humanizeFieldName(m.inputName)
                   return (
                     <div key={`${m.stepName}-${m.inputName}`} className="flex flex-col gap-1">
                       <Text size="2" weight="medium" className="text-neutral-11">
-                        {m.description || m.inputName}
-                      </Text>
-                      <Text size="1" className="text-neutral-8">
-                        Step: {m.stepName} / {m.inputName} ({m.type})
+                        {label}
                       </Text>
                       {m.type === 'directory' || m.type === 'dicom-folder' ? (
                         <div className="flex items-center gap-2">

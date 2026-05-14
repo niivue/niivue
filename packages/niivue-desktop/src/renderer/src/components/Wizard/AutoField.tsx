@@ -17,7 +17,7 @@ import { VolumePickerField } from './fields/VolumePickerField.js'
  * no `label` or `description` — without this we'd render the raw camelCase
  * or snake_case identifier straight to the user.
  */
-function humanizeFieldName(name: string): string {
+export function humanizeFieldName(name: string): string {
   return name
     .replace(/[_-]+/g, ' ')
     .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
