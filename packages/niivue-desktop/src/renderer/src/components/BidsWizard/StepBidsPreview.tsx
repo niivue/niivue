@@ -8,6 +8,7 @@ import type {
   BidsValidationIssue
 } from '../../../../common/bidsTypes.js'
 import { buildBidsTree, generateBidsPath } from './bidsTreeUtil.js'
+import { Spinner } from '../Spinner.js'
 
 const electron = window.electron
 
@@ -102,7 +103,9 @@ function useSeriesPreviews(paths: string[]): Map<string, string> {
         }
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [paths.join('\n')])
 
   return images
@@ -174,7 +177,10 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
     const validate = async (): Promise<void> => {
       setValidating(true)
       try {
-        const allDemographics: Record<string, import('../../../../common/bidsTypes.js').ParticipantDemographics> = {}
+        const allDemographics: Record<
+          string,
+          import('../../../../common/bidsTypes.js').ParticipantDemographics
+        > = {}
         for (const sub of subjects) {
           if (!sub.excluded) {
             allDemographics[sub.label] = sub.demographics
@@ -186,7 +192,10 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
             name: context.dataset_name || '',
             bidsVersion: context.dataset_version || '1.9.0',
             license: context.license || 'CC0',
-            authors: ((context.authors as string) || '').split(',').map((a: string) => a.trim()).filter(Boolean),
+            authors: ((context.authors as string) || '')
+              .split(',')
+              .map((a: string) => a.trim())
+              .filter(Boolean),
             readme: context.readme || '',
             outputDir: context.output_dir || ''
           },
@@ -202,26 +211,49 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
       }
     }
     validate()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mappings, subjects, context.dataset_name, context.dataset_version, context.license, context.authors, context.readme, context.output_dir])
+  }, [
+    mappings,
+    subjects,
+    context.dataset_name,
+    context.dataset_version,
+    context.license,
+    context.authors,
+    context.readme,
+    context.output_dir
+  ])
 
   return (
     <div className="flex flex-col gap-4 flex-1 min-h-0">
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-[var(--accent-3)] border border-[var(--accent-6)] rounded p-3 text-center">
-          <Text size="4" weight="bold" color="blue">{includedSubjects.length}</Text>
-          <Text size="1" color="gray" as="p">Subject{includedSubjects.length !== 1 ? 's' : ''}</Text>
+          <Text size="4" weight="bold" color="blue">
+            {includedSubjects.length}
+          </Text>
+          <Text size="1" color="gray" as="p">
+            Subject{includedSubjects.length !== 1 ? 's' : ''}
+          </Text>
         </div>
         <div className="bg-[var(--green-3)] border border-[var(--green-6)] rounded p-3 text-center">
-          <Text size="4" weight="bold" color="green">{included.length}</Text>
-          <Text size="1" color="gray" as="p">Series included</Text>
+          <Text size="4" weight="bold" color="green">
+            {included.length}
+          </Text>
+          <Text size="1" color="gray" as="p">
+            Series included
+          </Text>
         </div>
         {excluded.length > 0 && (
           <div className="bg-[var(--orange-3)] border border-[var(--orange-6)] rounded p-3 text-center">
-            <Text size="4" weight="bold" color="orange">{excluded.length}</Text>
-            <Text size="1" color="gray" as="p">Series excluded</Text>
+            <Text size="4" weight="bold" color="orange">
+              {excluded.length}
+            </Text>
+            <Text size="1" color="gray" as="p">
+              Series excluded
+            </Text>
           </div>
         )}
       </div>
@@ -243,7 +275,9 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
       {/* Series list with NIfTI previews */}
       {included.length > 0 && (
         <div className="flex flex-col min-h-0 flex-1">
-          <Text size="2" weight="medium" className="mb-1">Series</Text>
+          <Text size="2" weight="medium" className="mb-1">
+            Series
+          </Text>
           <div className="flex-1 min-h-[200px] overflow-y-auto flex flex-col gap-1.5">
             {included.flatMap((m) => {
               const bidsPath = generateBidsPath(m)
@@ -258,19 +292,32 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                   key={`${m.index}-main`}
                   className="flex items-center gap-3 px-3 py-1.5 bg-[var(--gray-2)] rounded hover:bg-[var(--gray-3)]"
                 >
-                  {previewImages.has(mainPath)
-                    ? <img src={previewImages.get(mainPath)} width={60} height={60} className="rounded flex-shrink-0" />
-                    : <div className="rounded bg-black flex-shrink-0 flex items-center justify-center" style={{ width: 60, height: 60 }}>
-                        <div className="animate-spin w-3 h-3 border border-[var(--gray-9)] border-t-transparent rounded-full" />
-                      </div>
-                  }
+                  {previewImages.has(mainPath) ? (
+                    <img
+                      src={previewImages.get(mainPath)}
+                      width={60}
+                      height={60}
+                      className="rounded flex-shrink-0"
+                    />
+                  ) : (
+                    <div
+                      className="rounded bg-black flex-shrink-0 flex items-center justify-center"
+                      style={{ width: 60, height: 60 }}
+                    >
+                      <Spinner size="sm" tone="neutral" />
+                    </div>
+                  )}
                   <div className="flex flex-col min-w-0 flex-1">
-                    <Text size="2" className="truncate">{bidsPath}{ext}</Text>
+                    <Text size="2" className="truncate">
+                      {bidsPath}
+                      {ext}
+                    </Text>
                     <Text size="1" color="gray" className="truncate">
                       {m.seriesDescription}
                     </Text>
                     <Text size="1" color="blue">
-                      {m.datatype}/{m.suffix}{origPath ? ' (skull stripped)' : ''}
+                      {m.datatype}/{m.suffix}
+                      {origPath ? ' (skull stripped)' : ''}
                     </Text>
                   </div>
                   {onLoadFile && (
@@ -285,7 +332,9 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                       }}
                     >
                       {loadedPaths.has(mainPath) ? (
-                        <><CheckIcon /> Loaded</>
+                        <>
+                          <CheckIcon /> Loaded
+                        </>
                       ) : (
                         'Open in Viewer'
                       )}
@@ -301,18 +350,32 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                     key={`${m.index}-original`}
                     className="flex items-center gap-3 px-3 py-1.5 bg-[var(--gray-2)] rounded hover:bg-[var(--gray-3)]"
                   >
-                    {previewImages.has(origPath)
-                      ? <img src={previewImages.get(origPath)} width={60} height={60} className="rounded flex-shrink-0" />
-                      : <div className="rounded bg-black flex-shrink-0 flex items-center justify-center" style={{ width: 60, height: 60 }}>
-                          <div className="animate-spin w-3 h-3 border border-[var(--gray-9)] border-t-transparent rounded-full" />
-                        </div>
-                    }
+                    {previewImages.has(origPath) ? (
+                      <img
+                        src={previewImages.get(origPath)}
+                        width={60}
+                        height={60}
+                        className="rounded flex-shrink-0"
+                      />
+                    ) : (
+                      <div
+                        className="rounded bg-black flex-shrink-0 flex items-center justify-center"
+                        style={{ width: 60, height: 60 }}
+                      >
+                        <Spinner size="sm" tone="neutral" />
+                      </div>
+                    )}
                     <div className="flex flex-col min-w-0 flex-1">
-                      <Text size="2" className="truncate">{bidsPath}{ext}</Text>
+                      <Text size="2" className="truncate">
+                        {bidsPath}
+                        {ext}
+                      </Text>
                       <Text size="1" color="gray" className="truncate">
                         {m.seriesDescription}
                       </Text>
-                      <Text size="1" color="gray">(original)</Text>
+                      <Text size="1" color="gray">
+                        (original)
+                      </Text>
                     </div>
                     {onLoadFile && (
                       <Button
@@ -326,7 +389,9 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                         }}
                       >
                         {loadedPaths.has(origPath) ? (
-                          <><CheckIcon /> Loaded</>
+                          <>
+                            <CheckIcon /> Loaded
+                          </>
                         ) : (
                           'Open in Viewer'
                         )}
@@ -345,7 +410,9 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
       {/* Subject demographics table */}
       {includedSubjects.length > 0 && (
         <div>
-          <Text size="2" weight="medium" className="mb-1">Participants</Text>
+          <Text size="2" weight="medium" className="mb-1">
+            Participants
+          </Text>
           <div className="border border-[var(--gray-5)] rounded overflow-hidden">
             <table className="w-full text-xs">
               <thead>
@@ -359,7 +426,10 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
               </thead>
               <tbody>
                 {includedSubjects.map((sub) => {
-                  const totalSeries = sub.sessions.reduce((sum, ses) => sum + ses.seriesIndices.length, 0)
+                  const totalSeries = sub.sessions.reduce(
+                    (sum, ses) => sum + ses.seriesIndices.length,
+                    0
+                  )
                   return (
                     <tr key={sub.label} className="border-t border-[var(--gray-4)]">
                       <td className="px-2 py-1 font-mono">sub-{sub.label}</td>
@@ -379,7 +449,7 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
       {/* Validation results */}
       {validating && (
         <div className="flex items-center gap-2 text-sm text-[var(--gray-9)]">
-          <div className="animate-spin w-3 h-3 border-2 border-[var(--accent-9)] border-t-transparent rounded-full" />
+          <Spinner size="sm" tone="accent" />
           Validating...
         </div>
       )}
@@ -387,7 +457,9 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
         <div>
           {validation.valid && validation.errors.length === 0 && (
             <div className="bg-[var(--green-3)] border border-[var(--green-6)] rounded p-2">
-              <Text size="2" color="green">Validation passed</Text>
+              <Text size="2" color="green">
+                Validation passed
+              </Text>
             </div>
           )}
           {validation.errors.length > 0 && (
@@ -426,13 +498,18 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
       {/* Output path */}
       {outputDir && (
         <div className="text-xs text-[var(--gray-9)]">
-          Output: <span className="font-mono">{outputDir}/{(datasetName || 'bids-dataset').replace(/[^a-zA-Z0-9_-]/g, '_')}/</span>
+          Output:{' '}
+          <span className="font-mono">
+            {outputDir}/{(datasetName || 'bids-dataset').replace(/[^a-zA-Z0-9_-]/g, '_')}/
+          </span>
         </div>
       )}
 
       {/* File tree */}
       <div>
-        <Text size="2" weight="medium" className="mb-1">File tree</Text>
+        <Text size="2" weight="medium" className="mb-1">
+          File tree
+        </Text>
         <div className="bg-[var(--gray-12)] text-[var(--green-9)] rounded p-3 text-xs font-mono overflow-auto max-h-[250px]">
           <div>{(datasetName || 'my_bids_dataset').replace(/[^a-zA-Z0-9_-]/g, '_')}/</div>
           <div className="ml-3">dataset_description.json</div>
