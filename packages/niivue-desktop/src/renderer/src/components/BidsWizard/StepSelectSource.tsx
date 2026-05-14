@@ -97,7 +97,7 @@ export function StepSelectSource({
   }
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 flex-1 min-h-0">
       <Text size="2" weight="bold">Select Source</Text>
       <Text size="1" color="gray">
         Choose a folder containing DICOM files, or import pre-converted NIfTI+JSON pairs.
@@ -133,7 +133,7 @@ export function StepSelectSource({
             </label>
           </div>
 
-          <div className="border rounded p-2 overflow-auto max-h-[250px]">
+          <div className="border rounded p-2 overflow-auto flex-1 min-h-[200px]">
             {series.map((s, i) => {
               const n = s.seriesNumber
               const disabled = typeof n !== 'number'

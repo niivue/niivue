@@ -100,13 +100,13 @@ export function StepTaskEvents({ mappings, onUpdateMapping }: StepTaskEventsProp
   }
 
   return (
-    <div>
+    <div className="flex flex-col flex-1 min-h-0">
       <Text size="2" weight="bold" className="block mb-2">Task Events</Text>
       <Text size="1" color="gray" className="block mb-3">
         Import timing/event files for functional runs. Event files are optional — click Next to skip.
       </Text>
 
-      <div className="overflow-auto max-h-[400px] space-y-2">
+      <div className="overflow-auto flex-1 min-h-[200px] space-y-2">
         {boldRuns.map(m => {
           const isExpanded = expandedIndex === m.index
           const evt = m.eventFile
