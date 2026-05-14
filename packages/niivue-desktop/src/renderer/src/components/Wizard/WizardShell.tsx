@@ -185,7 +185,7 @@ export function WizardShell({
               flex-1 min-h-0 to grow primary lists into the empty space below
               short forms, instead of clipping at a fixed pixel max-h. */}
           <main className="flex-1 min-w-0 overflow-y-auto">
-            <div className="p-6 max-w-4xl mx-auto w-full min-h-full flex flex-col">
+            <div className="p-6 max-w-4xl xl:max-w-5xl 2xl:max-w-6xl mx-auto w-full min-h-full flex flex-col">
               <WizardTransition stepIndex={currentStep} direction={direction}>
                 {children}
               </WizardTransition>
