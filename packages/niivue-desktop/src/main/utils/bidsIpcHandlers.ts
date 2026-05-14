@@ -29,6 +29,7 @@ import {
 import { nodePostPassFs, runPostPass } from './bidsPostpass/index.js'
 import { readBidsTree } from './bidsTreeReader.js'
 import { renameSubject } from './bidsSubjectRename.js'
+import { applyUserEditsToProvenanceFile } from './bidsProvenanceWriter.js'
 import type {
   BidsConvertAndClassifyPayload,
   BidsWritePayload,
@@ -396,19 +397,16 @@ export function registerBidsIpcHandlers(): void {
    * the file with a single trailing newline, matching the convention BIDS
    * tools (and our writer) use.
    */
-  ipcMain.handle(
-    'bids:write-tsv',
-    async (_evt, payload: { path: string; grid: string[][] }) => {
-      try {
-        if (!payload?.path) return { success: false, error: 'No path provided' }
-        const body = payload.grid.map((row) => row.join('\t')).join('\n')
-        await fs.promises.writeFile(payload.path, body + '\n', 'utf-8')
-        return { success: true }
-      } catch (err) {
-        return { success: false, error: err instanceof Error ? err.message : String(err) }
-      }
+  ipcMain.handle('bids:write-tsv', async (_evt, payload: { path: string; grid: string[][] }) => {
+    try {
+      if (!payload?.path) return { success: false, error: 'No path provided' }
+      const body = payload.grid.map((row) => row.join('\t')).join('\n')
+      await fs.promises.writeFile(payload.path, body + '\n', 'utf-8')
+      return { success: true }
+    } catch (err) {
+      return { success: false, error: err instanceof Error ? err.message : String(err) }
     }
-  )
+  })
 
   /**
    * Validate a BIDS directory on disk using the in-process @bids/validator.
@@ -475,6 +473,17 @@ export function registerBidsIpcHandlers(): void {
         const result = updateSidecar(sidecarPath, updates)
         if (result.ok) {
           applied += Object.keys(updates).length
+          // Mirror the edit into the sibling .prov.json so the autofix
+          // layer knows these fields are user-authored. A prov-write
+          // failure must not fail the sidecar edit — the sidecar is the
+          // source of truth, prov is best-effort attribution.
+          try {
+            applyUserEditsToProvenanceFile(sidecarPath, updates)
+          } catch (err) {
+            debugLog(
+              `bids:apply-staged-edits prov-write failed for ${sidecarPath}: ${err instanceof Error ? err.message : String(err)}`
+            )
+          }
         } else {
           for (const field of Object.keys(updates)) {
             failed.push({ sidecarPath, field, error: result.error ?? 'unknown error' })

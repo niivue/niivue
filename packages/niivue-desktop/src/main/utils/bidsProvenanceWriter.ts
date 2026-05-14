@@ -1,4 +1,5 @@
 import fs from 'node:fs'
+import path from 'node:path'
 import type {
   BidsProvenance,
   BidsProvenanceField,
@@ -63,4 +64,82 @@ export function writeProvenanceFile(destPath: string, provenance: BidsProvenance
  */
 export function provenancePathFor(niftiPath: string): string {
   return niftiPath.replace(/\.nii(\.gz)?$/i, '.prov.json')
+}
+
+/**
+ * Derive the `.prov.json` sibling path from a JSON sidecar path. Sidecars
+ * end in `.json`; the provenance file uses `.prov.json` so the suffix
+ * doesn't collide with the BIDS sidecar.
+ */
+export function provenancePathForSidecar(sidecarPath: string): string {
+  return sidecarPath.replace(/\.json$/i, '.prov.json')
+}
+
+/**
+ * Find the NIfTI that a sidecar describes by checking the conventional
+ * `.nii.gz` and `.nii` siblings. Returns the first one that exists on
+ * disk, or null if neither does (dataset-level sidecars like
+ * `participants.json` have no NIfTI counterpart).
+ */
+export function findNiftiForSidecar(sidecarPath: string): string | null {
+  const base = sidecarPath.replace(/\.json$/i, '')
+  for (const ext of ['.nii.gz', '.nii']) {
+    const candidate = base + ext
+    if (fs.existsSync(candidate)) return candidate
+  }
+  return null
+}
+
+/** Parse a `.prov.json` file from disk. Returns null when absent or invalid. */
+export function readProvenanceFile(provPath: string): BidsProvenance | null {
+  if (!fs.existsSync(provPath)) return null
+  try {
+    const parsed = JSON.parse(fs.readFileSync(provPath, 'utf-8')) as BidsProvenance
+    if (!parsed || typeof parsed !== 'object') return null
+    if (parsed.schemaVersion !== '1') return null
+    return parsed
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Apply a batch of user-authored sidecar updates to a `.prov.json`
+ * sibling: each edited field is rewritten with `kind: "user"`, deletions
+ * remove the entry. Missing files are created on the fly so datasets
+ * that pre-date provenance still pick up new user attribution. Returns
+ * the updated record (or null when there's no NIfTI to anchor the
+ * record to, e.g. a dataset-level sidecar).
+ */
+export function applyUserEditsToProvenanceFile(
+  sidecarPath: string,
+  updates: Record<string, unknown>,
+  actor = 'bids-editor'
+): BidsProvenance | null {
+  const niftiPath = findNiftiForSidecar(sidecarPath)
+  if (!niftiPath) return null
+  const provPath = provenancePathForSidecar(sidecarPath)
+  const provenance: BidsProvenance = readProvenanceFile(provPath) ?? {
+    schemaVersion: '1',
+    outputFile: path.basename(niftiPath),
+    fields: {},
+    history: []
+  }
+  const ts = new Date().toISOString()
+  for (const [field, value] of Object.entries(updates)) {
+    // Mirror updateSidecar's delete semantics so the provenance and the
+    // sidecar stay in sync on key removals.
+    const isDelete =
+      value === undefined ||
+      value === null ||
+      (typeof value === 'string' && value.trim() === '') ||
+      (Array.isArray(value) && value.length === 0)
+    if (isDelete) {
+      delete provenance.fields[field]
+      continue
+    }
+    setProvenanceField(provenance, field, value, { kind: 'user', actor, ts })
+  }
+  writeProvenanceFile(provPath, provenance)
+  return provenance
 }
