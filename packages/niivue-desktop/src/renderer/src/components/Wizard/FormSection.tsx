@@ -6,6 +6,7 @@ import type {
   ContextFieldDef
 } from '../../../../common/workflowTypes.js'
 import { AutoField } from './AutoField.js'
+import { Spinner } from '../Spinner.js'
 
 interface CustomComponentProps {
   context: Record<string, unknown>
@@ -93,7 +94,7 @@ export function FormSection({
             </div>
             <Separator size="4" />
             <div className="py-12 text-center" role="status" aria-live="polite">
-              <div className="animate-spin w-6 h-6 border-2 border-accent-9 border-t-transparent rounded-full mx-auto mb-3" />
+              <Spinner size="lg" tone="accent" className="mx-auto mb-3 block" />
               <Text size="2" className="text-neutral-9">
                 Preparing data...
               </Text>

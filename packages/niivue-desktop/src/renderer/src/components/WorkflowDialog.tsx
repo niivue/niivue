@@ -17,6 +17,7 @@ import { FormSection } from './Wizard/FormSection.js'
 import { CompletionScreen } from './Wizard/CompletionScreen.js'
 import { useWizardEngine } from './Wizard/useWizardEngine.js'
 import { StepClassification } from './BidsWizard/StepClassification.js'
+import { Spinner } from './Spinner.js'
 import { StepSubjectSession } from './BidsWizard/StepSubjectSession.js'
 import { StepSkullStrip } from './BidsWizard/StepSkullStrip.js'
 import { StepBidsPreview } from './BidsWizard/StepBidsPreview.js'
@@ -53,9 +54,7 @@ function RunningIndicator({
       <Callout.Text>
         <div className="flex flex-col gap-2">
           <div className="flex items-center gap-2">
-            {!hasCounts && (
-              <div className="animate-spin w-4 h-4 border-2 border-accent-9 border-t-transparent rounded-full" />
-            )}
+            {!hasCounts && <Spinner size="md" tone="accent" />}
             <span>{label}</span>
           </div>
           {hasCounts ? (
@@ -641,7 +640,7 @@ export function WorkflowDialog({
       {isPreparing && (
         <div className="flex items-center justify-center py-16">
           <div className="text-center">
-            <div className="animate-spin w-8 h-8 border-2 border-accent-9 border-t-transparent rounded-full mx-auto mb-3" />
+            <Spinner size="lg" tone="accent" className="mx-auto mb-3 block" />
             <Text size="2" className="text-neutral-9">
               Preparing workflow...
             </Text>

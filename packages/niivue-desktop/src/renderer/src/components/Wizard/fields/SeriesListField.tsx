@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Checkbox, Text, Tooltip } from '@radix-ui/themes'
 import { InfoCircledIcon } from '@radix-ui/react-icons'
+import { Spinner } from '../../Spinner.js'
 
 interface DicomSeriesItem {
   seriesNumber: number
@@ -63,8 +64,10 @@ export function SeriesListField({
   if (loading) {
     return (
       <div className="py-6 text-center">
-        <div className="animate-spin w-5 h-5 border-2 border-accent-9 border-t-transparent rounded-full mx-auto mb-2" />
-        <Text size="2" className="text-neutral-9">Loading DICOM series...</Text>
+        <Spinner size="md" tone="accent" className="mx-auto mb-2 block" />
+        <Text size="2" className="text-neutral-9">
+          Loading DICOM series...
+        </Text>
       </div>
     )
   }
@@ -72,7 +75,9 @@ export function SeriesListField({
   if (seriesItems.length === 0) {
     return (
       <div className="py-6 text-center">
-        <Text size="2" className="text-neutral-9">No series found</Text>
+        <Text size="2" className="text-neutral-9">
+          No series found
+        </Text>
       </div>
     )
   }
@@ -93,11 +98,7 @@ export function SeriesListField({
       )}
 
       <label className="flex items-center gap-2.5 cursor-pointer">
-        <Checkbox
-          checked={allChecked}
-          onCheckedChange={() => toggleAll()}
-          size="2"
-        />
+        <Checkbox checked={allChecked} onCheckedChange={() => toggleAll()} size="2" />
         <Text size="2" weight="medium" className="text-neutral-11">
           Select all ({seriesItems.length} series)
         </Text>

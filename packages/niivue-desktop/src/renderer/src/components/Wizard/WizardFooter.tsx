@@ -1,4 +1,5 @@
 import { Button, Tooltip } from '@radix-ui/themes'
+import { Spinner } from '../Spinner.js'
 
 interface WizardFooterProps {
   isFirstStep: boolean
@@ -37,7 +38,7 @@ export function WizardFooter({
     <Button variant="solid" size="2" onClick={onNext} disabled={nextDisabled}>
       {loading ? (
         <span className="flex items-center gap-2">
-          <span className="animate-spin w-3.5 h-3.5 border-2 border-accent-contrast border-t-transparent rounded-full" />
+          <Spinner size="md" tone="contrast" />
           Running...
         </span>
       ) : (

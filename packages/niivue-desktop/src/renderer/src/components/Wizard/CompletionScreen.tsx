@@ -5,6 +5,7 @@ import { Niivue, NVImage, SLICE_TYPE } from '@niivue/niivue'
 import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
 import { generateBidsPath } from '../BidsWizard/bidsTreeUtil.js'
 import { runWithConcurrency } from '../../utils/concurrency.js'
+import { Spinner } from '../Spinner.js'
 
 /** Concurrent preview renders. Each preview spins up its own Niivue
  *  WebGL context — browsers cap simultaneous contexts (~16), and the
@@ -380,10 +381,10 @@ export function CompletionScreen({
                     />
                   ) : (
                     <div
-                      className="rounded-md bg-neutral-12 shrink-0 flex items-center justify-center"
+                      className="rounded-md bg-neutral-3 shrink-0 flex items-center justify-center"
                       style={{ width: 56, height: 56 }}
                     >
-                      <div className="animate-spin w-3 h-3 border border-neutral-8 border-t-transparent rounded-full" />
+                      <Spinner size="sm" tone="neutral" />
                     </div>
                   )}
                   <div className="flex flex-col min-w-0 flex-1">
