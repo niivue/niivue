@@ -7,7 +7,6 @@ import {
   MixerHorizontalIcon,
   DownloadIcon,
   PlusIcon,
-  CodeIcon,
   GearIcon,
   TrashIcon,
   ExclamationTriangleIcon,
@@ -33,7 +32,6 @@ export type TemplateChoice =
   | { kind: 'use-as-template'; definition: Record<string, unknown> }
   | { kind: 'edit-user'; definition: Record<string, unknown> }
   | { kind: 'blank' }
-  | { kind: 'advanced' }
 
 interface WorkflowTemplateGalleryProps {
   onClose: () => void
@@ -312,21 +310,6 @@ export function WorkflowTemplateGallery({
                       </Text>
                       <Text size="2" className="text-neutral-9 text-center">
                         Build a workflow using the block-based visual builder
-                      </Text>
-                    </div>
-                  </Card>
-                  <Card
-                    size="2"
-                    className="hover:shadow-md transition-shadow cursor-pointer border-2 border-dashed border-neutral-6 hover:border-neutral-8"
-                    onClick={() => onSelect({ kind: 'advanced' })}
-                  >
-                    <div className="flex flex-col items-center gap-2 py-4">
-                      <CodeIcon className="w-8 h-8 text-neutral-9" />
-                      <Text size="3" weight="bold" className="text-neutral-12">
-                        Advanced Editor
-                      </Text>
-                      <Text size="2" className="text-neutral-9 text-center">
-                        Full control over JSON, bindings, and tool configuration
                       </Text>
                     </div>
                   </Card>

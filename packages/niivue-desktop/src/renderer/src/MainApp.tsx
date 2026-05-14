@@ -1588,7 +1588,7 @@ function MainApp(): JSX.Element {
                     choice.kind === 'edit-user'
                   ) {
                     openDesignerMode(choice.definition)
-                  } else if (choice.kind === 'blank' || choice.kind === 'advanced') {
+                  } else if (choice.kind === 'blank') {
                     openDesignerMode(null)
                   }
                 }}
