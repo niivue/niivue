@@ -31,7 +31,9 @@ body {
 .wizard-step-enter-active {
   opacity: 1;
   transform: translateX(0);
-  transition: opacity 150ms ease-out, transform 150ms ease-out;
+  transition:
+    opacity 150ms ease-out,
+    transform 150ms ease-out;
 }
 .wizard-step-exit {
   opacity: 1;
@@ -43,9 +45,21 @@ body {
 }
 .wizard-step-exit-active[data-direction='forward'] {
   transform: translateX(-24px);
-  transition: opacity 100ms ease-in, transform 100ms ease-in;
+  transition:
+    opacity 100ms ease-in,
+    transform 100ms ease-in;
 }
 .wizard-step-exit-active[data-direction='backward'] {
   transform: translateX(24px);
-  transition: opacity 100ms ease-in, transform 100ms ease-in;
+  transition:
+    opacity 100ms ease-in,
+    transform 100ms ease-in;
+}
+
+/* ── Workflow edge delete button ─────────────────────────────────────
+   Bare <button> on edge midpoints (custom circular pill style). Add a
+   keyboard focus ring so the button is reachable without a mouse. */
+.workflow-edge-delete:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: 2px;
 }

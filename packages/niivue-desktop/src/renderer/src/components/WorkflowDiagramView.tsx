@@ -184,7 +184,10 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
         <Badge variant="soft" size="1" color={hasError ? 'red' : 'gray'}>
           {index + 1}
         </Badge>
-        <button
+        <IconButton
+          size="1"
+          variant="ghost"
+          color="gray"
           onClick={(e) => {
             e.stopPropagation()
             onMove(-1)
@@ -192,18 +195,13 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
           disabled={index === 0}
           aria-label="Move step earlier"
           title="Move earlier"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            cursor: index === 0 ? 'not-allowed' : 'pointer',
-            color: index === 0 ? 'var(--gray-7)' : 'var(--gray-9)',
-            padding: 2,
-            display: 'flex'
-          }}
         >
           <ChevronUpIcon />
-        </button>
-        <button
+        </IconButton>
+        <IconButton
+          size="1"
+          variant="ghost"
+          color="gray"
           onClick={(e) => {
             e.stopPropagation()
             onMove(1)
@@ -211,35 +209,22 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
           disabled={index === totalSteps - 1}
           aria-label="Move step later"
           title="Move later"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            cursor: index === totalSteps - 1 ? 'not-allowed' : 'pointer',
-            color: index === totalSteps - 1 ? 'var(--gray-7)' : 'var(--gray-9)',
-            padding: 2,
-            display: 'flex'
-          }}
         >
           <ChevronDownIcon />
-        </button>
-        <button
+        </IconButton>
+        <IconButton
+          size="1"
+          variant="ghost"
+          color="gray"
           onClick={(e) => {
             e.stopPropagation()
             onRemove()
           }}
           aria-label={`Remove step ${step.name || index + 1}`}
           title="Remove step"
-          style={{
-            background: 'transparent',
-            border: 'none',
-            cursor: 'pointer',
-            color: 'var(--gray-9)',
-            padding: 2,
-            display: 'flex'
-          }}
         >
           <TrashIcon />
-        </button>
+        </IconButton>
       </div>
 
       {/* Inline validation message — surfaced on the offending node so authors
