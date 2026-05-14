@@ -152,6 +152,20 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
   return (
     <div
       onClick={onSelect}
+      onKeyDown={(e) => {
+        // Enter / Space selects the node, matching the click behavior. Once
+        // selected, the dialog's global Delete handler picks up Backspace /
+        // Delete so a single keyboard path covers select-then-remove without
+        // duplicating the handler here.
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault()
+          onSelect()
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      aria-pressed={selected}
+      aria-label={`Step ${index + 1}: ${blockLabel}${hasError ? ' — has errors' : hasWarning ? ' — has warnings' : ''}`}
       style={{
         width: NODE_WIDTH,
         background: 'var(--color-panel-solid)',
