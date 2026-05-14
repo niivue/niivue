@@ -182,7 +182,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
             variant="outline"
             size="1"
             color="gray"
-            title="This tool has no executor; the step is configuration-only"
+            title="No executor — won't run without a custom backend"
           >
             config-only
           </Badge>

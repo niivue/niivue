@@ -440,7 +440,7 @@ export function BidsSidecarFixForm({
                   disabled={savingPath === proposal.sidecarPath || loading}
                   onClick={() => void handleSave(proposal)}
                 >
-                  {savingPath === proposal.sidecarPath ? 'Saving…' : 'Save'}
+                  {savingPath === proposal.sidecarPath ? 'Saving sidecar…' : 'Save sidecar'}
                 </Button>
               </div>
 

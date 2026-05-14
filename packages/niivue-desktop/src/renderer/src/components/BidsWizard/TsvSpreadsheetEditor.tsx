@@ -190,7 +190,7 @@ export function TsvSpreadsheetEditor({
 
       <div className="flex items-center gap-2 flex-wrap">
         <Button size="1" onClick={() => void handleSave()} disabled={saving || !dirty}>
-          {saving ? 'Saving…' : 'Save'}
+          {saving ? 'Saving TSV…' : 'Save TSV'}
         </Button>
         <Button size="1" variant="soft" onClick={handleRevert} disabled={saving || !dirty}>
           Revert

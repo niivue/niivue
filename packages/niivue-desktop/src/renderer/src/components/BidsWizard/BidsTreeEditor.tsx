@@ -1194,7 +1194,7 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
             disabled={stagedCount === 0 || saveStatus.kind === 'saving'}
             onClick={() => void handleSave()}
           >
-            {saveStatus.kind === 'saving' ? 'Saving…' : 'Save edits'}
+            {saveStatus.kind === 'saving' ? 'Saving edits…' : 'Save edits'}
           </Button>
         </div>
       </div>

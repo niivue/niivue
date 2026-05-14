@@ -474,7 +474,7 @@ export function HeuristicDesigner({
               <Text size="2" color="red">{jsonError}</Text>
             )}
             <Button variant="soft" size="2" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : 'Save'}
+              {saving ? 'Saving heuristic…' : 'Save heuristic'}
             </Button>
             <Button variant="soft" color="gray" size="2" onClick={onClose}>
               Close

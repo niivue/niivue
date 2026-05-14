@@ -647,7 +647,7 @@ export function ContextSpineDesigner({
                       </div>
                     </button>
                     {!runnable && (
-                      <Tooltip content="This tool has no executor — the step will fail at runtime. Built-in workflows pair it with a custom backend.">
+                      <Tooltip content="No executor — won't run without a custom backend.">
                         <Badge variant="outline" size="1" color="gray" className="shrink-0">
                           config-only
                         </Badge>
