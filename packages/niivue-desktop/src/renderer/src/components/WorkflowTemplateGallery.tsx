@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react'
-import { Button, Heading, Text, Card, Badge, Callout } from '@radix-ui/themes'
+import { Button, Heading, Text, Card, Badge, Callout, AlertDialog, Flex } from '@radix-ui/themes'
 import {
   ArrowLeftIcon,
   RocketIcon,
@@ -50,6 +50,7 @@ export function WorkflowTemplateGallery({
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [deleteTarget, setDeleteTarget] = useState<WorkflowListItem | null>(null)
 
   const loadWorkflows = useCallback(async (): Promise<void> => {
     setLoading(true)
@@ -124,10 +125,9 @@ export function WorkflowTemplateGallery({
     }
   }
 
-  const handleDelete = async (wf: WorkflowListItem): Promise<void> => {
-    if (!confirm(`Delete workflow "${wf.description || wf.name}"?\n\nThis cannot be undone.`))
-      return
+  const handleConfirmDelete = async (wf: WorkflowListItem): Promise<void> => {
     setActionError(null)
+    setDeleteTarget(null)
     try {
       await electron.ipcRenderer.invoke('workflow:delete', wf.name)
       setWorkflows((prev) => prev.filter((w) => w.name !== wf.name))
@@ -271,7 +271,7 @@ export function WorkflowTemplateGallery({
                                     variant="soft"
                                     color="red"
                                     size="1"
-                                    onClick={() => void handleDelete(wf)}
+                                    onClick={() => setDeleteTarget(wf)}
                                   >
                                     <TrashIcon /> Delete
                                   </Button>
@@ -336,6 +336,39 @@ export function WorkflowTemplateGallery({
           )}
         </div>
       </div>
+
+      <AlertDialog.Root
+        open={deleteTarget !== null}
+        onOpenChange={(open): void => {
+          if (!open) setDeleteTarget(null)
+        }}
+      >
+        <AlertDialog.Content maxWidth="450px">
+          <AlertDialog.Title>Delete workflow</AlertDialog.Title>
+          <AlertDialog.Description size="2">
+            Delete &ldquo;{deleteTarget?.description || deleteTarget?.name}&rdquo;? This cannot be
+            undone.
+          </AlertDialog.Description>
+          <Flex gap="3" mt="4" justify="end">
+            <AlertDialog.Cancel>
+              <Button variant="soft" color="gray">
+                Cancel
+              </Button>
+            </AlertDialog.Cancel>
+            <AlertDialog.Action>
+              <Button
+                variant="solid"
+                color="red"
+                onClick={(): void => {
+                  if (deleteTarget) void handleConfirmDelete(deleteTarget)
+                }}
+              >
+                Delete
+              </Button>
+            </AlertDialog.Action>
+          </Flex>
+        </AlertDialog.Content>
+      </AlertDialog.Root>
     </div>
   )
 }
