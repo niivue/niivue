@@ -907,7 +907,7 @@ export function WorkflowDiagramView({
           const compatible =
             !sourceType || !targetType ? true : isTypeCompatible(sourceType, targetType)
           const isCoercion = !!sourceType && !!targetType && sourceType !== targetType && compatible
-          const color = compatible ? typeEdgeColorVar(sourceType) : 'var(--red-8)'
+          const color = compatible ? typeEdgeColorVar(sourceType) : 'var(--red-9)'
           out.push({
             id: `ewi-${srcName}-${targetIdx}-${inputName}`,
             source: 'src-wfinputs',
@@ -924,7 +924,7 @@ export function WorkflowDiagramView({
             style: {
               stroke: color,
               strokeWidth: !compatible ? 4 : 2,
-              strokeDasharray: isCoercion ? '4 4' : undefined
+              strokeDasharray: isCoercion ? '3 6' : undefined
             },
             markerEnd: { type: MarkerType.ArrowClosed, color },
             animated: false
@@ -944,7 +944,7 @@ export function WorkflowDiagramView({
           const compatible =
             !sourceType || !targetType ? true : isTypeCompatible(sourceType, targetType)
           const isCoercion = !!sourceType && !!targetType && sourceType !== targetType && compatible
-          const color = compatible ? typeEdgeColorVar(sourceType) : 'var(--red-8)'
+          const color = compatible ? typeEdgeColorVar(sourceType) : 'var(--red-9)'
           out.push({
             id: `ectx-${srcName}-${targetIdx}-${inputName}`,
             source: 'src-ctxfields',
@@ -961,7 +961,7 @@ export function WorkflowDiagramView({
             style: {
               stroke: color,
               strokeWidth: !compatible ? 4 : 2,
-              strokeDasharray: isCoercion ? '4 4' : undefined
+              strokeDasharray: isCoercion ? '3 6' : undefined
             },
             markerEnd: { type: MarkerType.ArrowClosed, color },
             animated: false
@@ -990,7 +990,7 @@ export function WorkflowDiagramView({
           ? outDef
             ? typeEdgeColorVar(outDef.type)
             : 'var(--gray-8)'
-          : 'var(--red-8)'
+          : 'var(--red-9)'
 
         out.push({
           id: `e-${srcIdx}-${srcOut}-${targetIdx}-${inputName}`,
@@ -1012,7 +1012,7 @@ export function WorkflowDiagramView({
             // but uses a light dash so it's still distinguishable from a
             // clean type match without competing with the error styling.
             strokeWidth: !compatible ? (isArray ? 5 : 4) : isArray ? 3 : 2,
-            strokeDasharray: isCoercion ? '4 4' : undefined
+            strokeDasharray: isCoercion ? '3 6' : undefined
           },
           markerEnd: { type: MarkerType.ArrowClosed, color },
           animated: false
