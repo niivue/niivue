@@ -361,14 +361,14 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
           gray-12 contrast keeps it from disappearing into chrome. */}
       <div
         style={{
-          padding: '4px 10px 6px',
+          padding: '6px 10px 8px',
           borderTop: '1px solid var(--gray-4)',
           background: 'var(--gray-1)',
           borderRadius: '0 0 6px 6px'
         }}
       >
         <Text
-          size="1"
+          size="2"
           weight="medium"
           style={{ color: 'var(--gray-12)', fontFamily: 'var(--code-font-family)' }}
         >

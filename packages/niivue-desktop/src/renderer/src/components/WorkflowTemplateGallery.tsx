@@ -167,10 +167,10 @@ export function WorkflowTemplateGallery({
         <div className="max-w-4xl mx-auto p-8">
           {/* Intro */}
           <div className="mb-8">
-            <Heading size="5" weight="bold" className="text-neutral-12 mb-2">
+            <Heading size="3" weight="bold" className="text-neutral-12 mb-2">
               Start from a template
             </Heading>
-            <Text size="3" className="text-neutral-9">
+            <Text size="2" className="text-neutral-9">
               Choose a workflow template to get started quickly, or build your own from scratch.
             </Text>
           </div>
