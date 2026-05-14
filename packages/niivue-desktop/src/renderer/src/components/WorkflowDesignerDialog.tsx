@@ -11,7 +11,7 @@
 // file in their text editor.
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Button, Text, Flex, SegmentedControl, Popover, Badge } from '@radix-ui/themes'
+import { Button, Text, Flex, Heading, SegmentedControl, Popover, Badge } from '@radix-ui/themes'
 import {
   ArrowLeftIcon,
   ExclamationTriangleIcon,
@@ -607,7 +607,7 @@ export function WorkflowDesignerDialog({
       aria-label="Workflow Designer"
     >
       {/* Header */}
-      <header className="flex items-center justify-between px-4 py-2 border-b border-neutral-5 shrink-0 bg-panel">
+      <header className="flex items-center justify-between px-6 py-4 border-b border-neutral-5 shrink-0 bg-panel">
         <Flex gap="3" align="center">
           <Button
             variant="ghost"
@@ -620,9 +620,9 @@ export function WorkflowDesignerDialog({
           </Button>
           <div className="w-px h-6 bg-neutral-5" aria-hidden />
           <Flex gap="1" align="center">
-            <Text size="3" weight="bold">
+            <Heading size="4" weight="bold" className="text-neutral-12">
               Workflow Designer
-            </Text>
+            </Heading>
             {dirty && (
               <Text
                 size="3"

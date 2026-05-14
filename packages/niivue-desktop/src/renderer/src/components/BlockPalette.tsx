@@ -173,7 +173,7 @@ export function BlockPalette({
                 ) : (
                   <ChevronDownIcon className="text-neutral-8 shrink-0" />
                 )}
-                <Text size="1" weight="bold" className="text-neutral-10 uppercase tracking-wider">
+                <Text size="2" weight="medium" className="text-neutral-11">
                   {category}
                 </Text>
                 <Badge
