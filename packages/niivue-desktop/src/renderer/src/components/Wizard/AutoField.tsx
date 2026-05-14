@@ -50,8 +50,12 @@ export function AutoField({
   context,
   error
 }: AutoFieldProps): React.ReactElement {
-  const label = fieldDef.label || fieldDef.description || humanizeFieldName(fieldName)
-  const tooltip = fieldDef.label ? fieldDef.description : undefined
+  // Prefer the explicit label, then humanize the field name. The description
+  // is left out of this chain on purpose — descriptions are explanatory text
+  // meant to sit *under* the input as helper text, not be promoted to the
+  // label when the label is missing.
+  const label = fieldDef.label || humanizeFieldName(fieldName)
+  const tooltip = fieldDef.description && fieldDef.label ? fieldDef.description : undefined
 
   // Seed numeric fields whose value is still undefined. Without this the
   // input renders min (or 0) but the underlying context field stays
@@ -66,10 +70,12 @@ export function AutoField({
     // We intentionally re-fire if the value drifts back to undefined later
     // (e.g. a parent reset); onChange is expected to be stable.
   }, [fieldDef.type, fieldDef.min, value, onChange])
-  // Helper text is the description, shown only when a separate label exists;
-  // when description is doubling as the label, repeating it below the input
-  // would be noise.
-  const helperText = fieldDef.label && fieldDef.description ? fieldDef.description : undefined
+  // Helper text is the description whenever it's present — descriptions are
+  // longer-form explanations that belong under the input, not in the label
+  // slot. The tooltip on the label icon now mirrors helper text only when an
+  // explicit label is provided, so users on smaller viewports still get the
+  // explanation without needing to hover.
+  const helperText = fieldDef.description ? fieldDef.description : undefined
 
   // Stable IDs let the input announce its error/helper text to screen readers.
   // aria-describedby points at whichever is currently rendered.
