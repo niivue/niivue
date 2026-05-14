@@ -336,10 +336,40 @@ export function CompletionScreen({
           <div className="flex flex-col gap-2">
             {fileList.map((f) => {
               const file = f as WrittenFile
+              const loadFile = (): void => {
+                if (isBidsWorkflow) {
+                  void handleOpenBidsFile(file)
+                } else if (onLoadFile) {
+                  void (async () => {
+                    const append = loadedKeysRef.current.size > 0
+                    await onLoadFile(file.sourcePath, { append })
+                    markLoaded([file.key])
+                  })()
+                }
+              }
+              const rowClickable = !!onLoadFile && !loadedKeys.has(file.key)
               return (
                 <div
                   key={file.key}
-                  className="flex items-center gap-4 px-4 py-3 rounded-lg bg-neutral-2 hover:bg-neutral-3 transition-colors"
+                  role={rowClickable ? 'button' : undefined}
+                  tabIndex={rowClickable ? 0 : undefined}
+                  onClick={rowClickable ? loadFile : undefined}
+                  onKeyDown={
+                    rowClickable
+                      ? (e): void => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            loadFile()
+                          }
+                        }
+                      : undefined
+                  }
+                  className={
+                    'flex items-center gap-4 px-4 py-3 rounded-lg bg-neutral-2 transition-colors ' +
+                    (rowClickable
+                      ? 'hover:bg-neutral-3 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-9)]'
+                      : '')
+                  }
                 >
                   {previewImages.has(file.sourcePath) ? (
                     <img
@@ -385,15 +415,7 @@ export function CompletionScreen({
                       className="shrink-0"
                       onClick={(e) => {
                         e.stopPropagation()
-                        if (isBidsWorkflow) {
-                          void handleOpenBidsFile(file)
-                        } else if (onLoadFile) {
-                          void (async () => {
-                            const append = loadedKeysRef.current.size > 0
-                            await onLoadFile(file.sourcePath, { append })
-                            markLoaded([file.key])
-                          })()
-                        }
+                        loadFile()
                       }}
                     >
                       {loadedKeys.has(file.key) ? (
