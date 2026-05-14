@@ -179,6 +179,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
       role="button"
       aria-pressed={selected}
       aria-label={`Step ${index + 1}: ${blockLabel}${hasError ? ' — has errors' : hasWarning ? ' — has warnings' : ''}`}
+      className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
       style={{
         width: NODE_WIDTH,
         background: 'var(--color-panel-solid)',
