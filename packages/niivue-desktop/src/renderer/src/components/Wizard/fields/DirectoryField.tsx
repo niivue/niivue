@@ -54,7 +54,7 @@ export function DirectoryField({
           />
         </div>
         <Button variant="soft" size="2" onClick={handleBrowse} disabled={disabled}>
-          Browse...
+          Browse…
         </Button>
       </div>
     </div>

@@ -39,7 +39,7 @@ export function WizardFooter({
       {loading ? (
         <span className="flex items-center gap-2">
           <Spinner size="md" tone="contrast" />
-          Running...
+          Running…
         </span>
       ) : (
         nextLabel

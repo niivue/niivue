@@ -57,7 +57,7 @@ export const registerSegmentationHandlers = ({
       // Initialize brainchop service if needed
       if (!brainchopService.isReady()) {
         console.log('[Renderer] Initializing brainchop service...')
-        onSegmentationProgress?.(0, 'Initializing TensorFlow.js...')
+        onSegmentationProgress?.(0, 'Initializing TensorFlow.js…')
         await brainchopService.initialize()
       }
 

@@ -96,7 +96,7 @@ export function FormSection({
             <div className="py-12 text-center" role="status" aria-live="polite">
               <Spinner size="lg" tone="accent" className="mx-auto mb-3 block" />
               <Text size="2" className="text-neutral-9">
-                Preparing data...
+                Preparing data…
               </Text>
             </div>
           </div>

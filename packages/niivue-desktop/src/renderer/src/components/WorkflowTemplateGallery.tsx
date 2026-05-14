@@ -195,7 +195,7 @@ export function WorkflowTemplateGallery({
 
           {loading ? (
             <Text size="2" className="text-neutral-8">
-              Loading workflows...
+              Loading workflows…
             </Text>
           ) : loadError ? (
             <Callout.Root color="red" size="2">

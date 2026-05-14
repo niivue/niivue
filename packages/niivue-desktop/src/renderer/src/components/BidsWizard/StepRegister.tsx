@@ -319,7 +319,7 @@ export function StepRegister({
             onChange={(e) => setTargetSeriesIndex(Number(e.target.value))}
             disabled={running}
           >
-            <option value={-1}>Select target series...</option>
+            <option value={-1}>Select target series…</option>
             {nonExcluded.map((m) => (
               <option key={m.index} value={m.index}>
                 {m.seriesDescription || `Series ${m.index}`} ({m.datatype}/{m.suffix})
@@ -597,7 +597,7 @@ function RegisterPreview({
             <img src={origImage} className="w-full h-[160px] bg-black rounded object-contain" />
           ) : (
             <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-[var(--gray-9)] text-xs">
-              Rendering...
+              Rendering…
             </div>
           )}
         </div>
@@ -617,7 +617,7 @@ function RegisterPreview({
             <img src={regImage} className="w-full h-[160px] bg-black rounded object-contain" />
           ) : (
             <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-[var(--gray-9)] text-xs">
-              Rendering...
+              Rendering…
             </div>
           )}
         </div>

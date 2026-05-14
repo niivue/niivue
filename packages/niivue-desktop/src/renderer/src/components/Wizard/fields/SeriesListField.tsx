@@ -66,7 +66,7 @@ export function SeriesListField({
       <div className="py-6 text-center">
         <Spinner size="md" tone="accent" className="mx-auto mb-2 block" />
         <Text size="2" className="text-neutral-9">
-          Loading DICOM series...
+          Loading DICOM series…
         </Text>
       </div>
     )

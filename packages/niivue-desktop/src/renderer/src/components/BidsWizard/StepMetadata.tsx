@@ -26,7 +26,7 @@ This dataset was converted to BIDS format using NiiVue Desktop.
 
 ## Description
 
-*Describe your dataset here...*
+*Describe your dataset here…*
 `
 
   const readmeContent = config.readme || ''
@@ -157,7 +157,7 @@ This dataset was converted to BIDS format using NiiVue Desktop.
         </Text>
         <div className="flex gap-2">
           <Button variant="soft" size="2" onClick={handleSelectOutputDir}>
-            Browse...
+            Browse…
           </Button>
           <input
             type="text"

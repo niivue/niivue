@@ -81,7 +81,7 @@ export function StepConversion({
       </div>
 
       <Text size="1" color="gray">
-        {status === 'converting' && `Converting ${selectedSeries.size} series with dcm2niix...`}
+        {status === 'converting' && `Converting ${selectedSeries.size} series with dcm2niix…`}
         {status === 'complete' && 'Series converted and classified. Click Next to review.'}
         {status === 'error' && 'An error occurred during conversion.'}
       </Text>

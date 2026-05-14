@@ -450,7 +450,7 @@ function MainApp(): JSX.Element {
       } else {
         // Cache miss: run full segmentation
         if (!brainchopService.isReady()) {
-          setSegmentationStatus('Initializing TensorFlow.js...')
+          setSegmentationStatus('Initializing TensorFlow.js…')
           setSegmentationProgress(0)
           setSegmentationRunning(true)
           setSegmentationModelName(modelInfo.name)
@@ -459,7 +459,7 @@ function MainApp(): JSX.Element {
 
         setSegmentationRunning(true)
         setSegmentationProgress(0)
-        setSegmentationStatus('Starting segmentation...')
+        setSegmentationStatus('Starting segmentation…')
         setSegmentationModelName(modelInfo.name)
 
         // Conform to 256³ @ 1mm Uint8 — matches brainchop.org: nv.conform(volume, false)

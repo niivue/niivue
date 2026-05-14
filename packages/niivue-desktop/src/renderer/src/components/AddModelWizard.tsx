@@ -448,7 +448,7 @@ function StepBasicInfo({
               if (filePath) onUpdate('labelsPath', filePath)
             }}
           >
-            Browse...
+            Browse…
           </Button>
           <input
             type="text"

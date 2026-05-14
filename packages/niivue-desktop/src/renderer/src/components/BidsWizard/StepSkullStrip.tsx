@@ -793,7 +793,7 @@ function SkullStripPreview({
             <img src={origImage} className="w-full h-[160px] bg-black rounded object-contain" />
           ) : (
             <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-[var(--gray-9)] text-xs">
-              Rendering...
+              Rendering…
             </div>
           )}
         </div>
@@ -815,7 +815,7 @@ function SkullStripPreview({
             <img src={stripImage} className="w-full h-[160px] bg-black rounded object-contain" />
           ) : (
             <div className="w-full h-[160px] bg-black rounded flex items-center justify-center text-[var(--gray-9)] text-xs">
-              Rendering...
+              Rendering…
             </div>
           )}
         </div>

@@ -134,7 +134,7 @@ export function createDrawSubmenu(
     { label: 'Translucent', accelerator: 'T', click: () => send('Translucent') },
     { label: 'Thin Pen', click: () => send('ThinPen') },
     { label: 'Grow Cut', click: () => send('Growcut') },
-    { label: 'Otsu...', click: () => send('DrawOtsu') }
+    { label: 'Otsu…', click: () => send('DrawOtsu') }
   ]
 }
 
@@ -233,13 +233,13 @@ function buildAllWorkflowMenuItems(
   for (const wf of workflows.values()) {
     const submenu: Electron.MenuItemConstructorOptions[] = [
       {
-        label: 'Run...',
+        label: 'Run…',
         click: () => handleWorkflowMenuClick(win, wf)
       }
     ]
     if (!isBuiltInWorkflow(wf.name)) {
       submenu.push({
-        label: 'Edit...',
+        label: 'Edit…',
         click: () => {
           win.webContents.send('workflow:edit-designer', wf.name)
         }
@@ -315,7 +315,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
                 }
               },
               {
-                label: 'Preferences...',
+                label: 'Preferences…',
                 accelerator: 'CmdOrCtrl+,',
                 click: (): void => {
                   win.webContents.send('openPreferencesDialog')
@@ -636,7 +636,7 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
           }
         },
         {
-          label: 'Preferences...',
+          label: 'Preferences…',
           accelerator: 'CmdOrCtrl+,',
           click: (): void => {
             console.log('Sending openPreferencesDialog')
@@ -953,20 +953,20 @@ export const createMenu = (win: Electron.BrowserWindow): Electron.Menu => {
       label: 'Workflows',
       submenu: [
         {
-          label: 'Create Workflow...',
+          label: 'Create Workflow…',
           accelerator: 'CmdOrCtrl+Shift+N',
           click: (): void => {
             win.webContents.send('workflow:open-designer')
           }
         },
         {
-          label: 'New Heuristic...',
+          label: 'New Heuristic…',
           click: (): void => {
             win.webContents.send('heuristic:open-designer')
           }
         },
         {
-          label: 'Workflow Tutorial...',
+          label: 'Workflow Tutorial…',
           click: (): void => {
             win.webContents.send('workflow:open-designer-tutorial')
           }

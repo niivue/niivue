@@ -647,7 +647,7 @@ export function WorkflowDialog({
           <div className="text-center">
             <Spinner size="lg" tone="accent" className="mx-auto mb-3 block" />
             <Text size="2" className="text-neutral-9">
-              Preparing workflow...
+              Preparing workflow…
             </Text>
           </div>
         </div>
@@ -731,7 +731,7 @@ export function WorkflowDialog({
                               }
                             }}
                           >
-                            Browse...
+                            Browse…
                           </button>
                         </div>
                       ) : (
