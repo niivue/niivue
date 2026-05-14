@@ -681,8 +681,12 @@ export function WorkflowDiagramView({
           },
           style: {
             stroke: color,
-            strokeWidth: isArray ? 3 : 2,
-            strokeDasharray: isCoercion ? '6 4' : !compatible ? '2 3' : undefined
+            // Incompatible edges go thicker and solid so they read as a hard
+            // error from across the canvas. Coercion stays the normal weight
+            // but uses a light dash so it's still distinguishable from a
+            // clean type match without competing with the error styling.
+            strokeWidth: !compatible ? (isArray ? 5 : 4) : isArray ? 3 : 2,
+            strokeDasharray: isCoercion ? '4 4' : undefined
           },
           markerEnd: { type: MarkerType.ArrowClosed, color },
           animated: false
