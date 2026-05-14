@@ -1,5 +1,6 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Heading, Text, Card, Badge, Callout, AlertDialog, Flex } from '@radix-ui/themes'
+import { useFocusTrap } from './useFocusTrap.js'
 import {
   ArrowLeftIcon,
   RocketIcon,
@@ -44,6 +45,11 @@ export function WorkflowTemplateGallery({
   onClose,
   onSelect
 }: WorkflowTemplateGalleryProps): React.ReactElement {
+  const containerRef = useRef<HTMLDivElement>(null)
+  // Trap focus inside the gallery — it renders as an absolute-positioned
+  // panel rather than a Radix dialog, so we wire the trap manually.
+  useFocusTrap(containerRef, true)
+
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -138,6 +144,7 @@ export function WorkflowTemplateGallery({
 
   return (
     <div
+      ref={containerRef}
       className="flex flex-col h-full w-full bg-surface"
       role="region"
       aria-label="Create Workflow"

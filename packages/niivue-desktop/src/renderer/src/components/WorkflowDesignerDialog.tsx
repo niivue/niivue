@@ -36,6 +36,7 @@ import { validateWorkflowDraft, type ValidationResult } from '../../../common/wo
 import { ContextSpineDesigner } from './ContextSpineDesigner.js'
 import { WorkflowDiagramView } from './WorkflowDiagramView.js'
 import { BlockPalette } from './BlockPalette.js'
+import { useFocusTrap } from './useFocusTrap.js'
 
 const electron = window.electron
 
@@ -241,6 +242,12 @@ export function WorkflowDesignerDialog({
   initialDefinition,
   backTarget = 'viewer'
 }: WorkflowDesignerDialogProps): React.ReactElement | null {
+  const containerRef = useRef<HTMLDivElement>(null)
+  // Trap focus inside the designer shell so Tab can't reach background
+  // controls behind the absolute-positioned panel. The designer is always
+  // the topmost shell when mounted, so the trap is unconditional.
+  useFocusTrap(containerRef, open)
+
   const [draft, setDraft] = useState<WorkflowDraft>({ ...DEFAULT_DRAFT })
   const [tools, setTools] = useState<ToolDefinition[]>([])
   // Names of tools that have an executor (declarative `exec` block or
@@ -614,6 +621,7 @@ export function WorkflowDesignerDialog({
 
   return (
     <div
+      ref={containerRef}
       className="flex flex-col h-full w-full bg-surface"
       role="region"
       aria-label="Workflow Designer"

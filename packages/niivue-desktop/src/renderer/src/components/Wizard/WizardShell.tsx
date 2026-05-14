@@ -4,6 +4,7 @@ import { WizardHeader } from './WizardHeader.js'
 import { WizardStepIndicator } from './WizardStepIndicator.js'
 import { WizardFooter } from './WizardFooter.js'
 import { WizardTransition } from './WizardTransition.js'
+import { useFocusTrap } from '../useFocusTrap.js'
 
 interface WizardShellProps {
   open: boolean
@@ -65,6 +66,12 @@ export function WizardShell({
   disableEscape = false,
   children
 }: WizardShellProps): React.ReactElement | null {
+  const containerRef = useRef<HTMLDivElement>(null)
+  // Trap focus inside the wizard shell so Tab can't wander out to background
+  // controls behind the absolute-positioned panel. Disabled when the designer
+  // is stacked on top — the topmost shell owns the trap in that case.
+  useFocusTrap(containerRef, open && !disableEscape)
+
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
   const prevStep = useRef(currentStep)
   // Highest step the user has actually advanced through. Forward step-rail
@@ -148,7 +155,12 @@ export function WizardShell({
   if (!open) return null
 
   return (
-    <div className="flex flex-col h-full w-full bg-surface" role="region" aria-label={title}>
+    <div
+      ref={containerRef}
+      className="flex flex-col h-full w-full bg-surface"
+      role="region"
+      aria-label={title}
+    >
       <WizardProvider
         value={{
           currentStep,
