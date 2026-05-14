@@ -192,11 +192,8 @@ export function BlockPalette({
                   {blocks.map((block) => {
                     const isCompatible = compatibleBlockIds.has(block.id)
                     const runnable = isToolRunnable(tools.get(block.tool), runnableTools)
-                    const tooltip = runnable
-                      ? block.description
-                      : `${block.description}\n\nNo executor — adds a config-only step.`
                     return (
-                      <Tooltip key={block.id} content={tooltip}>
+                      <Tooltip key={block.id} content={block.description}>
                         <button
                           className={`flex items-center gap-2 w-full px-3 py-1.5 rounded text-left transition-colors cursor-pointer ${
                             isCompatible
@@ -225,9 +222,11 @@ export function BlockPalette({
                             </Text>
                           </div>
                           {!runnable && (
-                            <Badge variant="outline" size="1" color="gray" className="shrink-0">
-                              config-only
-                            </Badge>
+                            <Tooltip content="No executor — adds a config-only step.">
+                              <Badge variant="outline" size="1" color="gray" className="shrink-0">
+                                config-only
+                              </Badge>
+                            </Tooltip>
                           )}
                           {isCompatible && (
                             <Badge variant="soft" size="1" color="green" className="shrink-0">
