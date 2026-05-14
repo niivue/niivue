@@ -201,7 +201,11 @@ export async function validateBidsDirectoryInProcess(
     }
   }
   const { validate, BIDSFile, filesToTree, FileIgnoreRules } = modules
-  const ignore = new FileIgnoreRules([])
+  // *.prov.json companions live alongside every NIfTI to record per-field
+  // source attribution; they're not part of the BIDS spec, so seed the
+  // ignore rules directly rather than relying on the validator picking up
+  // the on-disk .bidsignore line.
+  const ignore = new FileIgnoreRules(['*.prov.json'])
 
   let files: { rel: string; abs: string; size: number }[]
   try {

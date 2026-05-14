@@ -7,6 +7,12 @@ import type {
   ParticipantDemographics,
   FieldmapIntendedFor
 } from '../../common/bidsTypes.js'
+import {
+  provenanceFromDcm2niixSidecar,
+  provenancePathFor,
+  setProvenanceField,
+  writeProvenanceFile
+} from './bidsProvenanceWriter.js'
 
 // Fields added by dcm2niix that should not appear in BIDS sidecars
 export const INTERNAL_SIDECAR_FIELDS = new Set([
@@ -225,9 +231,11 @@ ${config.bidsVersion || '1.9.0'}
 }
 
 function writeBidsIgnore(outputDir: string): void {
+  // *.prov.json siblings carry per-field source attribution for the
+  // autofix layer; the BIDS validator must skip them.
   fs.writeFileSync(
     path.join(outputDir, '.bidsignore'),
-    '.Trash/\n.Trash-*/\n.DS_Store\n.Spotlight-V100/\n.fseventsd/\n'
+    '.Trash/\n.Trash-*/\n.DS_Store\n.Spotlight-V100/\n.fseventsd/\n*.prov.json\n'
   )
 }
 
@@ -242,6 +250,7 @@ export function buildBidsTree(
     const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
     paths.push(bidsBase + ext)
     paths.push(bidsBase + '.json')
+    paths.push(provenancePathFor(bidsBase + ext))
     if (m.datatype === 'func' && m.suffix === 'bold' && m.eventFile) {
       paths.push(bidsBase + '_events.tsv')
     }
@@ -249,6 +258,7 @@ export function buildBidsTree(
       const stripBase = generateBidsPath(m, 'brain')
       paths.push(stripBase + ext)
       paths.push(stripBase + '.json')
+      paths.push(provenancePathFor(stripBase + ext))
     }
   }
   paths.sort()
@@ -381,7 +391,9 @@ export function writeDataset(
     // Strip BidsGuess — it's a dcm2niix internal field, not valid BIDS sidecar content
     let sidecar: Record<string, unknown>
     if (m.sidecarData) {
-      const { BidsGuess: _bg, ...rest } = m.sidecarData.original as Record<string, unknown> & { BidsGuess?: unknown }
+      const { BidsGuess: _bg, ...rest } = m.sidecarData.original as Record<string, unknown> & {
+        BidsGuess?: unknown
+      }
       sidecar = { ...rest, ...m.sidecarData.overrides }
     } else if (fs.existsSync(m.sidecarPath)) {
       sidecar = filterSidecar(m.sidecarPath)
@@ -402,6 +414,14 @@ export function writeDataset(
     fs.writeFileSync(destJson, JSON.stringify(sidecar, null, 2) + '\n')
     filesCopied++
 
+    // Emit a `.prov.json` companion describing where each sidecar field
+    // came from. The raw conversion path attributes everything to the
+    // DICOM source via dcm2niix; downstream fixers will overwrite
+    // individual entries as they re-author values.
+    const rawProvenance = provenanceFromDcm2niixSidecar(bidsBase + ext, sidecar)
+    writeProvenanceFile(path.join(outputDir, provenancePathFor(bidsBase + ext)), rawProvenance)
+    filesCopied++
+
     // Write event file for func/bold with eventFile config
     if (m.datatype === 'func' && m.suffix === 'bold' && m.eventFile) {
       const evtDest = path.join(outputDir, bidsBase + '_events.tsv')
@@ -420,6 +440,22 @@ export function writeDataset(
         filesCopied++
         const stripSidecar = { ...sidecar, SkullStripped: true }
         fs.writeFileSync(destStripJson, JSON.stringify(stripSidecar, null, 2) + '\n')
+        filesCopied++
+
+        // The stripped derivative's provenance copies the raw record then
+        // overrides `SkullStripped` with a step-authored entry so the
+        // autofix layer doesn't mistake it for DICOM-sourced metadata.
+        const stripProvenance = provenanceFromDcm2niixSidecar(stripBase + ext, sidecar)
+        setProvenanceField(stripProvenance, 'SkullStripped', true, {
+          kind: 'step',
+          stepName: 'skull_strip',
+          executor: 'niimath:skull-strip',
+          ts: new Date().toISOString()
+        })
+        writeProvenanceFile(
+          path.join(outputDir, provenancePathFor(stripBase + ext)),
+          stripProvenance
+        )
         filesCopied++
       }
     }
@@ -444,7 +480,9 @@ export function writeDataset(
     // Write sidecar (strip BidsGuess — dcm2niix internal, not valid BIDS)
     let sidecar: Record<string, unknown>
     if (m.sidecarData) {
-      const { BidsGuess: _bg, ...rest } = m.sidecarData.original as Record<string, unknown> & { BidsGuess?: unknown }
+      const { BidsGuess: _bg, ...rest } = m.sidecarData.original as Record<string, unknown> & {
+        BidsGuess?: unknown
+      }
       sidecar = { ...rest, ...m.sidecarData.overrides }
     } else if (fs.existsSync(m.sidecarPath)) {
       sidecar = filterSidecar(m.sidecarPath)

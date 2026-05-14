@@ -339,6 +339,73 @@ export interface BidsApplyEditsResult {
   failed: { sidecarPath: string; field: string; error: string }[]
 }
 
+/**
+ * Per-field source attribution for a BIDS sidecar value.
+ *
+ * Five kinds capture where a value actually came from:
+ * - `dicom`    — emitted by dcm2niix from the original DICOM headers
+ * - `step`     — produced by a workflow step (skull-strip, register, etc.)
+ * - `carried`  — copied forward from an upstream sidecar (resample, reorient)
+ * - `inferred` — derived from filename entities or value-range heuristics
+ * - `user`     — set explicitly via the BIDS editor / sidecar fix UI
+ *
+ * The autofix layer uses `kind` to decide overwrite precedence: a `step`
+ * claim outranks an `inferred` value; a `carried` value with a missing
+ * `fromFile` is stale and should be re-resolved.
+ */
+export type BidsProvenanceSourceKind = 'dicom' | 'step' | 'carried' | 'inferred' | 'user'
+
+export interface BidsProvenanceSource {
+  kind: BidsProvenanceSourceKind
+  /** DICOM tag in "GGGG,EEEE" form when known (kind = "dicom"). */
+  tag?: string
+  /** Workflow step that wrote this value (kind = "step" | "inferred"). */
+  stepName?: string
+  /** Underlying executor — e.g. "dcm2niix", "afni:3dSkullStrip". */
+  executor?: string
+  /** Executor version string when available. */
+  version?: string
+  /** Inferrer rule name (kind = "inferred"), e.g. "filename-entity:task". */
+  rule?: string
+  /** Upstream sidecar this value was copied from (kind = "carried"),
+   *  relative to dataset root. */
+  fromFile?: string
+  /** Carrier tool — e.g. "dcm2niix", "afni:3dresample" (kind = "carried"). */
+  via?: string
+  /** UI surface that set the value (kind = "user"), e.g. "bids-editor". */
+  actor?: string
+  /** ISO-8601 timestamp the entry was written. */
+  ts?: string
+}
+
+export interface BidsProvenanceField {
+  value: unknown
+  source: BidsProvenanceSource
+}
+
+export interface BidsProvenanceHistoryEntry {
+  stepName: string
+  executor: string
+  version?: string
+  ts: string
+  inputs?: string[]
+}
+
+/**
+ * Per-output-file provenance record. Lives next to the BIDS sidecar as
+ * `<basename>.prov.json` and is excluded from BIDS validation via
+ * `.bidsignore`. The schema is intentionally small for v1 — future kinds
+ * (`Sources`, `SpatialReference`, etc.) plug in via additional `fields`
+ * entries without a version bump.
+ */
+export interface BidsProvenance {
+  schemaVersion: '1'
+  /** Path relative to dataset root, e.g. `sub-01/anat/sub-01_T1w.nii.gz`. */
+  outputFile: string
+  fields: Record<string, BidsProvenanceField>
+  history: BidsProvenanceHistoryEntry[]
+}
+
 /** Persistable BIDS wizard state for save/restore via NVDocument.customData */
 export interface BidsWizardState {
   mappings: BidsSeriesMapping[]

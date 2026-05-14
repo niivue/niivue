@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import type { BidsSeriesMapping, BidsDatasetConfig, FieldmapIntendedFor } from '../../src/common/bidsTypes.js'
+import type {
+  BidsSeriesMapping,
+  BidsDatasetConfig,
+  FieldmapIntendedFor
+} from '../../src/common/bidsTypes.js'
 import { validateProposedDataset } from '../../src/main/utils/bidsValidator.js'
 import {
   generateBidsFilename,
@@ -180,16 +184,12 @@ describe('bidsWriter - generateBidsFilename', () => {
   })
 
   it('should include task for func (not fmap)', () => {
-    const fn = generateBidsFilename(
-      makeMapping({ datatype: 'func', suffix: 'bold', task: 'rest' })
-    )
+    const fn = generateBidsFilename(makeMapping({ datatype: 'func', suffix: 'bold', task: 'rest' }))
     expect(fn).toBe('sub-01_task-rest_bold')
   })
 
   it('should omit task for fmap even when task is set', () => {
-    const fn = generateBidsFilename(
-      makeMapping({ datatype: 'fmap', suffix: 'epi', task: 'rest' })
-    )
+    const fn = generateBidsFilename(makeMapping({ datatype: 'fmap', suffix: 'epi', task: 'rest' }))
     expect(fn).not.toContain('task-')
   })
 
@@ -209,7 +209,9 @@ describe('bidsWriter - generateBidsFilename', () => {
         echo: 1
       })
     )
-    expect(fn).toBe('sub-01_ses-pre_task-nback_acq-mb4_ce-gadolinium_rec-magnitude_dir-AP_run-02_echo-1_bold')
+    expect(fn).toBe(
+      'sub-01_ses-pre_task-nback_acq-mb4_ce-gadolinium_rec-magnitude_dir-AP_run-02_echo-1_bold'
+    )
   })
 
   it('should zero-pad run numbers to 2 digits', () => {
@@ -252,8 +254,10 @@ describe('bidsWriter - buildBidsTree', () => {
       })
     ]
     const tree = buildBidsTree(mappings)
-    // anat: .nii.gz + .json = 2 files, func: .nii.gz + .json = 2 files
-    expect(tree.length).toBe(4)
+    // anat: .nii.gz + .json + .prov.json = 3 files,
+    // func: .nii.gz + .json + .prov.json = 3 files
+    expect(tree.length).toBe(6)
+    expect(tree.filter((p) => p.endsWith('.prov.json'))).toHaveLength(2)
     // Should be sorted alphabetically
     for (let i = 1; i < tree.length; i++) {
       expect(tree[i] >= tree[i - 1]).toBe(true)
@@ -261,9 +265,7 @@ describe('bidsWriter - buildBidsTree', () => {
   })
 
   it('should exclude excluded mappings', () => {
-    const mappings = [
-      makeMapping({ excluded: true, niftiPath: '/data/anat.nii.gz' })
-    ]
+    const mappings = [makeMapping({ excluded: true, niftiPath: '/data/anat.nii.gz' })]
     const tree = buildBidsTree(mappings)
     expect(tree).toHaveLength(0)
   })
@@ -310,9 +312,7 @@ describe('bidsWriter - resolveIntendedForPaths', () => {
       subject: '01',
       niftiPath: '/data/func.nii.gz'
     })
-    const fieldmapMappings: FieldmapIntendedFor[] = [
-      { fmapIndex: 0, targetIndices: [1] }
-    ]
+    const fieldmapMappings: FieldmapIntendedFor[] = [{ fmapIndex: 0, targetIndices: [1] }]
 
     const updated = resolveIntendedForPaths([fmap, target], fieldmapMappings)
     // The returned mappings are copies with intendedFor set on fmap entries
@@ -327,8 +327,20 @@ describe('bidsWriter - resolveIntendedForPaths', () => {
   })
 
   it('should skip excluded fieldmaps', () => {
-    const fmap = makeMapping({ index: 0, datatype: 'fmap', suffix: 'phasediff', excluded: true, niftiPath: '/data/fmap.nii.gz' })
-    const target = makeMapping({ index: 1, datatype: 'func', suffix: 'bold', task: 'rest', niftiPath: '/data/func.nii.gz' })
+    const fmap = makeMapping({
+      index: 0,
+      datatype: 'fmap',
+      suffix: 'phasediff',
+      excluded: true,
+      niftiPath: '/data/fmap.nii.gz'
+    })
+    const target = makeMapping({
+      index: 1,
+      datatype: 'func',
+      suffix: 'bold',
+      task: 'rest',
+      niftiPath: '/data/func.nii.gz'
+    })
     const fieldmapMappings: FieldmapIntendedFor[] = [{ fmapIndex: 0, targetIndices: [1] }]
 
     resolveIntendedForPaths([fmap, target], fieldmapMappings)
@@ -704,9 +716,7 @@ describe('bidsEngine - suggestFieldmapMappings', () => {
   })
 
   it('should return empty array when no targets exist', () => {
-    const result = suggestFieldmapMappings([
-      makeMapping({ datatype: 'fmap', suffix: 'phasediff' })
-    ])
+    const result = suggestFieldmapMappings([makeMapping({ datatype: 'fmap', suffix: 'phasediff' })])
     expect(result).toHaveLength(0)
   })
 
