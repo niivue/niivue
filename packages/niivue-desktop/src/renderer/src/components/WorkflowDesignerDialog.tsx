@@ -549,19 +549,26 @@ export function WorkflowDesignerDialog({
     onClose()
   }, [dirty, onClose])
 
-  // Global ⌘/Ctrl-Z and ⌘/Ctrl-Shift-Z keybindings, scoped to the open
-  // dialog. We skip when the focus target is an editable element so we
-  // don't fight a native text-input undo (those have their own history).
+  // Global ⌘/Ctrl-Z and ⌘/Ctrl-Shift-Z keybindings, plus Escape to close
+  // (routed through requestClose so the dirty-changes guard still runs).
+  // We skip when the focus target is an editable element so we don't
+  // fight a native text-input undo or block Escape inside form fields.
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent): void => {
+      const target = e.target as HTMLElement | null
+      const inEditable =
+        !!target &&
+        (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable)
+      if (e.key === 'Escape') {
+        if (inEditable) return
+        e.preventDefault()
+        requestClose()
+        return
+      }
       if (!(e.metaKey || e.ctrlKey)) return
       if (e.key !== 'z' && e.key !== 'Z') return
-      const target = e.target as HTMLElement | null
-      if (target) {
-        const tag = target.tagName
-        if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return
-      }
+      if (inEditable) return
       e.preventDefault()
       if (e.shiftKey) {
         redo()
@@ -571,7 +578,7 @@ export function WorkflowDesignerDialog({
     }
     window.addEventListener('keydown', handler)
     return (): void => window.removeEventListener('keydown', handler)
-  }, [open, undo, redo])
+  }, [open, undo, redo, requestClose])
 
   if (!open) return null
 

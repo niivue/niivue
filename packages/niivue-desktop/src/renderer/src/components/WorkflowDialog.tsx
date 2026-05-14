@@ -473,6 +473,8 @@ interface WorkflowDialogProps {
   onEditWorkflow?: (workflowName: string) => void
   workflowName: string
   inputs: Record<string, unknown>
+  /** Suppress the window-level Escape handler — see WizardShell. */
+  disableEscape?: boolean
 }
 
 export function WorkflowDialog({
@@ -483,7 +485,8 @@ export function WorkflowDialog({
   onBidsInit,
   onEditWorkflow,
   workflowName,
-  inputs
+  inputs,
+  disableEscape
 }: WorkflowDialogProps): React.ReactElement | null {
   const engine = useWizardEngine(open, workflowName, inputs, onClose)
 
@@ -581,6 +584,7 @@ export function WorkflowDialog({
       onComplete={inPostCompletionSection ? engine.handleClose : handleComplete}
       hideFooter={isCompleted && !inPostCompletionSection}
       requireConfirmOnClose={isRunning}
+      disableEscape={disableEscape}
     >
       {/* Preparing state */}
       {isPreparing && (

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { WizardProvider, type WizardStep } from './WizardContext.js'
 import { WizardHeader } from './WizardHeader.js'
 import { WizardStepIndicator } from './WizardStepIndicator.js'
@@ -30,6 +30,12 @@ interface WizardShellProps {
    * executing" so a misclick doesn't kill a multi-minute import.
    */
   requireConfirmOnClose?: boolean
+  /**
+   * Suppress the window-level Escape-to-close handler. Used when another
+   * shell (e.g. the designer) is stacked over the wizard and owns Escape;
+   * without this, both handlers fire and both shells unmount on one press.
+   */
+  disableEscape?: boolean
   children: React.ReactNode
 }
 
@@ -49,6 +55,7 @@ export function WizardShell({
   hideFooter = false,
   allowStepClick = true,
   requireConfirmOnClose = false,
+  disableEscape = false,
   children
 }: WizardShellProps): React.ReactElement | null {
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
@@ -74,6 +81,26 @@ export function WizardShell({
     }
     onClose()
   }, [requireConfirmOnClose, onClose])
+
+  // Escape used to close the shell automatically when it lived inside a
+  // Radix Dialog. The inline panel doesn't get that for free, so we wire
+  // it up here — routed through guardedClose so a misclick mid-run still
+  // prompts before tearing down.
+  useEffect(() => {
+    if (!open || disableEscape) return
+    const handler = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return
+      const target = e.target as HTMLElement | null
+      if (target) {
+        const tag = target.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return
+      }
+      e.preventDefault()
+      guardedClose()
+    }
+    window.addEventListener('keydown', handler)
+    return (): void => window.removeEventListener('keydown', handler)
+  }, [open, disableEscape, guardedClose])
 
   const goNext = useCallback(() => {
     if (isLastStep) {

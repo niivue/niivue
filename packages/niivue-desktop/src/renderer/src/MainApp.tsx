@@ -1671,6 +1671,7 @@ function MainApp(): JSX.Element {
                 }}
                 workflowName={wizardParams?.workflowName ?? ''}
                 inputs={wizardParams?.inputs ?? {}}
+                disableEscape={designerOverWizard}
                 onEditWorkflow={(name) => {
                   electron.ipcRenderer
                     .invoke('workflow:get-definition', name)

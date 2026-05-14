@@ -58,6 +58,23 @@ export function WorkflowTemplateGallery({
       .catch(() => setLoading(false))
   }, [])
 
+  // Escape closes the gallery — restores the dismissal affordance that
+  // Radix Dialog used to provide before we moved the gallery inline.
+  useEffect(() => {
+    const handler = (e: KeyboardEvent): void => {
+      if (e.key !== 'Escape') return
+      const target = e.target as HTMLElement | null
+      if (target) {
+        const tag = target.tagName
+        if (tag === 'INPUT' || tag === 'TEXTAREA' || target.isContentEditable) return
+      }
+      e.preventDefault()
+      onClose()
+    }
+    window.addEventListener('keydown', handler)
+    return (): void => window.removeEventListener('keydown', handler)
+  }, [onClose])
+
   // Group workflows by menu category
   const grouped: Record<string, WorkflowListItem[]> = {}
   for (const wf of workflows) {
