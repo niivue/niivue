@@ -586,10 +586,19 @@ export function WorkflowDesignerDialog({
     onClose()
   }, [dirty, onClose])
 
-  // Global ⌘/Ctrl-Z and ⌘/Ctrl-Shift-Z keybindings, plus Escape to close
-  // (routed through requestClose so the dirty-changes guard still runs).
-  // We skip when the focus target is an editable element so we don't
-  // fight a native text-input undo or block Escape inside form fields.
+  // Global keybindings for the designer:
+  //   Escape           → close (routed through requestClose for the dirty guard)
+  //   ⌘/Ctrl-Z         → undo
+  //   ⌘/Ctrl-Shift-Z   → redo
+  //   ⌘/Ctrl-Y         → redo (Windows-style alternate, harmless on macOS)
+  //   ⌘/Ctrl-S         → save (only fires the save path; validation gating
+  //                      lives inside handleSave so the toast/error UI is
+  //                      identical to clicking the button)
+  //   Delete/Backspace → remove the selected step (diagram view only — the
+  //                      list view has its own per-row delete button and
+  //                      Backspace there would clash with text editing)
+  // We skip when the focus target is an editable element so we don't fight
+  // native text-input shortcuts or eat Backspace inside form fields.
   useEffect(() => {
     if (!open) return
     const handler = (e: KeyboardEvent): void => {
@@ -603,9 +612,27 @@ export function WorkflowDesignerDialog({
         requestClose()
         return
       }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && !inEditable) {
+        if (view !== 'diagram' || selectedStep === null) return
+        if (selectedStep < 0 || selectedStep >= draft.steps.length) return
+        e.preventDefault()
+        handleRemoveStep(selectedStep)
+        setSelectedStep(null)
+        return
+      }
       if (!(e.metaKey || e.ctrlKey)) return
-      if (e.key !== 'z' && e.key !== 'Z') return
       if (inEditable) return
+      if (e.key === 's' || e.key === 'S') {
+        e.preventDefault()
+        handleSave()
+        return
+      }
+      if (e.key === 'y' || e.key === 'Y') {
+        e.preventDefault()
+        redo()
+        return
+      }
+      if (e.key !== 'z' && e.key !== 'Z') return
       e.preventDefault()
       if (e.shiftKey) {
         redo()
@@ -615,7 +642,17 @@ export function WorkflowDesignerDialog({
     }
     window.addEventListener('keydown', handler)
     return (): void => window.removeEventListener('keydown', handler)
-  }, [open, undo, redo, requestClose])
+  }, [
+    open,
+    undo,
+    redo,
+    requestClose,
+    handleSave,
+    view,
+    selectedStep,
+    draft.steps.length,
+    handleRemoveStep
+  ])
 
   if (!open) return null
 
