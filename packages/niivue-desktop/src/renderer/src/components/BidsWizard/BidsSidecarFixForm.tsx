@@ -153,7 +153,9 @@ export function BidsSidecarFixForm({
       if (autoFixOnMount) {
         const res = await electron.bidsAutoFixSidecars(datasetDir, mappingsRef.current)
         if (!res.success) {
-          setBanner(res.error || 'Failed to run auto-fix pass')
+          setBanner(
+            res.error || "Couldn't run the auto-fix pass. Re-run the validator and try again."
+          )
           setBannerKind('error')
           setProposals([])
           return
@@ -181,7 +183,9 @@ export function BidsSidecarFixForm({
       }
       const res = await electron.bidsAnalyzeFixes(datasetDir, currentValidation)
       if (!res.success) {
-        setBanner(res.error || 'Failed to analyze validator issues')
+        setBanner(
+          res.error || "Couldn't analyze the validator issues. Re-run the validator and try again."
+        )
         setBannerKind('error')
         setProposals([])
         return
@@ -242,7 +246,9 @@ export function BidsSidecarFixForm({
     try {
       const res = await electron.bidsUpdateSidecar(proposal.sidecarPath, updates)
       if (!res.ok) {
-        setBanner(res.error || 'Failed to save sidecar')
+        setBanner(
+          res.error || "Couldn't save the sidecar. Check the file isn't open elsewhere and retry."
+        )
         setBannerKind('error')
         return
       }
@@ -273,7 +279,9 @@ export function BidsSidecarFixForm({
       const res = await electron.bidsUpdateSidecar(proposal.sidecarPath, updates)
       if (!res.ok) {
         hadError = true
-        setBanner(`Failed to save ${proposal.relativePath}: ${res.error || 'unknown error'}`)
+        setBanner(
+          `Couldn't save ${proposal.relativePath} — ${res.error || 'unknown error'}. Try saving it individually.`
+        )
         setBannerKind('error')
         continue
       }

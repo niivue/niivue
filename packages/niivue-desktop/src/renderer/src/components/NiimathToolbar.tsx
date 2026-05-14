@@ -60,7 +60,9 @@ export function NiimathToolbar({ modeMap, indexMap }: NiimathToolbarProps): JSX.
 
   const handleApply = async (): Promise<void> => {
     if (!currentVolume) {
-      setError('No volume selected')
+      setError(
+        "Can't run — no volume selected. Load a NIfTI/DICOM and pick it from the volumes panel."
+      )
       return
     }
     if (operations.length === 0) {
@@ -91,7 +93,9 @@ export function NiimathToolbar({ modeMap, indexMap }: NiimathToolbarProps): JSX.
       setCmdOpen(false) // collapse command preview
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e)
-      setError(`Failed to encode volume: ${msg}`)
+      setError(
+        `Couldn't encode the volume — ${msg}. Try loading the volume again or pick a different one.`
+      )
       setBusy(false)
     }
   }

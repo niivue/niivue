@@ -959,7 +959,11 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
     if (treeSettled.status === 'fulfilled') {
       const treeRes = treeSettled.value
       if (treeRes?.success) setDiskFiles(treeRes.files as BidsDiskFile[])
-      else setLoadError(treeRes?.error ?? 'Failed to read BIDS tree')
+      else
+        setLoadError(
+          treeRes?.error ??
+            "Couldn't read the BIDS dataset tree. Check the folder still exists and is readable."
+        )
     } else {
       const reason = treeSettled.reason
       setLoadError(reason instanceof Error ? reason.message : String(reason))
