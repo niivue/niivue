@@ -1208,7 +1208,7 @@ export function WorkflowDiagramView({
           )}
           {!dragOver && onOpenGallery && (
             <button
-              className="text-sm text-[var(--accent-11)] hover:underline"
+              className="text-sm text-[var(--accent-11)] hover:underline rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
               onClick={onOpenGallery}
             >
               Or browse templates →
