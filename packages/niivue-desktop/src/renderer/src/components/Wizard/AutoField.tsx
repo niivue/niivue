@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Text } from '@radix-ui/themes'
 import type { ContextFieldDef } from '../../../../common/workflowTypes.js'
 import { TextField } from './fields/TextField.js'
@@ -9,6 +10,21 @@ import { MarkdownField } from './fields/MarkdownField.js'
 import { SeriesListField } from './fields/SeriesListField.js'
 import { ArraySelectField } from './fields/ArraySelectField.js'
 import { VolumePickerField } from './fields/VolumePickerField.js'
+
+/**
+ * Turn an API-style key (output_dir, datasetName, dicom-folder) into a
+ * sentence-cased label. Used as the last-resort label when a field def has
+ * no `label` or `description` — without this we'd render the raw camelCase
+ * or snake_case identifier straight to the user.
+ */
+function humanizeFieldName(name: string): string {
+  return name
+    .replace(/[_-]+/g, ' ')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^./, (c) => c.toUpperCase())
+}
 
 interface AutoFieldProps {
   fieldName: string
@@ -34,8 +50,22 @@ export function AutoField({
   context,
   error
 }: AutoFieldProps): React.ReactElement {
-  const label = fieldDef.label || fieldDef.description || fieldName
+  const label = fieldDef.label || fieldDef.description || humanizeFieldName(fieldName)
   const tooltip = fieldDef.label ? fieldDef.description : undefined
+
+  // Seed numeric fields whose value is still undefined. Without this the
+  // input renders min (or 0) but the underlying context field stays
+  // `undefined`, so a step that never gets touched runs with a different
+  // value than the one the user sees. Fire this once when value is missing
+  // so the displayed and stored values stay in sync.
+  useEffect(() => {
+    if (fieldDef.type !== 'number') return
+    if (typeof value === 'number' && Number.isFinite(value)) return
+    const seed = typeof fieldDef.min === 'number' ? fieldDef.min : 0
+    onChange(seed)
+    // We intentionally re-fire if the value drifts back to undefined later
+    // (e.g. a parent reset); onChange is expected to be stable.
+  }, [fieldDef.type, fieldDef.min, value, onChange])
   // Helper text is the description, shown only when a separate label exists;
   // when description is doubling as the label, repeating it below the input
   // would be noise.
