@@ -636,7 +636,7 @@ export function WorkflowDialog({
       disabledReason={disabledReason}
       loading={isRunning}
       runningLabel={`Running ${sections[engine.currentSection]?.title || 'workflow'}…`}
-      lastStepLabel={sections[engine.currentSection]?.buttonText || 'Run'}
+      lastStepLabel={sections[engine.currentSection]?.buttonText || 'Run workflow'}
       onComplete={inPostCompletionSection ? engine.handleClose : handleComplete}
       hideFooter={isCompleted && !inPostCompletionSection}
       requireConfirmOnClose={isRunning}

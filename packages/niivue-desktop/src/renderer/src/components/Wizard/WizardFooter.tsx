@@ -28,7 +28,7 @@ export function WizardFooter({
   isLastStep,
   canProceed,
   loading,
-  lastStepLabel = 'Run',
+  lastStepLabel = 'Run workflow',
   disabledReason,
   runningLabel = 'Running…',
   onBack,
