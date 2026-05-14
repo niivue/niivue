@@ -1,6 +1,10 @@
 import React from 'react'
 import { Heading, Text, Separator } from '@radix-ui/themes'
-import type { WorkflowDefinition, FormSectionDef } from '../../../../common/workflowTypes.js'
+import type {
+  WorkflowDefinition,
+  FormSectionDef,
+  ContextFieldDef
+} from '../../../../common/workflowTypes.js'
 import { AutoField } from './AutoField.js'
 
 interface CustomComponentProps {
@@ -20,6 +24,19 @@ interface CustomComponentProps {
 function isSimpleInputType(type: string): boolean {
   if (type.endsWith('[]')) return false
   return type !== 'volume' && type !== 'mask' && type !== 'object'
+}
+
+/**
+ * Fields that visually need a full row even on a wide viewport (long input,
+ * embedded picker, markdown editor, etc.). Returns the Tailwind grid-span
+ * class to apply to that field's grid cell.
+ */
+function fieldSpanClass(fieldName: string, fieldDef: ContextFieldDef): string {
+  if (fieldName === 'readme') return 'md:col-span-2'
+  if (fieldName === 'output_dir') return 'md:col-span-2'
+  if (fieldDef.type === 'directory' || fieldDef.type === 'dicom-folder') return 'md:col-span-2'
+  if (fieldDef.type.endsWith('[]')) return 'md:col-span-2'
+  return ''
 }
 
 interface FormSectionProps {
@@ -106,20 +123,21 @@ export function FormSection({
           </div>
           <Separator size="4" />
           {inputFields.length > 0 && (
-            <div className="flex flex-col gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
               {inputFields.map(({ name, def }) => (
-                <AutoField
-                  key={name}
-                  fieldName={name}
-                  fieldDef={def!}
-                  value={context[name]}
-                  onChange={(v) => onFieldChange(name, v)}
-                  loading={heuristicLoading.has(name)}
-                  datasetName={context.dataset_name as string | undefined}
-                  stepOutputs={stepOutputs}
-                  context={context}
-                  error={fieldErrors?.[name]}
-                />
+                <div key={name} className={fieldSpanClass(name, def!)}>
+                  <AutoField
+                    fieldName={name}
+                    fieldDef={def!}
+                    value={context[name]}
+                    onChange={(v) => onFieldChange(name, v)}
+                    loading={heuristicLoading.has(name)}
+                    datasetName={context.dataset_name as string | undefined}
+                    stepOutputs={stepOutputs}
+                    context={context}
+                    error={fieldErrors?.[name]}
+                  />
+                </div>
               ))}
             </div>
           )}
@@ -156,23 +174,24 @@ export function FormSection({
         )}
       </div>
       <Separator size="4" />
-      <div className="flex flex-col gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3">
         {section.fields.map((fieldName) => {
           const fieldDef = fields[fieldName]
           if (!fieldDef) return null
           return (
-            <AutoField
-              key={fieldName}
-              fieldName={fieldName}
-              fieldDef={fieldDef}
-              value={context[fieldName]}
-              onChange={(v) => onFieldChange(fieldName, v)}
-              loading={heuristicLoading.has(fieldName)}
-              datasetName={context.dataset_name as string | undefined}
-              stepOutputs={stepOutputs}
-              context={context}
-              error={fieldErrors?.[fieldName]}
-            />
+            <div key={fieldName} className={fieldSpanClass(fieldName, fieldDef)}>
+              <AutoField
+                fieldName={fieldName}
+                fieldDef={fieldDef}
+                value={context[fieldName]}
+                onChange={(v) => onFieldChange(fieldName, v)}
+                loading={heuristicLoading.has(fieldName)}
+                datasetName={context.dataset_name as string | undefined}
+                stepOutputs={stepOutputs}
+                context={context}
+                error={fieldErrors?.[fieldName]}
+              />
+            </div>
           )
         })}
       </div>
