@@ -97,7 +97,7 @@ export function ArraySelectField({
         </Text>
       ) : items.length === 0 ? (
         <Text size="1" className="text-neutral-9">
-          No items.
+          Nothing to pick from yet — an earlier step has to produce items first.
         </Text>
       ) : (
         <div className="border border-neutral-6 rounded-md overflow-hidden max-h-[280px] overflow-y-auto">
