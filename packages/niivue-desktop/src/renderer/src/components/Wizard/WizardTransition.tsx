@@ -6,6 +6,24 @@ interface WizardTransitionProps {
   children: React.ReactNode
 }
 
+/** Read the user's reduced-motion preference. Tracked via media-query
+ *  listener so a runtime change (system pref toggle, OS dark mode switch
+ *  in some setups) is picked up without a remount. */
+function usePrefersReducedMotion(): boolean {
+  const [reduced, setReduced] = useState<boolean>(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  })
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return
+    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
+    const handler = (e: MediaQueryListEvent): void => setReduced(e.matches)
+    mq.addEventListener('change', handler)
+    return (): void => mq.removeEventListener('change', handler)
+  }, [])
+  return reduced
+}
+
 export function WizardTransition({
   stepIndex,
   direction,
@@ -15,10 +33,20 @@ export function WizardTransition({
   const [displayedChildren, setDisplayedChildren] = useState(children)
   const [phase, setPhase] = useState<'idle' | 'exit' | 'enter'>('idle')
   const timeoutRef = useRef<ReturnType<typeof setTimeout>>()
+  const reducedMotion = usePrefersReducedMotion()
 
   useEffect(() => {
     if (stepIndex === displayedStep) {
       setDisplayedChildren(children)
+      return
+    }
+
+    // Reduced-motion users skip the slide/fade transition entirely —
+    // swap content instantly and leave phase at 'idle'.
+    if (reducedMotion) {
+      setDisplayedChildren(children)
+      setDisplayedStep(stepIndex)
+      setPhase('idle')
       return
     }
 
@@ -38,7 +66,7 @@ export function WizardTransition({
     }, 100)
 
     return () => clearTimeout(timeoutRef.current)
-  }, [stepIndex, children])
+  }, [stepIndex, children, reducedMotion])
 
   const className =
     phase === 'exit'
