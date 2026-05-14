@@ -14,7 +14,6 @@ interface WizardFooterProps {
   disabledReason?: string
   onBack: () => void
   onNext: () => void
-  onCancel: () => void
 }
 
 export function WizardFooter({
@@ -25,8 +24,7 @@ export function WizardFooter({
   lastStepLabel = 'Run',
   disabledReason,
   onBack,
-  onNext,
-  onCancel
+  onNext
 }: WizardFooterProps): React.ReactElement {
   // Cancel stays enabled even mid-run: long-running steps (e.g. multi-minute
   // dcm2niix imports) must remain abortable so users aren't trapped waiting.
@@ -48,16 +46,22 @@ export function WizardFooter({
     </Button>
   )
 
+  // The header already renders a "Back to viewer" affordance, so the footer
+  // doesn't need a second Cancel on the first step — that duplication was
+  // pointed out in the workflow-designer UX review. Use a single Back button
+  // that's disabled on the first step (and during loading, to avoid racing
+  // the engine).
   return (
     <footer className="flex items-center justify-between px-6 py-4 border-t border-neutral-5 shrink-0 bg-panel">
       <Button
         variant="soft"
         color="gray"
         size="2"
-        onClick={isFirstStep ? onCancel : onBack}
-        disabled={!isFirstStep && loading}
+        onClick={onBack}
+        disabled={isFirstStep || loading}
+        aria-label={isFirstStep ? 'Back (you are on the first step)' : 'Back'}
       >
-        {isFirstStep ? 'Cancel' : 'Back'}
+        Back
       </Button>
 
       {/* Tooltip on the disabled Next reveals which fields are still missing.

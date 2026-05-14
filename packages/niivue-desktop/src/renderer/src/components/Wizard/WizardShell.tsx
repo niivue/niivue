@@ -200,7 +200,6 @@ export function WizardShell({
             lastStepLabel={lastStepLabel}
             onBack={goBack}
             onNext={goNext}
-            onCancel={guardedClose}
           />
         )}
       </WizardProvider>
