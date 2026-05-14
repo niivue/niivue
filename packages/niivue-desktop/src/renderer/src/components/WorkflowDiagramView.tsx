@@ -1207,12 +1207,14 @@ export function WorkflowDiagramView({
             </div>
           )}
           {!dragOver && onOpenGallery && (
-            <button
-              className="text-sm text-[var(--accent-11)] hover:underline rounded-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
-              onClick={onOpenGallery}
-            >
-              Or browse templates →
-            </button>
+            <div className="flex flex-col items-center gap-1">
+              <Text size="1" className="text-neutral-9">
+                Or
+              </Text>
+              <Button variant="soft" size="2" onClick={onOpenGallery}>
+                Browse templates
+              </Button>
+            </div>
           )}
         </div>
       </div>
