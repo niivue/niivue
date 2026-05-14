@@ -400,7 +400,7 @@ export function StepSkullStrip({
   const isActive = engine !== 'none'
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-3 flex-1 min-h-0">
       <Text size="2" weight="bold">
         Skull Stripping (Optional)
       </Text>
@@ -506,57 +506,56 @@ export function StepSkullStrip({
         </div>
       )}
 
-      {/* Series selection table */}
+      {/* Series selection grid (2 columns) */}
       {isActive && (
-        <div className="border rounded overflow-auto max-h-[140px]">
-          <table className="w-full text-xs">
-            <thead className="bg-[var(--gray-2)] sticky top-0">
-              <tr>
-                <th className="py-1 px-2 text-left font-medium w-8"></th>
-                <th className="py-1 px-2 text-left font-medium">Series</th>
-                <th className="py-1 px-2 text-left font-medium">Type</th>
-                <th className="py-1 px-2 text-left font-medium">Status</th>
-                <th className="py-1 px-2 text-left font-medium">Use</th>
-                {onLoadVolume && completed.size > 0 && <th className="py-1 px-2 text-left font-medium">Viewer</th>}
-              </tr>
-            </thead>
-            <tbody>
-              {nonExcluded.map((m) => (
-                <tr
+        <div className="border rounded overflow-auto flex-1 min-h-[140px] p-2">
+          <div className="grid grid-cols-2 gap-2">
+            {nonExcluded.map((m) => {
+              const isDone = completed.has(m.index)
+              const isPending = running && selectedIndices.has(m.index)
+              const isPreviewed = preview?.seriesIndex === m.index
+              const hasViewerActions = onLoadVolume && isDone && originalPaths.has(m.index)
+              return (
+                <div
                   key={m.index}
                   className={
-                    'border-t hover:bg-[var(--gray-3)] cursor-pointer' +
-                    (preview?.seriesIndex === m.index ? ' bg-[var(--accent-3)]' : '')
+                    'border rounded p-2 text-xs cursor-pointer transition-colors ' +
+                    (isPreviewed
+                      ? 'bg-[var(--accent-3)] border-[var(--accent-7)]'
+                      : 'hover:bg-[var(--gray-3)] border-[var(--gray-5)]')
                   }
                   onClick={() => {
-                    if (completed.has(m.index)) void handlePreviewSeries(m)
+                    if (isDone) void handlePreviewSeries(m)
                   }}
                 >
-                  <td className="py-1 px-2" onClick={(e) => e.stopPropagation()}>
+                  <div className="flex items-center gap-2 mb-1">
                     <input
                       type="checkbox"
                       checked={selectedIndices.has(m.index)}
                       onChange={() => toggleIndex(m.index)}
                       disabled={running}
+                      onClick={(e) => e.stopPropagation()}
                     />
-                  </td>
-                  <td className="py-1 px-2">{m.seriesDescription || `Series ${m.index}`}</td>
-                  <td className="py-1 px-2">
-                    {m.datatype}/{m.suffix}
-                  </td>
-                  <td className="py-1 px-2">
-                    {completed.has(m.index) ? (
+                    <span className="font-medium truncate flex-1" title={m.seriesDescription || `Series ${m.index}`}>
+                      {m.seriesDescription || `Series ${m.index}`}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 text-[11px] text-[var(--gray-10)] mb-1">
+                    <span>{m.datatype}/{m.suffix}</span>
+                    <span>•</span>
+                    {isDone ? (
                       <span className="text-[var(--green-11)]">Done</span>
-                    ) : running && selectedIndices.has(m.index) ? (
+                    ) : isPending ? (
                       <span className="text-[var(--accent-11)]">Pending</span>
                     ) : (
                       <span className="text-[var(--gray-8)]">-</span>
                     )}
-                  </td>
-                  <td className="py-1 px-2" onClick={(e) => e.stopPropagation()}>
-                    {completed.has(m.index) ? (
+                  </div>
+                  {isDone && (
+                    <div className="flex items-center gap-2 mb-1" onClick={(e) => e.stopPropagation()}>
+                      <Text size="1" className="text-[var(--gray-10)]">Use:</Text>
                       <select
-                        className="text-xs border rounded px-1 py-0.5"
+                        className="text-xs border rounded px-1 py-0.5 flex-1 min-w-0"
                         value={useStripped.get(m.index) !== false ? 'stripped' : 'original'}
                         onChange={(e) => {
                           const wantStripped = e.target.value === 'stripped'
@@ -578,49 +577,41 @@ export function StepSkullStrip({
                         <option value="stripped">Skull Stripped</option>
                         <option value="original">Original</option>
                       </select>
-                    ) : (
-                      <span className="text-[var(--gray-8)] text-xs">Original</span>
-                    )}
-                  </td>
-                  {onLoadVolume && completed.size > 0 && (
-                    <td className="py-1 px-2" onClick={(e) => e.stopPropagation()}>
-                      {completed.has(m.index) && originalPaths.has(m.index) ? (
-                        <div className="flex gap-1">
-                          <button
-                            className="text-[var(--accent-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)] disabled:no-underline"
-                            disabled={running}
-                            onClick={() => void onLoadVolume(originalPaths.get(m.index)!)}
-                          >
-                            Load Original
-                          </button>
-                          <button
-                            className="text-[var(--accent-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)] disabled:no-underline"
-                            disabled={running}
-                            onClick={() => void onLoadVolume(m.niftiPath)}
-                          >
-                            Load Stripped
-                          </button>
-                          {onLoadWithOverlay && (
-                            <button
-                              className="text-[var(--purple-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)] disabled:no-underline"
-                              disabled={running}
-                              onClick={() =>
-                                void onLoadWithOverlay(originalPaths.get(m.index)!, m.niftiPath)
-                              }
-                            >
-                              Original + Stripped
-                            </button>
-                          )}
-                        </div>
-                      ) : (
-                        <span className="text-[var(--gray-8)] text-xs">-</span>
-                      )}
-                    </td>
+                    </div>
                   )}
-                </tr>
-              ))}
-            </tbody>
-          </table>
+                  {hasViewerActions && (
+                    <div className="flex flex-wrap gap-x-2 gap-y-0.5" onClick={(e) => e.stopPropagation()}>
+                      <button
+                        className="text-[var(--accent-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)] disabled:no-underline"
+                        disabled={running}
+                        onClick={() => void onLoadVolume!(originalPaths.get(m.index)!)}
+                      >
+                        Load Original
+                      </button>
+                      <button
+                        className="text-[var(--accent-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)] disabled:no-underline"
+                        disabled={running}
+                        onClick={() => void onLoadVolume!(m.niftiPath)}
+                      >
+                        Load Stripped
+                      </button>
+                      {onLoadWithOverlay && (
+                        <button
+                          className="text-[var(--purple-11)] hover:underline text-[10px] disabled:text-[var(--gray-6)] disabled:no-underline"
+                          disabled={running}
+                          onClick={() =>
+                            void onLoadWithOverlay(originalPaths.get(m.index)!, m.niftiPath)
+                          }
+                        >
+                          Orig + Strip
+                        </button>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )
+            })}
+          </div>
         </div>
       )}
 
