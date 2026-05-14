@@ -202,9 +202,7 @@ export function WorkflowTemplateGallery({
               <Callout.Icon>
                 <ExclamationTriangleIcon />
               </Callout.Icon>
-              <Callout.Text className="flex-1">
-                Couldn&apos;t load workflows: {loadError}
-              </Callout.Text>
+              <Callout.Text className="flex-1">Couldn’t load workflows: {loadError}</Callout.Text>
               <Button variant="soft" color="red" size="1" onClick={() => void loadWorkflows()}>
                 Retry
               </Button>

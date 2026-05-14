@@ -71,8 +71,12 @@ export const bidsClassifyHeuristic: HeuristicFn = async (_inputs, context, stepO
     context.subjects = undefined
   }
 
+  // cacheIsStale=false implies mappings was already populated (the IIFE
+  // returns true when mappings is undefined). TS can't narrow through the
+  // IIFE so we have to spell it out.
+  const resolved: BidsSeriesMapping[] = mappings ?? []
   const subjects = context.subjects as DetectedSubject[] | undefined
-  return subjects && subjects.length > 0 ? applySubjectsToMappings(mappings, subjects) : mappings
+  return subjects && subjects.length > 0 ? applySubjectsToMappings(resolved, subjects) : resolved
 }
 
 /**

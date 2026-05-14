@@ -769,7 +769,7 @@ export function WorkflowDialog({
           </Callout.Icon>
           <Callout.Text>
             <div className="flex items-center justify-between gap-3">
-              <span>Couldn&apos;t apply your edit: {engine.updateError}</span>
+              <span>Couldn’t apply your edit: {engine.updateError}</span>
               <button
                 type="button"
                 className="text-xs underline text-[var(--amber-12)] shrink-0"

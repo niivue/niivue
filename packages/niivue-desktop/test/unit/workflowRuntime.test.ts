@@ -51,15 +51,14 @@ describe('workflow load smoke', () => {
     const tools = getToolDefinitions()
     for (const [wfName, def] of getWorkflowDefinitions()) {
       for (const [stepName, step] of Object.entries(def.steps)) {
-        expect(
-          tools.has(step.tool),
-          `${wfName}/${stepName} → unknown tool '${step.tool}'`
-        ).toBe(true)
+        expect(tools.has(step.tool), `${wfName}/${stepName} → unknown tool '${step.tool}'`).toBe(
+          true
+        )
       }
     }
   })
 
-  it('every step\'s tool has an executor (declarative or code-registered)', async () => {
+  it("every step's tool has an executor (declarative or code-registered)", async () => {
     const { getToolDefinitions } = await import('../../src/main/utils/workflowLoader.js')
     const { listRegisteredToolExecutors } = await import('../../src/main/utils/toolRegistry.js')
     const tools = getToolDefinitions()
@@ -160,7 +159,7 @@ describe('dicom-to-bids runtime wiring', () => {
 describe('selected_series filter reaches dcm2niix', () => {
   // Mirrors the user's saved "Workflow with series" shape: a filter-import
   // dcm2niix step whose series input is bound to context.selected_series.
-  // When the user pares the selection down, the executor must be called
+  // When the user narrows the selection down, the executor must be called
   // with only the kept series — not the full list.
   it('only converts the selected subset of dicom_series', async () => {
     const def: WorkflowDefinition = {
@@ -210,9 +209,7 @@ describe('selected_series filter reaches dcm2niix', () => {
     updateContext(runId, 'selected_series', subset)
 
     const executed = await runReadySteps(runId, 0)
-    expect(executed, 'filter_import_dicoms_0 should have run').toContain(
-      'filter_import_dicoms_0'
-    )
+    expect(executed, 'filter_import_dicoms_0 should have run').toContain('filter_import_dicoms_0')
 
     // The testbed replaces dcm2niix's declarative executor (which would
     // iterate via forEach) with a single-call fixture. We can't observe
@@ -253,9 +250,7 @@ describe('bids-classify reacts to filter changes', () => {
   // and bids-write would write the *old* (broader) mapping set. Detect that
   // staleness via sidecarPath ↔ stepOutputs.sidecars mismatch and reclassify.
   it('reclassifies when cached mappings reference stale sidecar paths', async () => {
-    const { bidsClassifyHeuristic } = await import(
-      '../../src/main/utils/heuristicRegistry.js'
-    )
+    const { bidsClassifyHeuristic } = await import('../../src/main/utils/heuristicRegistry.js')
 
     // Simulate a prior run that classified all 3 series.
     const stale = [1, 2, 3].map((n) => ({
@@ -297,14 +292,15 @@ describe('bids-classify reacts to filter changes', () => {
 
     expect(result.length, 'should reclassify down to subset').toBe(1)
     expect(result[0].sidecarPath).toBe(newSidecar)
-    expect(context.subjects, 'subjects cache must be cleared so detect-subjects rebuilds').toBeUndefined()
+    expect(
+      context.subjects,
+      'subjects cache must be cleared so detect-subjects rebuilds'
+    ).toBeUndefined()
     fs.rmSync(tmpRoot, { recursive: true, force: true })
   })
 
   it('preserves cached mappings when sidecar paths still match', async () => {
-    const { bidsClassifyHeuristic } = await import(
-      '../../src/main/utils/heuristicRegistry.js'
-    )
+    const { bidsClassifyHeuristic } = await import('../../src/main/utils/heuristicRegistry.js')
     const cached = [
       {
         index: 0,
@@ -340,7 +336,7 @@ describe('bids-classify reacts to filter changes', () => {
 })
 
 describe('repairOutputDirSelfRefs', () => {
-  it('drops a step input bound to a previous step\'s outDir when the tool declares that input as its working directory', () => {
+  it("drops a step input bound to a previous step's outDir when the tool declares that input as its working directory", () => {
     // Two-dcm2niix workflow shape that the designer produced before
     // blockToStepDraft learned to skip auto-wiring the working-dir input.
     // The second step's `out_dir` is bound to the first step's `outDir`,
