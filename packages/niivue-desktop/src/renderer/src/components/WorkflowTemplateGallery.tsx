@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from 'react'
-import { Button, Heading, Text, Card, Badge } from '@radix-ui/themes'
+import React, { useCallback, useEffect, useState } from 'react'
+import { Button, Heading, Text, Card, Badge, Callout } from '@radix-ui/themes'
 import {
   ArrowLeftIcon,
   RocketIcon,
@@ -9,7 +9,9 @@ import {
   PlusIcon,
   CodeIcon,
   GearIcon,
-  TrashIcon
+  TrashIcon,
+  ExclamationTriangleIcon,
+  Cross2Icon
 } from '@radix-ui/react-icons'
 import type { WorkflowListItem } from '../../../common/workflowTypes.js'
 
@@ -46,17 +48,25 @@ export function WorkflowTemplateGallery({
 }: WorkflowTemplateGalleryProps): React.ReactElement {
   const [workflows, setWorkflows] = useState<WorkflowListItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const loadWorkflows = useCallback(async (): Promise<void> => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const items: WorkflowListItem[] = await electron.ipcRenderer.invoke('workflow:list')
+      setWorkflows(items)
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : String(err))
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    setLoading(true)
-    electron.ipcRenderer
-      .invoke('workflow:list')
-      .then((items: WorkflowListItem[]) => {
-        setWorkflows(items)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
-  }, [])
+    void loadWorkflows()
+  }, [loadWorkflows])
 
   // Escape closes the gallery — restores the dismissal affordance that
   // Radix Dialog used to provide before we moved the gallery inline.
@@ -90,32 +100,41 @@ export function WorkflowTemplateGallery({
   }
 
   const handleUseAsTemplate = async (wf: WorkflowListItem): Promise<void> => {
+    setActionError(null)
     try {
       const definition = await electron.ipcRenderer.invoke('workflow:get-definition', wf.name)
       // Clear the name so user must provide a new one
       onSelect({ kind: 'use-as-template', definition: { ...definition, name: '' } })
     } catch (err) {
-      console.error('Failed to load workflow definition:', err)
+      setActionError(
+        `Couldn't open "${wf.description || wf.name}" as a template: ${err instanceof Error ? err.message : String(err)}`
+      )
     }
   }
 
   const handleEditUser = async (wf: WorkflowListItem): Promise<void> => {
+    setActionError(null)
     try {
       const definition = await electron.ipcRenderer.invoke('workflow:get-definition', wf.name)
       onSelect({ kind: 'edit-user', definition })
     } catch (err) {
-      console.error('Failed to load workflow definition:', err)
+      setActionError(
+        `Couldn't load "${wf.description || wf.name}" for editing: ${err instanceof Error ? err.message : String(err)}`
+      )
     }
   }
 
   const handleDelete = async (wf: WorkflowListItem): Promise<void> => {
     if (!confirm(`Delete workflow "${wf.description || wf.name}"?\n\nThis cannot be undone.`))
       return
+    setActionError(null)
     try {
       await electron.ipcRenderer.invoke('workflow:delete', wf.name)
       setWorkflows((prev) => prev.filter((w) => w.name !== wf.name))
     } catch (err) {
-      console.error('Failed to delete workflow:', err)
+      setActionError(
+        `Couldn't delete "${wf.description || wf.name}": ${err instanceof Error ? err.message : String(err)}`
+      )
     }
   }
 
@@ -158,10 +177,40 @@ export function WorkflowTemplateGallery({
             </Text>
           </div>
 
+          {actionError && (
+            <Callout.Root color="red" size="2" className="mb-4">
+              <Callout.Icon>
+                <ExclamationTriangleIcon />
+              </Callout.Icon>
+              <Callout.Text className="flex-1">{actionError}</Callout.Text>
+              <Button
+                variant="ghost"
+                color="gray"
+                size="1"
+                onClick={() => setActionError(null)}
+                aria-label="Dismiss error"
+              >
+                <Cross2Icon />
+              </Button>
+            </Callout.Root>
+          )}
+
           {loading ? (
             <Text size="2" className="text-neutral-8">
               Loading workflows...
             </Text>
+          ) : loadError ? (
+            <Callout.Root color="red" size="2">
+              <Callout.Icon>
+                <ExclamationTriangleIcon />
+              </Callout.Icon>
+              <Callout.Text className="flex-1">
+                Couldn&apos;t load workflows: {loadError}
+              </Callout.Text>
+              <Button variant="soft" color="red" size="1" onClick={() => void loadWorkflows()}>
+                Retry
+              </Button>
+            </Callout.Root>
           ) : (
             <div className="flex flex-col gap-8">
               {/* Existing workflow templates by category */}
