@@ -426,7 +426,9 @@ function MainApp(): JSX.Element {
     const modelInfo = brainchopService.getModelInfo(modelId)
 
     if (!modelInfo) {
-      alert(`Model not found: ${modelId}`)
+      alert(
+        `Can't run segmentation — model '${modelId}' isn't installed. Pick a different model from the panel.`
+      )
       return
     }
 
@@ -1399,7 +1401,9 @@ function MainApp(): JSX.Element {
           updateDocument(selected.id, { isDirty: true })
         } catch (err) {
           console.error('Failed to replace volume:', err)
-          window.alert('Failed to load replacement volume.')
+          window.alert(
+            "Couldn't load the replacement volume. Check the file is a readable NIfTI/DICOM and try again."
+          )
         }
       }
     )
