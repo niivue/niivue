@@ -12,7 +12,7 @@
 // as a small `=` badge on the input row because they have no off-step
 // source to draw a wire from.
 
-import React, { useMemo, useCallback } from 'react'
+import React, { useMemo, useCallback, useState, useRef } from 'react'
 import {
   ReactFlow,
   Background,
@@ -1117,30 +1117,95 @@ export function WorkflowDiagramView({
     [clearBindingByEdgeId]
   )
 
+  // ── Palette drag-and-drop ──────────────────────────────────────────
+  //
+  // Drag handlers live above the empty-state early return so the same
+  // drop zone works whether the workflow has zero steps or fifty —
+  // otherwise authors with a blank canvas can't drop their first block.
+  // dragDepthRef tracks the enter/leave counter (the DOM fires both
+  // events for child crossings, so a naive boolean would flicker).
+
+  const [dragOver, setDragOver] = useState(false)
+  const dragDepthRef = useRef(0)
+
+  const handleDragEnter = useCallback(
+    (e: React.DragEvent<HTMLDivElement>): void => {
+      if (!onAddBlockById) return
+      if (!Array.from(e.dataTransfer.types).includes(BLOCK_DRAG_MIME)) return
+      dragDepthRef.current += 1
+      setDragOver(true)
+    },
+    [onAddBlockById]
+  )
+
+  const handleDragLeave = useCallback((): void => {
+    dragDepthRef.current = Math.max(0, dragDepthRef.current - 1)
+    if (dragDepthRef.current === 0) setDragOver(false)
+  }, [])
+
+  const handleDragOver = useCallback(
+    (e: React.DragEvent<HTMLDivElement>): void => {
+      if (!onAddBlockById) return
+      if (!Array.from(e.dataTransfer.types).includes(BLOCK_DRAG_MIME)) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'copy'
+    },
+    [onAddBlockById]
+  )
+
+  const handleDrop = useCallback(
+    (e: React.DragEvent<HTMLDivElement>): void => {
+      dragDepthRef.current = 0
+      setDragOver(false)
+      if (!onAddBlockById) return
+      const blockId = e.dataTransfer.getData(BLOCK_DRAG_MIME)
+      if (!blockId) return
+      e.preventDefault()
+      onAddBlockById(blockId)
+    },
+    [onAddBlockById]
+  )
+
   // ── Empty state ────────────────────────────────────────────────────
 
   if (draft.steps.length === 0) {
     return (
-      <div className="flex-1 flex items-center justify-center bg-[var(--gray-2)] p-8">
-        <div className="flex flex-col items-center gap-4 max-w-md text-center border-2 border-dashed border-[var(--gray-6)] rounded-lg px-8 py-10 bg-[var(--color-background)]">
+      <div
+        className="flex-1 flex items-center justify-center bg-[var(--gray-2)] p-8"
+        onDragEnter={handleDragEnter}
+        onDragOver={handleDragOver}
+        onDragLeave={handleDragLeave}
+        onDrop={handleDrop}
+      >
+        <div
+          className={`flex flex-col items-center gap-4 max-w-md text-center border-2 border-dashed rounded-lg px-8 py-10 transition-colors ${
+            dragOver
+              ? 'border-[var(--accent-9)] bg-[var(--accent-3)]'
+              : 'border-[var(--gray-6)] bg-[var(--color-background)]'
+          }`}
+        >
           <div className="w-12 h-12 rounded-full bg-[var(--accent-3)] flex items-center justify-center text-[var(--accent-11)]">
             <RocketIcon width="24" height="24" />
           </div>
           <div className="flex flex-col gap-1">
             <Text size="4" weight="bold" className="text-neutral-12">
-              Build your first pipeline
+              {dragOver ? 'Drop to add this step' : 'Build your first pipeline'}
             </Text>
             <Text size="2" className="text-neutral-9">
-              Pick a tool from the palette below to add your first step.
+              {dragOver
+                ? 'Release to drop the block onto the canvas.'
+                : 'Click or drag a tool from the palette below to add your first step.'}
             </Text>
           </div>
-          <div className="flex items-center gap-1 text-[var(--accent-11)]">
-            <ArrowDownIcon />
-            <Text size="2" weight="medium">
-              Palette
-            </Text>
-          </div>
-          {onOpenGallery && (
+          {!dragOver && (
+            <div className="flex items-center gap-1 text-[var(--accent-11)]">
+              <ArrowDownIcon />
+              <Text size="2" weight="medium">
+                Palette
+              </Text>
+            </div>
+          )}
+          {!dragOver && onOpenGallery && (
             <button
               className="text-sm text-[var(--accent-11)] hover:underline"
               onClick={onOpenGallery}
@@ -1155,37 +1220,41 @@ export function WorkflowDiagramView({
 
   // ── Render ─────────────────────────────────────────────────────────
 
-  const handleDragOver = useCallback(
-    (e: React.DragEvent<HTMLDivElement>): void => {
-      if (!onAddBlockById) return
-      if (!Array.from(e.dataTransfer.types).includes(BLOCK_DRAG_MIME)) return
-      e.preventDefault()
-      e.dataTransfer.dropEffect = 'copy'
-    },
-    [onAddBlockById]
-  )
-
-  const handleDrop = useCallback(
-    (e: React.DragEvent<HTMLDivElement>): void => {
-      if (!onAddBlockById) return
-      const blockId = e.dataTransfer.getData(BLOCK_DRAG_MIME)
-      if (!blockId) return
-      e.preventDefault()
-      onAddBlockById(blockId)
-    },
-    [onAddBlockById]
-  )
-
   const selectedStepData = selectedStep !== null ? draft.steps[selectedStep] : null
   const selectedTool = selectedStepData ? tools.get(selectedStepData.tool) : undefined
   const selectedBlock = selectedStepData ? detectBlockForStep(selectedStepData, tools) : undefined
 
   return (
     <div
-      style={{ flex: 1, height: '100%', minHeight: 0, display: 'flex' }}
+      style={{
+        flex: 1,
+        height: '100%',
+        minHeight: 0,
+        display: 'flex',
+        position: 'relative'
+      }}
+      onDragEnter={handleDragEnter}
       onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
       onDrop={handleDrop}
     >
+      {/* Drop-zone highlight overlay — only visible while a palette block
+          is being dragged. pointer-events:none so it doesn't intercept
+          the drop event itself. */}
+      {dragOver && (
+        <div
+          aria-hidden
+          style={{
+            position: 'absolute',
+            inset: 0,
+            pointerEvents: 'none',
+            border: '2px dashed var(--accent-9)',
+            background: 'var(--accent-a3)',
+            borderRadius: 6,
+            zIndex: 10
+          }}
+        />
+      )}
       <div style={{ flex: 1, minWidth: 0 }}>
         <ReactFlow
           nodes={nodes}
