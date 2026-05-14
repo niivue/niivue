@@ -27,6 +27,7 @@ export function WizardStepIndicator({
         const isCompleted = i < currentStep
         const isCurrent = i === currentStep
         const isVisited = i <= reached && !isCurrent
+        const isUnreached = i > reached
         const isClickable = isVisited && !!onStepClick
 
         return (
@@ -37,13 +38,14 @@ export function WizardStepIndicator({
             onClick={() => isClickable && onStepClick(i)}
             aria-current={isCurrent ? 'step' : undefined}
             aria-label={`Step ${i + 1}: ${step.label}${isCompleted ? ' (completed)' : ''}`}
+            title={isUnreached ? 'Complete the earlier steps to unlock this one' : undefined}
             className={
               'flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition-colors duration-150 ' +
               (isCurrent
                 ? 'bg-accent-3 text-accent-11'
                 : isVisited
                   ? 'text-neutral-11 hover:bg-neutral-3 cursor-pointer'
-                  : 'text-neutral-8 cursor-default')
+                  : 'text-neutral-8 cursor-not-allowed')
             }
           >
             {/* Step number / check circle */}
@@ -62,15 +64,17 @@ export function WizardStepIndicator({
 
             {/* Label */}
             <div className="flex flex-col min-w-0">
-              <Text
-                size="2"
-                weight={isCurrent ? 'medium' : 'regular'}
-                className="truncate"
-              >
+              <Text size="2" weight={isCurrent ? 'medium' : 'regular'} className="truncate">
                 {step.label}
               </Text>
-              {step.description && isCurrent && (
-                <Text size="1" className="truncate text-neutral-9 mt-0.5">
+              {step.description && (
+                <Text
+                  size="1"
+                  className={
+                    'truncate mt-0.5 ' +
+                    (isCurrent ? 'text-accent-11' : isVisited ? 'text-neutral-9' : 'text-neutral-8')
+                  }
+                >
                   {step.description}
                 </Text>
               )}
