@@ -127,7 +127,7 @@ function ModelCard({
         <div className="w-full h-36 bg-[var(--gray-3)] rounded overflow-hidden mb-1">
           {previewLoading ? (
             <div className="w-full h-full flex items-center justify-center text-[var(--gray-8)] text-xs">
-              Loading…
+              Loading preview…
             </div>
           ) : previewSrc ? (
             <img

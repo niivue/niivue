@@ -184,7 +184,7 @@ export function DicomImportDialog({ onLoadVolume }: DicomImportDialogProps): JSX
                       disabled={isLoading || loadingFile !== null}
                       onClick={() => handleLoadFile(f)}
                     >
-                      {isLoading ? 'Loading…' : 'Load in Viewer'}
+                      {isLoading ? 'Loading volume…' : 'Load in Viewer'}
                     </button>
                   )}
                 </div>

@@ -16,6 +16,12 @@ interface WizardShellProps {
   /** Tooltip text on the disabled Next button explaining what's missing. */
   disabledReason?: string
   loading?: boolean
+  /**
+   * Label shown on the Next button while `loading` is true. Pass a verb +
+   * noun specific to the step (e.g. "Converting series…") so the spinner
+   * isn't a generic "Running…" with no context.
+   */
+  runningLabel?: string
   lastStepLabel?: string
   onComplete?: () => void
   /** Called when the Next button is clicked (non-last step). Falls back to onStepChange(currentStep+1). */
@@ -49,6 +55,7 @@ export function WizardShell({
   canProceed = true,
   disabledReason,
   loading = false,
+  runningLabel,
   lastStepLabel,
   onComplete,
   onNext: onNextProp,
@@ -201,6 +208,7 @@ export function WizardShell({
             canProceed={canProceed}
             disabledReason={disabledReason}
             loading={loading}
+            runningLabel={runningLabel}
             lastStepLabel={lastStepLabel}
             onBack={goBack}
             onNext={goNext}

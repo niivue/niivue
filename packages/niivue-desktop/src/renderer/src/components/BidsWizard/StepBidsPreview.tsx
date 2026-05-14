@@ -450,7 +450,7 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
       {validating && (
         <div className="flex items-center gap-2 text-sm text-[var(--gray-9)]">
           <Spinner size="sm" tone="accent" />
-          Validating…
+          Validating dataset…
         </div>
       )}
       {validation && !validating && (

@@ -13,6 +13,12 @@ interface WizardFooterProps {
    * the disabled button has no tooltip.
    */
   disabledReason?: string
+  /**
+   * Verb + noun label shown on the Next button while `loading` is true (e.g.
+   * "Converting series…"). Defaults to the generic "Running…" which fails the
+   * microcopy guide's verb-plus-object rule — pass a step-specific label.
+   */
+  runningLabel?: string
   onBack: () => void
   onNext: () => void
 }
@@ -24,6 +30,7 @@ export function WizardFooter({
   loading,
   lastStepLabel = 'Run',
   disabledReason,
+  runningLabel = 'Running…',
   onBack,
   onNext
 }: WizardFooterProps): React.ReactElement {
@@ -32,14 +39,14 @@ export function WizardFooter({
   // Back stays disabled while running to avoid racing the engine's section
   // transition.
   const nextDisabled = !canProceed || loading
-  const nextLabel = loading ? 'Running…' : isLastStep ? lastStepLabel : 'Next'
+  const nextLabel = loading ? runningLabel : isLastStep ? lastStepLabel : 'Next'
 
   const nextButton = (
     <Button variant="solid" size="2" onClick={onNext} disabled={nextDisabled}>
       {loading ? (
         <span className="flex items-center gap-2">
           <Spinner size="md" tone="contrast" />
-          Running…
+          {runningLabel}
         </span>
       ) : (
         nextLabel

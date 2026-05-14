@@ -93,7 +93,7 @@ export function ArraySelectField({
 
       {loading ? (
         <Text size="1" className="text-neutral-9">
-          Loading…
+          Loading options…
         </Text>
       ) : items.length === 0 ? (
         <Text size="1" className="text-neutral-9">
