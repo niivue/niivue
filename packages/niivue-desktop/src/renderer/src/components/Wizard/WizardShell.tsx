@@ -83,7 +83,9 @@ export function WizardShell({
     if (
       requireConfirmOnClose &&
       !confirm(
-        'A workflow step is still running. Leaving now will cancel it and discard any in-progress work. Continue?'
+        'A workflow step is still running. Cancelling now will abort the step ' +
+          'immediately — any files it has already written to disk will stay where ' +
+          'they are (not rolled back) and may be partial or invalid. Continue?'
       )
     ) {
       return
