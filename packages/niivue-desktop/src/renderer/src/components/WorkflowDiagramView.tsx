@@ -63,10 +63,16 @@ const NODE_WIDTH = 240
 const NODE_X_GAP = 320
 const NODE_Y_GAP = 40
 
-/** Map a TYPE_COLORS value (Radix color name) to a CSS variable. */
+/** Map a TYPE_COLORS value (Radix color name) to a CSS variable.
+ *  Step 9 = solid brand (handles, badges). Step 8 = UI element (edge
+ *  strokes, borders) — softer so a busy graph doesn't read as confetti. */
 function typeColorVar(type: string): string {
   const c = TYPE_COLORS[type] || 'gray'
   return `var(--${c}-9)`
+}
+function typeEdgeColorVar(type: string): string {
+  const c = TYPE_COLORS[type] || 'gray'
+  return `var(--${c}-8)`
 }
 
 /** Constants are stored JSON-stringified; show a short, readable preview. */
@@ -859,7 +865,7 @@ export function WorkflowDiagramView({
           const compatible =
             !sourceType || !targetType ? true : isTypeCompatible(sourceType, targetType)
           const isCoercion = !!sourceType && !!targetType && sourceType !== targetType && compatible
-          const color = compatible ? typeColorVar(sourceType) : 'var(--red-9)'
+          const color = compatible ? typeEdgeColorVar(sourceType) : 'var(--red-8)'
           out.push({
             id: `ewi-${srcName}-${targetIdx}-${inputName}`,
             source: 'src-wfinputs',
@@ -896,7 +902,7 @@ export function WorkflowDiagramView({
           const compatible =
             !sourceType || !targetType ? true : isTypeCompatible(sourceType, targetType)
           const isCoercion = !!sourceType && !!targetType && sourceType !== targetType && compatible
-          const color = compatible ? typeColorVar(sourceType) : 'var(--red-9)'
+          const color = compatible ? typeEdgeColorVar(sourceType) : 'var(--red-8)'
           out.push({
             id: `ectx-${srcName}-${targetIdx}-${inputName}`,
             source: 'src-ctxfields',
@@ -940,9 +946,9 @@ export function WorkflowDiagramView({
 
         const color = compatible
           ? outDef
-            ? typeColorVar(outDef.type)
-            : 'var(--gray-9)'
-          : 'var(--red-9)'
+            ? typeEdgeColorVar(outDef.type)
+            : 'var(--gray-8)'
+          : 'var(--red-8)'
 
         out.push({
           id: `e-${srcIdx}-${srcOut}-${targetIdx}-${inputName}`,
