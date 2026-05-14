@@ -193,7 +193,27 @@ export interface WorkflowRunState {
   error?: string
 }
 
-export type ToolExecutor = (inputs: Record<string, unknown>) => Promise<Record<string, unknown>>
+/**
+ * Per-step progress event emitted from the engine to the renderer.
+ * `phase` is a short label ('start' | 'done' | tool-specific like 'series 3/12').
+ * `current`/`total` are present when the executor knows discrete units;
+ * absent when it can only signal indeterminate work.
+ */
+export interface WorkflowStepProgress {
+  runId: string
+  stepName: string
+  phase?: string
+  current?: number
+  total?: number
+  message?: string
+}
+
+export type ProgressEmitter = (payload: Omit<WorkflowStepProgress, 'runId' | 'stepName'>) => void
+
+export type ToolExecutor = (
+  inputs: Record<string, unknown>,
+  onProgress?: ProgressEmitter
+) => Promise<Record<string, unknown>>
 
 export type HeuristicFn = (
   inputs: Record<string, unknown>,

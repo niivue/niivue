@@ -250,7 +250,7 @@ export function matchGlob(filename: string, pattern: string): boolean {
 export function createDeclarativeToolExecutor(def: ToolDefinition): ToolExecutor {
   const exec = def.exec!
 
-  return async (inputs: Record<string, unknown>): Promise<Record<string, unknown>> => {
+  return async (inputs, onProgress): Promise<Record<string, unknown>> => {
     const binPath = resolveBinaryPath(exec)
     const resources = resolveResources(exec)
     const outDir = resolveOutputDir(exec, inputs)
@@ -345,12 +345,39 @@ export function createDeclarativeToolExecutor(def: ToolDefinition): ToolExecutor
     // Run iterations — collect results without shared mutation
     // Promise.all rejects on first failure, so no partial results are returned
     let results: { outputFile: string; stdout: string; stderr: string }[]
+    const total = items.length
+    const isIterating = total > 1 && exec.forEach != null
     if (exec.parallel && items.length > 1) {
-      results = await Promise.all(items.map(runOne))
+      // Parallel: report completions as they land, not in submission order,
+      // so the bar advances monotonically without misordered counts.
+      let completed = 0
+      results = await Promise.all(
+        items.map(async (item) => {
+          const res = await runOne(item)
+          completed++
+          if (isIterating) {
+            onProgress?.({
+              phase: 'iteration',
+              current: completed,
+              total,
+              message: `${def.name} ${completed}/${total}`
+            })
+          }
+          return res
+        })
+      )
     } else {
       results = []
-      for (const item of items) {
-        results.push(await runOne(item))
+      for (let i = 0; i < items.length; i++) {
+        if (isIterating) {
+          onProgress?.({
+            phase: 'iteration',
+            current: i + 1,
+            total,
+            message: `${def.name} ${i + 1}/${total}`
+          })
+        }
+        results.push(await runOne(items[i]))
       }
     }
 

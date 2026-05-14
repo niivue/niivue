@@ -1,7 +1,14 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain } from 'electron'
-import { getWorkflowDefinitions, getToolDefinitions, getHeuristicDefinitions, isBuiltInWorkflow, saveUserWorkflow, deleteUserWorkflow } from './workflowLoader.js'
+import {
+  getWorkflowDefinitions,
+  getToolDefinitions,
+  getHeuristicDefinitions,
+  isBuiltInWorkflow,
+  saveUserWorkflow,
+  deleteUserWorkflow
+} from './workflowLoader.js'
 import { refreshMenu } from './menu.js'
 import {
   startWorkflow,
@@ -14,12 +21,18 @@ import {
   executeAllSteps,
   runAutoSteps,
   runReadySteps,
-  cancelRun
+  cancelRun,
+  setProgressListener,
+  clearProgressListener
 } from './workflowEngine.js'
 import { getHeuristicNames, registerHeuristic } from './heuristicRegistry.js'
 import { createDeclarativeHeuristic } from './declarativeHeuristic.js'
 import { listRegisteredToolExecutors } from './toolRegistry.js'
-import type { WorkflowListItem, WorkflowDefinition, HeuristicDefinition } from '../../common/workflowTypes.js'
+import type {
+  WorkflowListItem,
+  WorkflowDefinition,
+  HeuristicDefinition
+} from '../../common/workflowTypes.js'
 
 export function registerWorkflowIpcHandlers(): void {
   ipcMain.handle('workflow:list', async () => {
@@ -41,7 +54,9 @@ export function registerWorkflowIpcHandlers(): void {
       throw new Error('Workflow name is required')
     }
     if (isBuiltInWorkflow(definition.name)) {
-      throw new Error(`Cannot overwrite built-in workflow "${definition.name}". Choose a different name.`)
+      throw new Error(
+        `Cannot overwrite built-in workflow "${definition.name}". Choose a different name.`
+      )
     }
     const filePath = saveUserWorkflow(definition)
     refreshMenu()
@@ -66,23 +81,17 @@ export function registerWorkflowIpcHandlers(): void {
   ipcMain.handle(
     'workflow:start',
     async (_evt, payload: { name: string; inputs: Record<string, unknown> }) => {
-      const { runId, runState, definition } = startWorkflow(
-        payload.name,
-        payload.inputs
-      )
+      const { runId, runState, definition } = startWorkflow(payload.name, payload.inputs)
       const autoSteps = getAutoRunnableSteps(definition)
       return { runId, runState, definition, autoSteps }
     }
   )
 
-  ipcMain.handle(
-    'workflow:run-auto-steps',
-    async (_evt, payload: { runId: string }) => {
-      const executed = await runAutoSteps(payload.runId)
-      const state = getRunState(payload.runId)
-      return { executed, runState: state }
-    }
-  )
+  ipcMain.handle('workflow:run-auto-steps', async (_evt, payload: { runId: string }) => {
+    const executed = await runAutoSteps(payload.runId)
+    const state = getRunState(payload.runId)
+    return { executed, runState: state }
+  })
 
   ipcMain.handle(
     'workflow:run-heuristic',
@@ -95,10 +104,7 @@ export function registerWorkflowIpcHandlers(): void {
 
   ipcMain.handle(
     'workflow:update-context',
-    async (
-      _evt,
-      payload: { runId: string; fieldName: string; value: unknown }
-    ) => {
+    async (_evt, payload: { runId: string; fieldName: string; value: unknown }) => {
       updateContext(payload.runId, payload.fieldName, payload.value)
       const state = getRunState(payload.runId)
       return { context: state?.context }
@@ -114,23 +120,45 @@ export function registerWorkflowIpcHandlers(): void {
     }
   )
 
-  ipcMain.handle('workflow:execute-all', async (_evt, payload: { runId: string }) => {
+  ipcMain.handle('workflow:execute-all', async (evt, payload: { runId: string }) => {
     // executeAllSteps deletes the run from activeRuns when it finishes, so
     // we capture outputs/context from its return value rather than calling
     // getRunState afterwards (which would always be undefined).
-    const result = await executeAllSteps(payload.runId)
-    return {
-      outputs: result.outputs,
-      stepOutputs: result.stepOutputs,
-      runState: { context: result.context, stepOutputs: result.stepOutputs }
+    setProgressListener(payload.runId, (progress) => {
+      if (!evt.sender.isDestroyed()) {
+        evt.sender.send('workflow:step-progress', progress)
+      }
+    })
+    try {
+      const result = await executeAllSteps(payload.runId)
+      return {
+        outputs: result.outputs,
+        stepOutputs: result.stepOutputs,
+        runState: { context: result.context, stepOutputs: result.stepOutputs }
+      }
+    } finally {
+      // engine clears its own listener on completion, but be defensive
+      clearProgressListener(payload.runId)
     }
   })
 
-  ipcMain.handle('workflow:run-ready-steps', async (_evt, payload: { runId: string; maxStepIndex?: number }) => {
-    const executed = await runReadySteps(payload.runId, payload.maxStepIndex ?? -1)
-    const state = getRunState(payload.runId)
-    return { executed, runState: state }
-  })
+  ipcMain.handle(
+    'workflow:run-ready-steps',
+    async (evt, payload: { runId: string; maxStepIndex?: number }) => {
+      setProgressListener(payload.runId, (progress) => {
+        if (!evt.sender.isDestroyed()) {
+          evt.sender.send('workflow:step-progress', progress)
+        }
+      })
+      try {
+        const executed = await runReadySteps(payload.runId, payload.maxStepIndex ?? -1)
+        const state = getRunState(payload.runId)
+        return { executed, runState: state }
+      } finally {
+        clearProgressListener(payload.runId)
+      }
+    }
+  )
 
   ipcMain.handle('workflow:cancel', async (_evt, payload: { runId: string }) => {
     cancelRun(payload.runId)

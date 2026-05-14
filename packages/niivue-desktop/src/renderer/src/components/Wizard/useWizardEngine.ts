@@ -1,6 +1,14 @@
 import { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import type { WorkflowDefinition, FormSectionDef, ToolDefinition } from '../../../../common/workflowTypes.js'
-import { validateUserProvidedInputs, type MissingInput } from '../../../../common/workflowValidator.js'
+import type {
+  WorkflowDefinition,
+  FormSectionDef,
+  ToolDefinition,
+  WorkflowStepProgress
+} from '../../../../common/workflowTypes.js'
+import {
+  validateUserProvidedInputs,
+  type MissingInput
+} from '../../../../common/workflowValidator.js'
 
 const electron = window.electron
 
@@ -16,6 +24,9 @@ export interface WizardEngineState {
   error: string | null
   heuristicLoading: Set<string>
   missingInputs: MissingInput[]
+  /** Latest progress event for the currently running step. Null when no
+   *  step is running or the step hasn't emitted progress yet. */
+  progress: WorkflowStepProgress | null
 }
 
 export interface WizardEngineActions {
@@ -45,6 +56,7 @@ export function useWizardEngine(
   > | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [heuristicLoading, setHeuristicLoading] = useState<Set<string>>(new Set())
+  const [progress, setProgress] = useState<WorkflowStepProgress | null>(null)
   const [tools, setTools] = useState<ToolDefinition[]>([])
   const runIdRef = useRef<string | null>(null)
   const closingRef = useRef(false)
@@ -53,6 +65,27 @@ export function useWizardEngine(
   useEffect(() => {
     if (!open) return
     electron.ipcRenderer.invoke('workflow:list-tools').then((t: ToolDefinition[]) => setTools(t))
+  }, [open])
+
+  // Subscribe to per-step progress for this wizard's run. Filtering by
+  // runIdRef keeps stale events from a previous run (or another open dialog)
+  // out of the current progress bar.
+  useEffect(() => {
+    if (!open) return
+    const handler = (_evt: unknown, payload: WorkflowStepProgress): void => {
+      if (!runIdRef.current || payload.runId !== runIdRef.current) return
+      // Reset the bar to indeterminate between steps so a fast-finishing
+      // step doesn't leave its 100% bar visible during the next slow one.
+      if (payload.phase === 'done') {
+        setProgress({ ...payload, current: undefined, total: undefined })
+        return
+      }
+      setProgress(payload)
+    }
+    electron.ipcRenderer.on('workflow:step-progress', handler)
+    return (): void => {
+      electron.ipcRenderer.removeListener('workflow:step-progress', handler)
+    }
   }, [open])
 
   // Compute missing inputs — only flag inputs whose context fields appear
@@ -104,7 +137,9 @@ export function useWizardEngine(
         // Run auto-runnable steps
         const hasAutoSteps = (startResult.autoSteps as string[])?.length > 0
         if (hasAutoSteps) {
-          const autoResult = await electron.ipcRenderer.invoke('workflow:run-auto-steps', { runId: rid })
+          const autoResult = await electron.ipcRenderer.invoke('workflow:run-auto-steps', {
+            runId: rid
+          })
           if (cancelled) return
           if (autoResult.runState?.context) {
             setContext(autoResult.runState.context)
@@ -246,6 +281,7 @@ export function useWizardEngine(
       // Final engine step: execute all remaining workflow steps. If a
       // post-completion section exists, advance into it so the user can
       // edit the just-written output without leaving the dialog.
+      setProgress(null)
       try {
         const result = await electron.ipcRenderer.invoke('workflow:execute-all', { runId })
         if (result.runState?.context) setContext(result.runState.context)
@@ -253,6 +289,7 @@ export function useWizardEngine(
         setStatus('completed')
         setCompletedOutputs(result.outputs ?? null)
         setCompletedStepOutputs(result.stepOutputs ?? null)
+        setProgress(null)
         if (firstPostCompletionIdx > currentSection) {
           setCurrentSection(firstPostCompletionIdx)
         }
@@ -266,8 +303,12 @@ export function useWizardEngine(
     // Run the next ready step (one at a time, not all at once)
     // This ensures dcm2niix runs after import, but classify doesn't
     // run until explicitly needed — heuristics handle context population
+    setProgress(null)
     try {
-      const readyResult = await electron.ipcRenderer.invoke('workflow:run-ready-steps', { runId, maxStepIndex: currentSection })
+      const readyResult = await electron.ipcRenderer.invoke('workflow:run-ready-steps', {
+        runId,
+        maxStepIndex: currentSection
+      })
       if (readyResult.runState?.context) {
         setContext(readyResult.runState.context)
       }
@@ -279,6 +320,7 @@ export function useWizardEngine(
       console.warn('run-ready-steps:', err)
     }
 
+    setProgress(null)
     setStatus('form')
     const nextSection = currentSection + 1
     setCurrentSection(nextSection)
@@ -310,19 +352,25 @@ export function useWizardEngine(
     setCurrentSection(0)
     setStatus('idle')
     setError(null)
+    setProgress(null)
     setCompletedOutputs(null)
     setCompletedStepOutputs(null)
     onClose()
-    setTimeout(() => { closingRef.current = false }, 0)
+    setTimeout(() => {
+      closingRef.current = false
+    }, 0)
   }, [onClose])
 
-  const goToSection = useCallback(async (section: number): Promise<void> => {
-    const isForward = section > currentSection
-    setCurrentSection(section)
-    if (isForward && runId && definition && sections[section]) {
-      await runSectionHeuristics(runId, definition, sections[section])
-    }
-  }, [currentSection, runId, definition, sections])
+  const goToSection = useCallback(
+    async (section: number): Promise<void> => {
+      const isForward = section > currentSection
+      setCurrentSection(section)
+      if (isForward && runId && definition && sections[section]) {
+        await runSectionHeuristics(runId, definition, sections[section])
+      }
+    },
+    [currentSection, runId, definition, sections]
+  )
 
   return {
     runId,
@@ -336,6 +384,7 @@ export function useWizardEngine(
     error,
     heuristicLoading,
     missingInputs,
+    progress,
     goToSection,
     handleFieldChange,
     handleNext,

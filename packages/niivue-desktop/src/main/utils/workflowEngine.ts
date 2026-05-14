@@ -3,7 +3,9 @@ import type {
   WorkflowDefinition,
   WorkflowRunState,
   StepDef,
-  Binding
+  Binding,
+  WorkflowStepProgress,
+  ProgressEmitter
 } from '../../common/workflowTypes.js'
 import { getWorkflowDefinitions, getToolDefinitions } from './workflowLoader.js'
 import { getToolExecutor } from './toolRegistry.js'
@@ -17,6 +19,31 @@ import {
 } from './workflowCache.js'
 
 const activeRuns = new Map<string, WorkflowRunState>()
+
+// Per-run progress listener. The IPC handler that drives a run installs a
+// listener that forwards events to its webContents; renderer-driven callers
+// (tests, headless) can install one too. One listener per run is enough —
+// each renderer-side `useWizardEngine` owns its own runId.
+type ProgressListener = (payload: WorkflowStepProgress) => void
+const progressListeners = new Map<string, ProgressListener>()
+
+export function setProgressListener(runId: string, listener: ProgressListener): void {
+  progressListeners.set(runId, listener)
+}
+
+export function clearProgressListener(runId: string): void {
+  progressListeners.delete(runId)
+}
+
+function emitProgress(
+  runId: string,
+  stepName: string,
+  payload: Omit<WorkflowStepProgress, 'runId' | 'stepName'>
+): void {
+  const listener = progressListeners.get(runId)
+  if (!listener) return
+  listener({ runId, stepName, ...payload })
+}
 
 /**
  * Safely resolve a dot-path expression against the workflow run state.
@@ -369,8 +396,10 @@ export async function executeStep(
   }
 
   state.status = 'running'
+  emitProgress(runId, stepName, { phase: 'start' })
+  const stepProgress: ProgressEmitter = (payload) => emitProgress(runId, stepName, payload)
   try {
-    const outputs = await executor(resolvedInputs)
+    const outputs = await executor(resolvedInputs, stepProgress)
     state.stepOutputs[stepName] = outputs
 
     // Apply explicit outputMappings to context
@@ -379,6 +408,7 @@ export async function executeStep(
     // Store in cache
     setCachedOutput(runId, stepName, inputHash, outputs)
 
+    emitProgress(runId, stepName, { phase: 'done' })
     return outputs
   } catch (err) {
     state.status = 'error'
@@ -459,6 +489,7 @@ export async function executeAllSteps(runId: string): Promise<ExecuteAllResult> 
   } finally {
     clearRunCache(runId)
     activeRuns.delete(runId)
+    progressListeners.delete(runId)
   }
 }
 
@@ -591,4 +622,5 @@ export async function runReadySteps(runId: string, maxStepIndex: number = -1): P
 export function cancelRun(runId: string): void {
   activeRuns.delete(runId)
   clearRunCache(runId)
+  progressListeners.delete(runId)
 }

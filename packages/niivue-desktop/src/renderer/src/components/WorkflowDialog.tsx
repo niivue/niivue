@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { Text, Callout, Heading, TextField } from '@radix-ui/themes'
+import { Text, Callout, Heading, TextField, Progress } from '@radix-ui/themes'
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons'
 import type {
   BidsSeriesMapping,
@@ -25,6 +25,49 @@ import { BidsSidecarFixForm } from './BidsWizard/BidsSidecarFixForm.js'
 import { BidsSeriesFilter } from './BidsSeriesFilter.js'
 import { VolumePickerField } from './Wizard/fields/VolumePickerField.js'
 import type { DicomSeries } from '../../../common/dcm2niixTypes.js'
+import type { WorkflowStepProgress } from '../../../common/workflowTypes.js'
+
+// ── Running indicator ────────────────────────────────────────────────
+
+/**
+ * Workflow execution feedback. Becomes determinate as soon as a step emits
+ * `current`/`total` (e.g. dcm2niix per-series); falls back to an indeterminate
+ * bar otherwise so the user still gets motion while waiting for the first
+ * tick or for steps whose tools don't emit counts.
+ */
+function RunningIndicator({
+  progress
+}: {
+  progress: WorkflowStepProgress | null
+}): React.ReactElement {
+  const hasCounts =
+    !!progress &&
+    typeof progress.current === 'number' &&
+    typeof progress.total === 'number' &&
+    progress.total > 0
+  const label =
+    progress?.message ||
+    (progress?.stepName ? `Running ${progress.stepName}…` : 'Running workflow…')
+  return (
+    <Callout.Root color="blue" size="2" className="mt-4">
+      <Callout.Text>
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center gap-2">
+            {!hasCounts && (
+              <div className="animate-spin w-4 h-4 border-2 border-accent-9 border-t-transparent rounded-full" />
+            )}
+            <span>{label}</span>
+          </div>
+          {hasCounts ? (
+            <Progress value={(progress!.current! / progress!.total!) * 100} />
+          ) : (
+            <Progress />
+          )}
+        </div>
+      </Callout.Text>
+    </Callout.Root>
+  )
+}
 
 // ── Classification table adapter ─────────────────────────────────────
 
@@ -126,9 +169,7 @@ function SubjectSessionAdapter({
       detectedSubjects={detectedSubjects}
       onUpdateDetectedSubject={(index, changes) => {
         const old = detectedSubjects[index]
-        const updated = detectedSubjects.map((ds, i) =>
-          i === index ? { ...ds, ...changes } : ds
-        )
+        const updated = detectedSubjects.map((ds, i) => (i === index ? { ...ds, ...changes } : ds))
 
         if (changes.label && changes.label !== old.label) {
           const updatedMappings = mappings.map((m) => {
@@ -148,9 +189,7 @@ function SubjectSessionAdapter({
       }}
       onUpdateDetectedSubjectDemographics={(index, field, value) => {
         const updated = detectedSubjects.map((ds, i) =>
-          i === index
-            ? { ...ds, demographics: { ...ds.demographics, [field]: value } }
-            : ds
+          i === index ? { ...ds, demographics: { ...ds.demographics, [field]: value } } : ds
         )
         onFieldChange('subjects', updated)
       }}
@@ -207,7 +246,9 @@ function SkullStripAdapter({
 
   const savedCompleted = (context._completed as number[]) || []
   const [completed, setCompleted] = useState<Set<number>>(() => new Set(savedCompleted))
-  const [originalPaths, setOriginalPaths] = useState<Map<number, string>>(() => initialOriginalPaths)
+  const [originalPaths, setOriginalPaths] = useState<Map<number, string>>(
+    () => initialOriginalPaths
+  )
   const savedUseStripped = (context._useStripped as Record<number, boolean>) || {}
   const [useStripped, setUseStripped] = useState<Map<number, boolean>>(() => {
     const map = new Map<number, boolean>()
@@ -256,7 +297,9 @@ function SkullStripAdapter({
     (paths: Map<number, string>) => {
       setOriginalPaths(paths)
       const record: Record<number, string> = {}
-      paths.forEach((v, k) => { record[k] = v })
+      paths.forEach((v, k) => {
+        record[k] = v
+      })
       onFieldChange('_originalPaths', record)
     },
     [onFieldChange]
@@ -274,7 +317,9 @@ function SkullStripAdapter({
     (us: Map<number, boolean>) => {
       setUseStripped(us)
       const record: Record<number, boolean> = {}
-      us.forEach((v, k) => { record[k] = v })
+      us.forEach((v, k) => {
+        record[k] = v
+      })
       onFieldChange('_useStripped', record)
     },
     [onFieldChange]
@@ -432,8 +477,8 @@ function BidsSeriesFilterAdapter({
     return (
       <Callout.Root color="gray">
         <Callout.Text>
-          Scanning the DICOM folder for series… if this takes more than a moment, check that
-          the selected folder contains DICOM files.
+          Scanning the DICOM folder for series… if this takes more than a moment, check that the
+          selected folder contains DICOM files.
         </Callout.Text>
       </Callout.Root>
     )
@@ -601,87 +646,101 @@ export function WorkflowDialog({
       {/* Form content — also rendered while in a postCompletion section so
           its custom component (e.g. BIDS View) gets the just-populated
           context (bids_dir from the write step's outputMappings). */}
-      {!isPreparing && engine.definition && sections[engine.currentSection] &&
+      {!isPreparing &&
+        engine.definition &&
+        sections[engine.currentSection] &&
         (!isCompleted || inPostCompletionSection) && (
-        <FormSection
-          section={sections[engine.currentSection]}
-          definition={engine.definition}
-          context={engine.context}
-          stepOutputs={engine.stepOutputs}
-          onFieldChange={engine.handleFieldChange}
-          heuristicLoading={engine.heuristicLoading}
-          onLoadFile={handleLoadFile}
-          componentRegistry={COMPONENT_REGISTRY}
-          fieldErrors={fieldErrors}
-        />
-      )}
+          <FormSection
+            section={sections[engine.currentSection]}
+            definition={engine.definition}
+            context={engine.context}
+            stepOutputs={engine.stepOutputs}
+            onFieldChange={engine.handleFieldChange}
+            heuristicLoading={engine.heuristicLoading}
+            onLoadFile={handleLoadFile}
+            componentRegistry={COMPONENT_REGISTRY}
+            fieldErrors={fieldErrors}
+          />
+        )}
 
       {/* Auto-generated form for missing inputs not already shown in the current section */}
       {(() => {
         const currentFields = new Set(sections[engine.currentSection]?.fields || [])
-        const extraMissing = engine.missingInputs.filter((m) => !m.contextField || !currentFields.has(m.contextField))
-        return extraMissing.length > 0 && !isPreparing && !isRunning && !isCompleted && (
-        <div className="mt-6 flex flex-col gap-4">
-          <div className="flex items-center gap-2">
-            <ExclamationTriangleIcon className="text-[var(--yellow-9)]" />
-            <Heading size="3" className="text-neutral-12">
-              Required Fields
-            </Heading>
-          </div>
-          <div className="flex flex-col gap-3">
-            {extraMissing.map((m) => {
-              const currentValue = m.contextField ? (engine.context[m.contextField] as string || '') : ''
+        const extraMissing = engine.missingInputs.filter(
+          (m) => !m.contextField || !currentFields.has(m.contextField)
+        )
+        return (
+          extraMissing.length > 0 &&
+          !isPreparing &&
+          !isRunning &&
+          !isCompleted && (
+            <div className="mt-6 flex flex-col gap-4">
+              <div className="flex items-center gap-2">
+                <ExclamationTriangleIcon className="text-[var(--yellow-9)]" />
+                <Heading size="3" className="text-neutral-12">
+                  Required Fields
+                </Heading>
+              </div>
+              <div className="flex flex-col gap-3">
+                {extraMissing.map((m) => {
+                  const currentValue = m.contextField
+                    ? (engine.context[m.contextField] as string) || ''
+                    : ''
 
-              return (
-                <div key={`${m.stepName}-${m.inputName}`} className="flex flex-col gap-1">
-                  <Text size="2" weight="medium" className="text-neutral-11">
-                    {m.description || m.inputName}
-                  </Text>
-                  <Text size="1" className="text-neutral-8">
-                    Step: {m.stepName} / {m.inputName} ({m.type})
-                  </Text>
-                  {m.type === 'directory' || m.type === 'dicom-folder' ? (
-                    <div className="flex items-center gap-2">
-                      <TextField.Root
-                        value={currentValue}
-                        onChange={(e) => {
-                          if (m.contextField) {
-                            void engine.handleFieldChange(m.contextField, e.target.value)
-                          }
-                        }}
-                        placeholder="Select a directory..."
-                        size="2"
-                        className="flex-1"
-                      />
-                      <button
-                        className="px-3 py-1.5 rounded bg-[var(--accent-3)] text-[var(--accent-11)] hover:bg-[var(--accent-4)] transition-colors text-sm cursor-pointer"
-                        onClick={async () => {
-                          const dir = await electron.ipcRenderer.invoke('workflow:select-directory', { title: m.description })
-                          if (dir && m.contextField) {
-                            void engine.handleFieldChange(m.contextField, dir)
-                          }
-                        }}
-                      >
-                        Browse...
-                      </button>
+                  return (
+                    <div key={`${m.stepName}-${m.inputName}`} className="flex flex-col gap-1">
+                      <Text size="2" weight="medium" className="text-neutral-11">
+                        {m.description || m.inputName}
+                      </Text>
+                      <Text size="1" className="text-neutral-8">
+                        Step: {m.stepName} / {m.inputName} ({m.type})
+                      </Text>
+                      {m.type === 'directory' || m.type === 'dicom-folder' ? (
+                        <div className="flex items-center gap-2">
+                          <TextField.Root
+                            value={currentValue}
+                            onChange={(e) => {
+                              if (m.contextField) {
+                                void engine.handleFieldChange(m.contextField, e.target.value)
+                              }
+                            }}
+                            placeholder="Select a directory..."
+                            size="2"
+                            className="flex-1"
+                          />
+                          <button
+                            className="px-3 py-1.5 rounded bg-[var(--accent-3)] text-[var(--accent-11)] hover:bg-[var(--accent-4)] transition-colors text-sm cursor-pointer"
+                            onClick={async () => {
+                              const dir = await electron.ipcRenderer.invoke(
+                                'workflow:select-directory',
+                                { title: m.description }
+                              )
+                              if (dir && m.contextField) {
+                                void engine.handleFieldChange(m.contextField, dir)
+                              }
+                            }}
+                          >
+                            Browse...
+                          </button>
+                        </div>
+                      ) : (
+                        <TextField.Root
+                          value={currentValue}
+                          onChange={(e) => {
+                            if (m.contextField) {
+                              void engine.handleFieldChange(m.contextField, e.target.value)
+                            }
+                          }}
+                          placeholder={m.description}
+                          size="2"
+                        />
+                      )}
                     </div>
-                  ) : (
-                    <TextField.Root
-                      value={currentValue}
-                      onChange={(e) => {
-                        if (m.contextField) {
-                          void engine.handleFieldChange(m.contextField, e.target.value)
-                        }
-                      }}
-                      placeholder={m.description}
-                      size="2"
-                    />
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </div>
+                  )
+                })}
+              </div>
+            </div>
+          )
         )
       })()}
 
@@ -695,15 +754,10 @@ export function WorkflowDialog({
         </Callout.Root>
       )}
 
-      {/* Running indicator */}
-      {isRunning && (
-        <Callout.Root color="blue" size="2" className="mt-4">
-          <Callout.Icon>
-            <div className="animate-spin w-4 h-4 border-2 border-accent-9 border-t-transparent rounded-full" />
-          </Callout.Icon>
-          <Callout.Text>Running workflow...</Callout.Text>
-        </Callout.Root>
-      )}
+      {/* Running indicator — determinate when the executor emits current/total
+          (e.g. dcm2niix per-series), indeterminate while waiting for the first
+          progress event or for executors that don't emit counts. */}
+      {isRunning && <RunningIndicator progress={engine.progress} />}
 
       {/* Completion screen — only when there is no postCompletion section
           (the postCompletion section IS the completion view for workflows
@@ -716,10 +770,14 @@ export function WorkflowDialog({
           onClose={engine.handleClose}
           onLoadFile={handleLoadFile}
           onLoadFiles={onLoadFiles}
-          onEditWorkflow={onEditWorkflow ? () => {
-            engine.handleClose()
-            onEditWorkflow(workflowName)
-          } : undefined}
+          onEditWorkflow={
+            onEditWorkflow
+              ? () => {
+                  engine.handleClose()
+                  onEditWorkflow(workflowName)
+                }
+              : undefined
+          }
         />
       )}
     </WizardShell>
