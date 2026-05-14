@@ -231,7 +231,11 @@ export function WorkflowTemplateGallery({
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       {wfs.map((wf) => (
-                        <Card key={wf.name} size="2" className="hover:shadow-md transition-shadow">
+                        <Card
+                          key={wf.name}
+                          size="2"
+                          className="transition-shadow hover:[box-shadow:var(--shadow-3)]"
+                        >
                           <div className="flex flex-col gap-3">
                             <div className="flex items-center gap-2">
                               <div className="flex-1">
@@ -300,7 +304,7 @@ export function WorkflowTemplateGallery({
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card
                     size="2"
-                    className="hover:shadow-md transition-shadow cursor-pointer border-2 border-dashed border-neutral-6 hover:border-[var(--accent-7)]"
+                    className="transition-shadow cursor-pointer border-2 border-dashed border-neutral-6 hover:border-[var(--accent-7)] hover:[box-shadow:var(--shadow-3)]"
                     onClick={() => onSelect({ kind: 'blank' })}
                   >
                     <div className="flex flex-col items-center gap-2 py-4">
