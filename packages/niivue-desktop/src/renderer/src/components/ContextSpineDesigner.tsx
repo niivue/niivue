@@ -11,15 +11,13 @@ import {
   IconButton
 } from '@radix-ui/themes'
 import {
-  PlusIcon,
   TrashIcon,
-  ChevronDownIcon,
-  ChevronRightIcon,
   DragHandleDots2Icon,
   PersonIcon,
   InfoCircledIcon,
   MagicWandIcon,
-  RocketIcon
+  RocketIcon,
+  ArrowDownIcon
 } from '@radix-ui/react-icons'
 import type { ToolDefinition, ToolParameterDef } from '../../../common/workflowTypes.js'
 import type { ValidationResult } from '../../../common/workflowValidator.js'
@@ -36,7 +34,7 @@ import {
 } from '../../../common/workflowBlocks.js'
 import { getAvailableSources, type SourceSuggestion } from '../../../common/typeCompatibility.js'
 import { generateContextFieldFromParam } from '../../../common/bindingAnalyzer.js'
-import { BlockPalette, getBlockIcon } from './BlockPalette.js'
+import { getBlockIcon } from './BlockPalette.js'
 
 // ── Constants ────────────────────────────────────────────────────────
 
@@ -59,7 +57,6 @@ interface ContextSpineDesignerProps {
   /** Names of registered heuristics (declarative + code), shown in the
    * heuristic dropdown for user-form context fields. */
   heuristicNames?: string[]
-  onAddBlock: (block: WorkflowBlock) => void
   onRemoveStep: (index: number) => void
   onMoveStep: (index: number, direction: -1 | 1) => void
   onSave: () => void
@@ -142,8 +139,11 @@ function analyzeInputs(
         source = 'context'
         const [, refStepName, refOutput] = stepRefMatch
         const sourceStepIdx = allSteps.findIndex((s) => s.name === refStepName)
-        const slot = slots.find((s) => s.sourceStep === sourceStepIdx && s.sourceOutput === refOutput)
-        const sourceBlock = sourceStepIdx >= 0 ? detectBlockForStep(allSteps[sourceStepIdx], tools) : null
+        const slot = slots.find(
+          (s) => s.sourceStep === sourceStepIdx && s.sourceOutput === refOutput
+        )
+        const sourceBlock =
+          sourceStepIdx >= 0 ? detectBlockForStep(allSteps[sourceStepIdx], tools) : null
         sourceLabel = `${sourceBlock?.label || refStepName} → ${refOutput}`
         sourceColor = slot?.color || 'gray'
       } else if (value.startsWith('context.')) {
@@ -191,7 +191,6 @@ export function ContextSpineDesigner({
   validation,
   runnableTools,
   heuristicNames = [],
-  onAddBlock,
   onRemoveStep,
   onMoveStep,
   onOpenGallery
@@ -199,13 +198,8 @@ export function ContextSpineDesigner({
   const [selectedStep, setSelectedStep] = useState<number | null>(null)
   const [dragIndex, setDragIndex] = useState<number | null>(null)
   const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
-  const [showPalette, setShowPalette] = useState(false)
 
   const slots = useMemo(() => computeContextSlots(draft.steps, tools), [draft.steps, tools])
-
-  const lastStepTool = draft.steps.length > 0
-    ? draft.steps[draft.steps.length - 1].tool
-    : undefined
 
   const wfInputTypes = useMemo(() => {
     const m: Record<string, { type: string }> = {}
@@ -225,34 +219,48 @@ export function ContextSpineDesigner({
 
   // ── Handlers ───────────────────────────────────────────────────────
 
-  const updateStepInput = useCallback((stepIndex: number, inputName: string, value: string, mode: 'ref' | 'constant' = 'constant') => {
-    setDraft((prev) => {
-      const steps = [...prev.steps]
-      const step = { ...steps[stepIndex], inputs: { ...steps[stepIndex].inputs } }
-      step.inputs[inputName] = { mode, value }
-      steps[stepIndex] = step
-      return { ...prev, steps }
-    })
-  }, [setDraft])
+  const updateStepInput = useCallback(
+    (
+      stepIndex: number,
+      inputName: string,
+      value: string,
+      mode: 'ref' | 'constant' = 'constant'
+    ) => {
+      setDraft((prev) => {
+        const steps = [...prev.steps]
+        const step = { ...steps[stepIndex], inputs: { ...steps[stepIndex].inputs } }
+        step.inputs[inputName] = { mode, value }
+        steps[stepIndex] = step
+        return { ...prev, steps }
+      })
+    },
+    [setDraft]
+  )
 
   /**
    * Patch a single context field. Used by the user-form attach popover so
    * authors can pick a heuristic to pre-fill the value, edit the label
    * shown to the runtime user, etc., without opening the JSON file.
    */
-  const updateContextField = useCallback((fieldName: string, patch: Partial<{ heuristic: string; label: string; description: string }>) => {
-    setDraft((prev) => {
-      const existing = prev.contextFields[fieldName]
-      if (!existing) return prev
-      return {
-        ...prev,
-        contextFields: {
-          ...prev.contextFields,
-          [fieldName]: { ...existing, ...patch }
+  const updateContextField = useCallback(
+    (
+      fieldName: string,
+      patch: Partial<{ heuristic: string; label: string; description: string }>
+    ) => {
+      setDraft((prev) => {
+        const existing = prev.contextFields[fieldName]
+        if (!existing) return prev
+        return {
+          ...prev,
+          contextFields: {
+            ...prev.contextFields,
+            [fieldName]: { ...existing, ...patch }
+          }
         }
-      }
-    })
-  }, [setDraft])
+      })
+    },
+    [setDraft]
+  )
 
   /**
    * Switch an input to "user form" mode. Prefers reusing an existing
@@ -260,94 +268,94 @@ export function ContextSpineDesigner({
    * creates a new (step-prefixed) field and ensures it appears in a form
    * section so the user actually gets prompted at runtime.
    */
-  const setInputToUserForm = useCallback((stepIndex: number, inputName: string, paramDef: ToolParameterDef) => {
-    setDraft((prev) => {
-      const step = prev.steps[stepIndex]
+  const setInputToUserForm = useCallback(
+    (stepIndex: number, inputName: string, paramDef: ToolParameterDef) => {
+      setDraft((prev) => {
+        const step = prev.steps[stepIndex]
 
-      // 1. Reuse an existing context field with the plain input name if its
-      //    type is compatible. This is the common case when opening an older
-      //    workflow that already has a context field the user needs to bind.
-      const existing = prev.contextFields[inputName]
-      if (existing) {
+        // 1. Reuse an existing context field with the plain input name if its
+        //    type is compatible. This is the common case when opening an older
+        //    workflow that already has a context field the user needs to bind.
+        const existing = prev.contextFields[inputName]
+        if (existing) {
+          const steps = [...prev.steps]
+          steps[stepIndex] = {
+            ...step,
+            inputs: {
+              ...step.inputs,
+              [inputName]: { mode: 'ref', value: `context.${inputName}` }
+            }
+          }
+          return { ...prev, steps }
+        }
+
+        // 2. Otherwise create a new step-prefixed context field to avoid
+        //    collisions across steps.
+        const contextFieldName = `${step.name}_${inputName}`
+        const generated = generateContextFieldFromParam(inputName, paramDef)
+
         const steps = [...prev.steps]
         steps[stepIndex] = {
           ...step,
           inputs: {
             ...step.inputs,
-            [inputName]: { mode: 'ref', value: `context.${inputName}` }
+            [inputName]: { mode: 'ref', value: `context.${contextFieldName}` }
           }
         }
-        return { ...prev, steps }
-      }
 
-      // 2. Otherwise create a new step-prefixed context field to avoid
-      //    collisions across steps.
-      const contextFieldName = `${step.name}_${inputName}`
-      const generated = generateContextFieldFromParam(inputName, paramDef)
-
-      const steps = [...prev.steps]
-      steps[stepIndex] = {
-        ...step,
-        inputs: {
-          ...step.inputs,
-          [inputName]: { mode: 'ref', value: `context.${contextFieldName}` }
-        }
-      }
-
-      const contextFields = {
-        ...prev.contextFields,
-        [contextFieldName]: {
-          type: generated.type,
-          label: generated.label,
-          description: generated.description,
-          heuristic: '',
-          default: generated.default !== undefined ? JSON.stringify(generated.default) : ''
-        }
-      }
-
-      // 3. Make sure the new field appears in a form section so the runtime
-      //    UI actually asks for it. Prefer a section whose title matches the
-      //    step's block label; fall back to a new section.
-      const block = detectBlockForStep(step, tools)
-      const targetTitle = block?.label || step.tool
-      const sections = [...prev.sections]
-      const existingIdx = sections.findIndex((s) => s.title === targetTitle)
-      if (existingIdx >= 0) {
-        const current = sections[existingIdx]
-        if (!current.fields.includes(contextFieldName)) {
-          sections[existingIdx] = {
-            ...current,
-            fields: [...current.fields, contextFieldName]
+        const contextFields = {
+          ...prev.contextFields,
+          [contextFieldName]: {
+            type: generated.type,
+            label: generated.label,
+            description: generated.description,
+            heuristic: '',
+            default: generated.default !== undefined ? JSON.stringify(generated.default) : ''
           }
         }
-      } else {
-        sections.push({
-          title: targetTitle,
-          description: '',
-          fields: [contextFieldName],
-          component: '',
-          buttonText: ''
-        })
-      }
 
-      return { ...prev, steps, contextFields, sections }
-    })
-  }, [setDraft, tools])
+        // 3. Make sure the new field appears in a form section so the runtime
+        //    UI actually asks for it. Prefer a section whose title matches the
+        //    step's block label; fall back to a new section.
+        const block = detectBlockForStep(step, tools)
+        const targetTitle = block?.label || step.tool
+        const sections = [...prev.sections]
+        const existingIdx = sections.findIndex((s) => s.title === targetTitle)
+        if (existingIdx >= 0) {
+          const current = sections[existingIdx]
+          if (!current.fields.includes(contextFieldName)) {
+            sections[existingIdx] = {
+              ...current,
+              fields: [...current.fields, contextFieldName]
+            }
+          }
+        } else {
+          sections.push({
+            title: targetTitle,
+            description: '',
+            fields: [contextFieldName],
+            component: '',
+            buttonText: ''
+          })
+        }
 
-  const handleAddBlockWrapped = useCallback((block: WorkflowBlock) => {
-    onAddBlock(block)
-    setShowPalette(false)
-    setSelectedStep(draft.steps.length)
-  }, [onAddBlock, draft.steps.length])
+        return { ...prev, steps, contextFields, sections }
+      })
+    },
+    [setDraft, tools]
+  )
 
   /** Handle source selection from the dropdown */
-  const handleSourceChange = useCallback((stepIndex: number, inputName: string, paramDef: ToolParameterDef, selectedValue: string) => {
-    if (selectedValue === USER_FORM_VALUE) {
-      setInputToUserForm(stepIndex, inputName, paramDef)
-    } else {
-      updateStepInput(stepIndex, inputName, selectedValue, 'ref')
-    }
-  }, [setInputToUserForm, updateStepInput])
+  const handleSourceChange = useCallback(
+    (stepIndex: number, inputName: string, paramDef: ToolParameterDef, selectedValue: string) => {
+      if (selectedValue === USER_FORM_VALUE) {
+        setInputToUserForm(stepIndex, inputName, paramDef)
+      } else {
+        updateStepInput(stepIndex, inputName, selectedValue, 'ref')
+      }
+    },
+    [setInputToUserForm, updateStepInput]
+  )
 
   // ── Drag-and-drop reordering ───────────────────────────────────────
 
@@ -357,31 +365,37 @@ export function ContextSpineDesigner({
     e.dataTransfer.setData('text/plain', String(index))
   }, [])
 
-  const handleCardDragOver = useCallback((e: React.DragEvent, index: number) => {
-    if (dragIndex === null || dragIndex === index) return
-    e.preventDefault()
-    e.dataTransfer.dropEffect = 'move'
-    setDragOverIndex(index)
-  }, [dragIndex])
+  const handleCardDragOver = useCallback(
+    (e: React.DragEvent, index: number) => {
+      if (dragIndex === null || dragIndex === index) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      setDragOverIndex(index)
+    },
+    [dragIndex]
+  )
 
-  const handleCardDrop = useCallback((e: React.DragEvent, targetIndex: number) => {
-    e.preventDefault()
-    if (dragIndex === null || dragIndex === targetIndex) return
+  const handleCardDrop = useCallback(
+    (e: React.DragEvent, targetIndex: number) => {
+      e.preventDefault()
+      if (dragIndex === null || dragIndex === targetIndex) return
 
-    // Move step one position at a time to reach target
-    let current = dragIndex
-    while (current !== targetIndex) {
-      const direction = targetIndex > current ? 1 : -1
-      onMoveStep(current, direction as -1 | 1)
-      current += direction
-    }
+      // Move step one position at a time to reach target
+      let current = dragIndex
+      while (current !== targetIndex) {
+        const direction = targetIndex > current ? 1 : -1
+        onMoveStep(current, direction as -1 | 1)
+        current += direction
+      }
 
-    if (selectedStep === dragIndex) {
-      setSelectedStep(targetIndex)
-    }
-    setDragIndex(null)
-    setDragOverIndex(null)
-  }, [dragIndex, selectedStep, onMoveStep])
+      if (selectedStep === dragIndex) {
+        setSelectedStep(targetIndex)
+      }
+      setDragIndex(null)
+      setDragOverIndex(null)
+    },
+    [dragIndex, selectedStep, onMoveStep]
+  )
 
   const handleCardDragEnd = useCallback(() => {
     setDragIndex(null)
@@ -410,45 +424,51 @@ export function ContextSpineDesigner({
                 Add tools to see their outputs here
               </Text>
             </div>
-          ) : (() => {
-            const stepGroups = new Map<number, ContextSlot[]>()
-            for (const slot of slots) {
-              const group = stepGroups.get(slot.sourceStep) || []
-              group.push(slot)
-              stepGroups.set(slot.sourceStep, group)
-            }
+          ) : (
+            (() => {
+              const stepGroups = new Map<number, ContextSlot[]>()
+              for (const slot of slots) {
+                const group = stepGroups.get(slot.sourceStep) || []
+                group.push(slot)
+                stepGroups.set(slot.sourceStep, group)
+              }
 
-            return Array.from(stepGroups.entries()).map(([stepIdx, groupSlots]) => {
-              const step = draft.steps[stepIdx]
-              const block = detectBlockForStep(step, tools)
+              return Array.from(stepGroups.entries()).map(([stepIdx, groupSlots]) => {
+                const step = draft.steps[stepIdx]
+                const block = detectBlockForStep(step, tools)
 
-              return (
-                <div key={stepIdx} className="mb-2">
-                  <Text size="1" weight="medium" className="text-neutral-8 px-2 py-1 uppercase tracking-wider block">
-                    {block?.label || step.tool}
-                  </Text>
-                  {groupSlots.map((slot) => (
-                    <div
-                      key={slot.id}
-                      className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-[var(--gray-3)]"
-                      style={{ borderLeft: `3px solid var(--${slot.color}-9, var(--gray-7))` }}
+                return (
+                  <div key={stepIdx} className="mb-2">
+                    <Text
+                      size="1"
+                      weight="medium"
+                      className="text-neutral-8 px-2 py-1 uppercase tracking-wider block"
                     >
-                      <div className="flex-1 min-w-0">
-                        <Text size="1" className="text-neutral-11 truncate block">
-                          {TYPE_LABELS[slot.type] || slot.type}
-                        </Text>
+                      {block?.label || step.tool}
+                    </Text>
+                    {groupSlots.map((slot) => (
+                      <div
+                        key={slot.id}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-[var(--gray-3)]"
+                        style={{ borderLeft: `3px solid var(--${slot.color}-9, var(--gray-7))` }}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <Text size="1" className="text-neutral-11 truncate block">
+                            {TYPE_LABELS[slot.type] || slot.type}
+                          </Text>
+                        </div>
+                        {slot.consumers.length > 0 && (
+                          <Badge variant="soft" size="1" color="violet">
+                            {slot.consumers.length}×
+                          </Badge>
+                        )}
                       </div>
-                      {slot.consumers.length > 0 && (
-                        <Badge variant="soft" size="1" color="violet">
-                          {slot.consumers.length}×
-                        </Badge>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )
-            })
-          })()}
+                    ))}
+                  </div>
+                )
+              })
+            })()
+          )}
         </div>
       </div>
 
@@ -457,7 +477,9 @@ export function ContextSpineDesigner({
         {/* Workflow metadata */}
         <div className="px-4 pt-4 pb-2 flex flex-col gap-2 border-b border-neutral-5">
           <div className="flex items-center gap-2">
-            <Text size="1" className="text-neutral-9 w-20 shrink-0">Workflow</Text>
+            <Text size="1" className="text-neutral-9 w-20 shrink-0">
+              Workflow
+            </Text>
             <TextField.Root
               value={draft.name}
               onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
@@ -468,7 +490,9 @@ export function ContextSpineDesigner({
             />
           </div>
           <div className="flex items-center gap-2">
-            <Text size="1" className="text-neutral-9 w-20 shrink-0">Description</Text>
+            <Text size="1" className="text-neutral-9 w-20 shrink-0">
+              Description
+            </Text>
             <TextField.Root
               value={draft.description}
               onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
@@ -478,22 +502,26 @@ export function ContextSpineDesigner({
             />
           </div>
           <div className="flex items-center gap-2">
-            <Text size="1" className="text-neutral-9 w-20 shrink-0">Dataset</Text>
+            <Text size="1" className="text-neutral-9 w-20 shrink-0">
+              Dataset
+            </Text>
             <TextField.Root
               value={(draft.contextFields.dataset_name?.default as string) || ''}
-              onChange={(e) => setDraft((d) => ({
-                ...d,
-                contextFields: {
-                  ...d.contextFields,
-                  dataset_name: {
-                    type: 'string',
-                    label: 'Dataset Name',
-                    description: 'Name for the output dataset',
-                    heuristic: '',
-                    default: e.target.value
+              onChange={(e) =>
+                setDraft((d) => ({
+                  ...d,
+                  contextFields: {
+                    ...d.contextFields,
+                    dataset_name: {
+                      type: 'string',
+                      label: 'Dataset Name',
+                      description: 'Name for the output dataset',
+                      heuristic: '',
+                      default: e.target.value
+                    }
                   }
-                }
-              }))}
+                }))
+              }
               placeholder="My Dataset"
               size="1"
               className="flex-1"
@@ -516,12 +544,12 @@ export function ContextSpineDesigner({
                     Open the tool palette below to add your first step.
                   </Text>
                 </div>
-                <button
-                  className="inline-flex items-center gap-1 px-3 py-1.5 rounded bg-[var(--accent-9)] hover:bg-[var(--accent-10)] text-white text-sm font-medium"
-                  onClick={() => setShowPalette(true)}
-                >
-                  <PlusIcon /> Open Tool Palette
-                </button>
+                <div className="flex items-center gap-1 text-[var(--accent-11)]">
+                  <ArrowDownIcon />
+                  <Text size="2" weight="medium">
+                    Palette
+                  </Text>
+                </div>
                 {onOpenGallery && (
                   <button
                     className="text-sm text-[var(--accent-11)] hover:underline"
@@ -542,12 +570,24 @@ export function ContextSpineDesigner({
               const hasError = validation.errors.some((e) => e.stepName === step.name)
 
               const inputInfos = tool
-                ? analyzeInputs(step, i, tool, block, slots, draft.steps, tools, wfInputTypes, ctxFieldTypes)
+                ? analyzeInputs(
+                    step,
+                    i,
+                    tool,
+                    block,
+                    slots,
+                    draft.steps,
+                    tools,
+                    wfInputTypes,
+                    ctxFieldTypes
+                  )
                 : []
 
               const visibleInputs = inputInfos.filter((inp) => !inp.hidden)
               const hiddenInputs = inputInfos.filter((inp) => inp.hidden)
-              const hasMissingRequired = visibleInputs.some((inp) => inp.source === 'unset' && !inp.paramDef.optional)
+              const hasMissingRequired = visibleInputs.some(
+                (inp) => inp.source === 'unset' && !inp.paramDef.optional
+              )
               const runnable = isToolRunnable(tool, runnableTools)
 
               const outputTypes = tool
@@ -629,25 +669,40 @@ export function ContextSpineDesigner({
                         <Popover.Content size="1" maxWidth="420px">
                           <Flex direction="column" gap="2">
                             <Flex gap="2" align="center">
-                              <Text size="2" weight="bold">{tool.name}</Text>
-                              <Text size="1" color="gray">v{tool.version}</Text>
+                              <Text size="2" weight="bold">
+                                {tool.name}
+                              </Text>
+                              <Text size="1" color="gray">
+                                v{tool.version}
+                              </Text>
                             </Flex>
                             <Text size="1">{tool.description}</Text>
                             {Object.keys(tool.inputs).length > 0 && (
                               <Flex direction="column" gap="1">
-                                <Text size="1" weight="bold" className="text-neutral-11 uppercase tracking-wider">
+                                <Text
+                                  size="1"
+                                  weight="bold"
+                                  className="text-neutral-11 uppercase tracking-wider"
+                                >
                                   Inputs
                                 </Text>
                                 {Object.entries(tool.inputs).map(([name, def]) => (
                                   <Flex key={name} gap="2" align="start">
-                                    <Badge variant="soft" size="1" color={(TYPE_COLORS[def.type] || 'gray') as 'gray'}>
+                                    <Badge
+                                      variant="soft"
+                                      size="1"
+                                      color={(TYPE_COLORS[def.type] || 'gray') as 'gray'}
+                                    >
                                       {def.type}
                                     </Badge>
                                     <Flex direction="column" className="min-w-0 flex-1">
                                       <Text size="1" weight="medium" className="font-mono">
-                                        {name}{def.optional ? '?' : ''}
+                                        {name}
+                                        {def.optional ? '?' : ''}
                                       </Text>
-                                      <Text size="1" className="text-neutral-10">{def.description}</Text>
+                                      <Text size="1" className="text-neutral-10">
+                                        {def.description}
+                                      </Text>
                                     </Flex>
                                   </Flex>
                                 ))}
@@ -655,17 +710,29 @@ export function ContextSpineDesigner({
                             )}
                             {Object.keys(tool.outputs).length > 0 && (
                               <Flex direction="column" gap="1">
-                                <Text size="1" weight="bold" className="text-neutral-11 uppercase tracking-wider">
+                                <Text
+                                  size="1"
+                                  weight="bold"
+                                  className="text-neutral-11 uppercase tracking-wider"
+                                >
                                   Outputs
                                 </Text>
                                 {Object.entries(tool.outputs).map(([name, def]) => (
                                   <Flex key={name} gap="2" align="start">
-                                    <Badge variant="soft" size="1" color={(TYPE_COLORS[def.type] || 'gray') as 'gray'}>
+                                    <Badge
+                                      variant="soft"
+                                      size="1"
+                                      color={(TYPE_COLORS[def.type] || 'gray') as 'gray'}
+                                    >
                                       {def.type}
                                     </Badge>
                                     <Flex direction="column" className="min-w-0 flex-1">
-                                      <Text size="1" weight="medium" className="font-mono">{name}</Text>
-                                      <Text size="1" className="text-neutral-10">{def.description}</Text>
+                                      <Text size="1" weight="medium" className="font-mono">
+                                        {name}
+                                      </Text>
+                                      <Text size="1" className="text-neutral-10">
+                                        {def.description}
+                                      </Text>
                                     </Flex>
                                   </Flex>
                                 ))}
@@ -673,14 +740,19 @@ export function ContextSpineDesigner({
                             )}
                             {!runnable && (
                               <Text size="1" color="amber">
-                                No executor registered — this tool needs a backend before it can run in a workflow.
+                                No executor registered — this tool needs a backend before it can run
+                                in a workflow.
                               </Text>
                             )}
                           </Flex>
                         </Popover.Content>
                       </Popover.Root>
                     )}
-                    <Badge variant="soft" size="1" color={hasError || hasMissingRequired ? 'red' : 'gray'}>
+                    <Badge
+                      variant="soft"
+                      size="1"
+                      color={hasError || hasMissingRequired ? 'red' : 'gray'}
+                    >
                       {i + 1}
                     </Badge>
                     <button
@@ -699,7 +771,11 @@ export function ContextSpineDesigner({
                   {visibleInputs.length > 0 && (
                     <div className="mt-2 rounded-md overflow-hidden border border-[var(--violet-5)]">
                       <div className="bg-[var(--violet-2)] px-3 py-1">
-                        <Text size="1" weight="medium" className="text-[var(--violet-11)] uppercase tracking-wider">
+                        <Text
+                          size="1"
+                          weight="medium"
+                          className="text-[var(--violet-11)] uppercase tracking-wider"
+                        >
                           Inputs
                         </Text>
                       </div>
@@ -715,7 +791,8 @@ export function ContextSpineDesigner({
                             let displayValue = inp.value
                             try {
                               const parsed = JSON.parse(inp.value)
-                              if (parsed !== undefined && parsed !== null) displayValue = String(parsed)
+                              if (parsed !== undefined && parsed !== null)
+                                displayValue = String(parsed)
                             } catch {
                               /* not valid JSON — use raw */
                             }
@@ -726,7 +803,9 @@ export function ContextSpineDesigner({
                                 </Text>
                                 <Select.Root
                                   value={displayValue}
-                                  onValueChange={(v) => updateStepInput(i, inp.name, JSON.stringify(v))}
+                                  onValueChange={(v) =>
+                                    updateStepInput(i, inp.name, JSON.stringify(v))
+                                  }
                                   size="1"
                                 >
                                   <Select.Trigger className="flex-1" />
@@ -760,10 +839,13 @@ export function ContextSpineDesigner({
                               {/* Source selector dropdown */}
                               <Select.Root
                                 value={
-                                  inp.isUserForm ? USER_FORM_VALUE
-                                    : inp.source === 'context' ? inp.value
-                                    : inp.source === 'unset' ? ''
-                                    : inp.value
+                                  inp.isUserForm
+                                    ? USER_FORM_VALUE
+                                    : inp.source === 'context'
+                                      ? inp.value
+                                      : inp.source === 'unset'
+                                        ? ''
+                                        : inp.value
                                 }
                                 onValueChange={(v) => {
                                   if (v === USER_FORM_VALUE) {
@@ -776,8 +858,14 @@ export function ContextSpineDesigner({
                               >
                                 <Select.Trigger
                                   className="flex-1"
-                                  placeholder={isRequired ? 'Select source...' : 'Select source (optional)'}
-                                  style={inp.source === 'unset' && isRequired ? { borderColor: 'var(--red-7)' } : undefined}
+                                  placeholder={
+                                    isRequired ? 'Select source...' : 'Select source (optional)'
+                                  }
+                                  style={
+                                    inp.source === 'unset' && isRequired
+                                      ? { borderColor: 'var(--red-7)' }
+                                      : undefined
+                                  }
                                 />
                                 <Select.Content>
                                   {/* Context sources */}
@@ -788,7 +876,11 @@ export function ContextSpineDesigner({
                                         <Select.Item key={s.ref} value={s.ref}>
                                           <div className="flex items-center gap-1.5">
                                             <span>{s.label}</span>
-                                            {s.exact && <Badge variant="soft" size="1" color="green">exact</Badge>}
+                                            {s.exact && (
+                                              <Badge variant="soft" size="1" color="green">
+                                                exact
+                                              </Badge>
+                                            )}
                                           </div>
                                         </Select.Item>
                                       ))}
@@ -811,94 +903,114 @@ export function ContextSpineDesigner({
                                   Authors can wire a registered heuristic to the
                                   underlying context field so the runtime form
                                   comes pre-filled (e.g. list-dicom-series). */}
-                              {inp.isUserForm && (() => {
-                                const ctxFieldName = inp.value.startsWith('context.')
-                                  ? inp.value.slice('context.'.length)
-                                  : ''
-                                const ctxField = ctxFieldName ? draft.contextFields[ctxFieldName] : undefined
-                                const heuristic = ctxField?.heuristic || ''
-                                return (
-                                  <Popover.Root>
-                                    <Popover.Trigger>
-                                      <button
-                                        type="button"
-                                        className="cursor-pointer"
-                                        aria-label="Edit form field"
-                                        title="Edit form field"
-                                      >
-                                        <Badge
-                                          variant={heuristic ? 'solid' : 'soft'}
-                                          size="1"
-                                          color={heuristic ? 'violet' : 'orange'}
+                              {inp.isUserForm &&
+                                (() => {
+                                  const ctxFieldName = inp.value.startsWith('context.')
+                                    ? inp.value.slice('context.'.length)
+                                    : ''
+                                  const ctxField = ctxFieldName
+                                    ? draft.contextFields[ctxFieldName]
+                                    : undefined
+                                  const heuristic = ctxField?.heuristic || ''
+                                  return (
+                                    <Popover.Root>
+                                      <Popover.Trigger>
+                                        <button
+                                          type="button"
+                                          className="cursor-pointer"
+                                          aria-label="Edit form field"
+                                          title="Edit form field"
                                         >
-                                          {heuristic ? (
-                                            <>
-                                              <MagicWandIcon /> {heuristic}
-                                            </>
-                                          ) : (
-                                            'form'
-                                          )}
-                                        </Badge>
-                                      </button>
-                                    </Popover.Trigger>
-                                    {ctxFieldName && ctxField && (
-                                      <Popover.Content size="1" maxWidth="380px">
-                                        <Flex direction="column" gap="2">
-                                          <Text size="1" weight="bold">User-provided field</Text>
-                                          <Text size="1" color="gray" className="font-mono">
-                                            context.{ctxFieldName}
-                                          </Text>
-                                          <Flex direction="column" gap="1">
-                                            <Text size="1" weight="medium">Pre-fill heuristic</Text>
-                                            <Select.Root
-                                              value={heuristic || '__none__'}
-                                              onValueChange={(v) =>
-                                                updateContextField(ctxFieldName, {
-                                                  heuristic: v === '__none__' ? '' : v
-                                                })
-                                              }
-                                              size="1"
-                                            >
-                                              <Select.Trigger />
-                                              <Select.Content>
-                                                <Select.Item value="__none__">None — empty until user fills it</Select.Item>
-                                                {heuristicNames.map((n) => (
-                                                  <Select.Item key={n} value={n}>{n}</Select.Item>
-                                                ))}
-                                              </Select.Content>
-                                            </Select.Root>
-                                            <Text size="1" color="gray">
-                                              Runs before the form opens; the user can edit the result.
+                                          <Badge
+                                            variant={heuristic ? 'solid' : 'soft'}
+                                            size="1"
+                                            color={heuristic ? 'violet' : 'orange'}
+                                          >
+                                            {heuristic ? (
+                                              <>
+                                                <MagicWandIcon /> {heuristic}
+                                              </>
+                                            ) : (
+                                              'form'
+                                            )}
+                                          </Badge>
+                                        </button>
+                                      </Popover.Trigger>
+                                      {ctxFieldName && ctxField && (
+                                        <Popover.Content size="1" maxWidth="380px">
+                                          <Flex direction="column" gap="2">
+                                            <Text size="1" weight="bold">
+                                              User-provided field
                                             </Text>
+                                            <Text size="1" color="gray" className="font-mono">
+                                              context.{ctxFieldName}
+                                            </Text>
+                                            <Flex direction="column" gap="1">
+                                              <Text size="1" weight="medium">
+                                                Pre-fill heuristic
+                                              </Text>
+                                              <Select.Root
+                                                value={heuristic || '__none__'}
+                                                onValueChange={(v) =>
+                                                  updateContextField(ctxFieldName, {
+                                                    heuristic: v === '__none__' ? '' : v
+                                                  })
+                                                }
+                                                size="1"
+                                              >
+                                                <Select.Trigger />
+                                                <Select.Content>
+                                                  <Select.Item value="__none__">
+                                                    None — empty until user fills it
+                                                  </Select.Item>
+                                                  {heuristicNames.map((n) => (
+                                                    <Select.Item key={n} value={n}>
+                                                      {n}
+                                                    </Select.Item>
+                                                  ))}
+                                                </Select.Content>
+                                              </Select.Root>
+                                              <Text size="1" color="gray">
+                                                Runs before the form opens; the user can edit the
+                                                result.
+                                              </Text>
+                                            </Flex>
+                                            <Flex direction="column" gap="1">
+                                              <Text size="1" weight="medium">
+                                                Label
+                                              </Text>
+                                              <TextField.Root
+                                                size="1"
+                                                value={ctxField.label}
+                                                onChange={(e) =>
+                                                  updateContextField(ctxFieldName, {
+                                                    label: e.target.value
+                                                  })
+                                                }
+                                                placeholder={ctxFieldName}
+                                              />
+                                            </Flex>
+                                            <Flex direction="column" gap="1">
+                                              <Text size="1" weight="medium">
+                                                Help text
+                                              </Text>
+                                              <TextField.Root
+                                                size="1"
+                                                value={ctxField.description}
+                                                onChange={(e) =>
+                                                  updateContextField(ctxFieldName, {
+                                                    description: e.target.value
+                                                  })
+                                                }
+                                                placeholder="Shown under the field at runtime"
+                                              />
+                                            </Flex>
                                           </Flex>
-                                          <Flex direction="column" gap="1">
-                                            <Text size="1" weight="medium">Label</Text>
-                                            <TextField.Root
-                                              size="1"
-                                              value={ctxField.label}
-                                              onChange={(e) =>
-                                                updateContextField(ctxFieldName, { label: e.target.value })
-                                              }
-                                              placeholder={ctxFieldName}
-                                            />
-                                          </Flex>
-                                          <Flex direction="column" gap="1">
-                                            <Text size="1" weight="medium">Help text</Text>
-                                            <TextField.Root
-                                              size="1"
-                                              value={ctxField.description}
-                                              onChange={(e) =>
-                                                updateContextField(ctxFieldName, { description: e.target.value })
-                                              }
-                                              placeholder="Shown under the field at runtime"
-                                            />
-                                          </Flex>
-                                        </Flex>
-                                      </Popover.Content>
-                                    )}
-                                  </Popover.Root>
-                                )
-                              })()}
+                                        </Popover.Content>
+                                      )}
+                                    </Popover.Root>
+                                  )
+                                })()}
                             </div>
                           )
                         })}
@@ -910,7 +1022,11 @@ export function ContextSpineDesigner({
                   {outputTypes.length > 0 && (
                     <div className="mt-2 rounded-md overflow-hidden border border-[var(--teal-5)]">
                       <div className="bg-[var(--teal-2)] px-3 py-1 flex items-center gap-1.5">
-                        <Text size="1" weight="medium" className="text-[var(--teal-11)] uppercase tracking-wider">
+                        <Text
+                          size="1"
+                          weight="medium"
+                          className="text-[var(--teal-11)] uppercase tracking-wider"
+                        >
                           → Context
                         </Text>
                       </div>
@@ -920,7 +1036,16 @@ export function ContextSpineDesigner({
                             <Badge
                               variant="soft"
                               size="1"
-                              color={out.color as 'blue' | 'purple' | 'yellow' | 'green' | 'gray' | 'teal' | 'orange'}
+                              color={
+                                out.color as
+                                  | 'blue'
+                                  | 'purple'
+                                  | 'yellow'
+                                  | 'green'
+                                  | 'gray'
+                                  | 'teal'
+                                  | 'orange'
+                              }
                             >
                               {out.label}
                             </Badge>
@@ -943,30 +1068,6 @@ export function ContextSpineDesigner({
                 </Card>
               )
             })
-          )}
-        </div>
-
-        {/* Block palette toggle */}
-        <div className="border-t border-neutral-5 bg-[var(--gray-2)]">
-          <button
-            className="flex items-center gap-2 w-full px-4 py-2 hover:bg-[var(--gray-3)] transition-colors cursor-pointer"
-            onClick={() => setShowPalette(!showPalette)}
-          >
-            {showPalette ? <ChevronDownIcon /> : <ChevronRightIcon />}
-            <PlusIcon />
-            <Text size="1" weight="medium" className="text-neutral-11">
-              Add Tool
-            </Text>
-          </button>
-          {showPalette && (
-            <div className="px-3 pb-3 max-h-64 overflow-y-auto">
-              <BlockPalette
-                onAddBlock={handleAddBlockWrapped}
-                tools={tools}
-                runnableTools={runnableTools}
-                lastStepTool={lastStepTool}
-              />
-            </div>
           )}
         </div>
       </div>

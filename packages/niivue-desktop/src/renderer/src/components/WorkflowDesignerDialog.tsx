@@ -737,25 +737,26 @@ export function WorkflowDesignerDialog({
         </Flex>
       </header>
 
-      {/* Body — list view delegates to ContextSpineDesigner; diagram view
-          uses WorkflowDiagramView with the same palette docked below. */}
-      <div className="flex-1 min-h-0 flex overflow-hidden">
-        {view === 'list' ? (
-          <ContextSpineDesigner
-            draft={draft}
-            setDraft={setDraftWithHistory}
-            tools={toolsMap}
-            validation={validation}
-            runnableTools={runnableTools}
-            heuristicNames={heuristicNames}
-            onAddBlock={handleAddBlock}
-            onRemoveStep={handleRemoveStep}
-            onMoveStep={handleMoveStep}
-            onSave={handleSave}
-            onOpenGallery={onOpenGallery}
-          />
-        ) : (
-          <div className="flex-1 flex flex-col min-h-0">
+      {/* Body — list and diagram views share the same bottom palette dock so
+          toggling between views doesn't shift the layout. The dock is owned
+          here (not by either child) so its position and height stay constant
+          across the view switch. */}
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <div className="flex-1 min-h-0 flex">
+          {view === 'list' ? (
+            <ContextSpineDesigner
+              draft={draft}
+              setDraft={setDraftWithHistory}
+              tools={toolsMap}
+              validation={validation}
+              runnableTools={runnableTools}
+              heuristicNames={heuristicNames}
+              onRemoveStep={handleRemoveStep}
+              onMoveStep={handleMoveStep}
+              onSave={handleSave}
+              onOpenGallery={onOpenGallery}
+            />
+          ) : (
             <WorkflowDiagramView
               draft={draft}
               setDraft={setDraftWithHistory}
@@ -772,18 +773,18 @@ export function WorkflowDesignerDialog({
               onSwitchToListView={(): void => setView('list')}
               runnableTools={runnableTools}
             />
-            <div className="border-t border-neutral-5 bg-[var(--gray-2)] px-3 py-2 max-h-56 overflow-y-auto shrink-0">
-              <BlockPalette
-                onAddBlock={handleAddBlock}
-                tools={toolsMap}
-                runnableTools={runnableTools}
-                lastStepTool={
-                  draft.steps.length > 0 ? draft.steps[draft.steps.length - 1].tool : undefined
-                }
-              />
-            </div>
-          </div>
-        )}
+          )}
+        </div>
+        <div className="border-t border-neutral-5 bg-[var(--gray-2)] px-3 py-2 max-h-56 overflow-y-auto shrink-0">
+          <BlockPalette
+            onAddBlock={handleAddBlock}
+            tools={toolsMap}
+            runnableTools={runnableTools}
+            lastStepTool={
+              draft.steps.length > 0 ? draft.steps[draft.steps.length - 1].tool : undefined
+            }
+          />
+        </div>
       </div>
     </div>
   )
