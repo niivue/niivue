@@ -63,11 +63,24 @@ export function FormSection({
       )
       if (isInitialLoading) {
         return (
-          <div className="py-12 text-center">
-            <div className="animate-spin w-6 h-6 border-2 border-accent-9 border-t-transparent rounded-full mx-auto mb-3" />
-            <Text size="2" className="text-neutral-9">
-              Preparing data...
-            </Text>
+          <div className="flex flex-col gap-4 flex-1 min-h-0">
+            <div>
+              <Heading size="3" weight="bold" className="text-neutral-12">
+                {section.title}
+              </Heading>
+              {section.description && (
+                <Text size="2" className="text-neutral-9 mt-1" as="p">
+                  {section.description}
+                </Text>
+              )}
+            </div>
+            <Separator size="4" />
+            <div className="py-12 text-center" role="status" aria-live="polite">
+              <div className="animate-spin w-6 h-6 border-2 border-accent-9 border-t-transparent rounded-full mx-auto mb-3" />
+              <Text size="2" className="text-neutral-9">
+                Preparing data...
+              </Text>
+            </div>
           </div>
         )
       }
