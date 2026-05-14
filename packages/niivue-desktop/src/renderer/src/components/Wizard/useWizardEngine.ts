@@ -23,6 +23,14 @@ export interface WizardEngineState {
   completedStepOutputs: Record<string, Record<string, unknown>> | null
   error: string | null
   heuristicLoading: Set<string>
+  /** Non-fatal heuristic failures keyed by the field that failed to refresh.
+   *  Empty when everything is healthy; consumed by the form to surface inline
+   *  errors instead of leaving the field silently empty. */
+  heuristicErrors: Record<string, string>
+  /** Most recent non-fatal update-context failure, or null. Surfaced as a
+   *  transient banner so a single keystroke that fails doesn't blow up the
+   *  whole wizard. Cleared via `dismissUpdateError`. */
+  updateError: string | null
   missingInputs: MissingInput[]
   /** Latest progress event for the currently running step. Null when no
    *  step is running or the step hasn't emitted progress yet. */
@@ -35,6 +43,7 @@ export interface WizardEngineActions {
   handleNext: () => Promise<void>
   handleBack: () => void
   handleClose: () => void
+  dismissUpdateError: () => void
 }
 
 export function useWizardEngine(
@@ -56,6 +65,13 @@ export function useWizardEngine(
   > | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [heuristicLoading, setHeuristicLoading] = useState<Set<string>>(new Set())
+  // Non-fatal errors from heuristic / update-context calls keyed by the field
+  // they failed on. Surfaced inline next to the field so users aren't left
+  // wondering why "Detected series" is empty after a directory change.
+  const [heuristicErrors, setHeuristicErrors] = useState<Record<string, string>>({})
+  // Most recent update-context failure. Not field-scoped (the update could
+  // be for any field); surfaced as a transient banner by the consumer.
+  const [updateError, setUpdateError] = useState<string | null>(null)
   const [progress, setProgress] = useState<WorkflowStepProgress | null>(null)
   const [tools, setTools] = useState<ToolDefinition[]>([])
   const runIdRef = useRef<string | null>(null)
@@ -195,6 +211,12 @@ export function useWizardEngine(
 
   const fireHeuristic = async (rid: string, fieldName: string): Promise<void> => {
     setHeuristicLoading((prev) => new Set(prev).add(fieldName))
+    setHeuristicErrors((prev) => {
+      if (!(fieldName in prev)) return prev
+      const next = { ...prev }
+      delete next[fieldName]
+      return next
+    })
     try {
       const result = await electron.ipcRenderer.invoke('workflow:run-heuristic', {
         runId: rid,
@@ -202,7 +224,9 @@ export function useWizardEngine(
       })
       if (result.context) setContext(result.context)
     } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err)
       console.error(`Heuristic for ${fieldName} failed:`, err)
+      setHeuristicErrors((prev) => ({ ...prev, [fieldName]: msg }))
     } finally {
       setHeuristicLoading((prev) => {
         const next = new Set(prev)
@@ -256,11 +280,15 @@ export function useWizardEngine(
           await fireHeuristic(runId, fname)
         }
       } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
         console.error('Failed to update context:', err)
+        setUpdateError(msg)
       }
     },
     [runId, definition, currentSection, tools]
   )
+
+  const dismissUpdateError = useCallback((): void => setUpdateError(null), [])
 
   const sections = definition?.form?.sections ?? []
   // The "engine-final" section is the last one that DOESN'T have
@@ -383,12 +411,15 @@ export function useWizardEngine(
     completedStepOutputs,
     error,
     heuristicLoading,
+    heuristicErrors,
+    updateError,
     missingInputs,
     progress,
     goToSection,
     handleFieldChange,
     handleNext,
     handleBack,
-    handleClose
+    handleClose,
+    dismissUpdateError
   }
 }

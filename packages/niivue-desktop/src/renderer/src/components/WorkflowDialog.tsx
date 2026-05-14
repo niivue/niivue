@@ -594,8 +594,14 @@ export function WorkflowDialog({
       if (!m.contextField || map[m.contextField]) continue
       map[m.contextField] = 'Required'
     }
+    // Heuristic failures override "Required" — if the user can see why the
+    // field is empty (e.g. "Folder not found") that's more actionable than a
+    // generic required warning.
+    for (const [field, msg] of Object.entries(engine.heuristicErrors)) {
+      map[field] = msg
+    }
     return map
-  }, [engine.missingInputs])
+  }, [engine.missingInputs, engine.heuristicErrors])
 
   const disabledReason = useMemo(() => {
     if (engine.missingInputs.length === 0) return undefined
@@ -751,6 +757,29 @@ export function WorkflowDialog({
             <ExclamationTriangleIcon />
           </Callout.Icon>
           <Callout.Text>{engine.error}</Callout.Text>
+        </Callout.Root>
+      )}
+
+      {/* Non-fatal update-context failure — surfaced separately because it
+          doesn't tear the wizard down; the user can keep editing and either
+          retry or dismiss. */}
+      {engine.updateError && (
+        <Callout.Root color="amber" size="2" className="mt-4">
+          <Callout.Icon>
+            <ExclamationTriangleIcon />
+          </Callout.Icon>
+          <Callout.Text>
+            <div className="flex items-center justify-between gap-3">
+              <span>Couldn&apos;t apply your edit: {engine.updateError}</span>
+              <button
+                type="button"
+                className="text-xs underline text-[var(--amber-12)] shrink-0"
+                onClick={engine.dismissUpdateError}
+              >
+                Dismiss
+              </button>
+            </div>
+          </Callout.Text>
         </Callout.Root>
       )}
 
