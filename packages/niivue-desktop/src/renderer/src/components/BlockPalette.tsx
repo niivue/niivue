@@ -194,7 +194,7 @@ export function BlockPalette({
                     const runnable = isToolRunnable(tools.get(block.tool), runnableTools)
                     const tooltip = runnable
                       ? block.description
-                      : `${block.description}\n\nThis tool has no executor. Adding it produces a config-only step that won't run; built-in workflows pair it with a custom backend.`
+                      : `${block.description}\n\nNo executor — adds a config-only step.`
                     return (
                       <Tooltip key={block.id} content={tooltip}>
                         <button
