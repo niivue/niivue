@@ -156,7 +156,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
         background: 'var(--color-panel-solid)',
         border: `2px solid ${ringColor}`,
         borderRadius: 8,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        boxShadow: 'var(--shadow-2)',
         cursor: 'pointer',
         fontFamily: 'inherit'
       }}
@@ -408,7 +408,7 @@ function SourceNode({ data }: NodeProps<Node<SourceNodeData>>): React.ReactEleme
         background: 'var(--color-panel-solid)',
         border: `2px solid var(--${accent}-7)`,
         borderRadius: 8,
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
+        boxShadow: 'var(--shadow-2)',
         fontFamily: 'inherit'
       }}
     >
@@ -560,7 +560,7 @@ function DeletableEdge({
                 color: 'var(--gray-12)',
                 fontStyle: isCoercion ? 'italic' : 'normal',
                 whiteSpace: 'nowrap',
-                boxShadow: '0 1px 2px rgba(0,0,0,0.08)'
+                boxShadow: 'var(--shadow-2)'
               }}
             >
               {isCoercion ? (
@@ -592,7 +592,7 @@ function DeletableEdge({
               fontSize: 12,
               lineHeight: 1,
               padding: 0,
-              boxShadow: '0 1px 2px rgba(0,0,0,0.15)'
+              boxShadow: 'var(--shadow-2)'
             }}
           >
             <Cross1Icon width={10} height={10} />
@@ -1167,13 +1167,12 @@ export function WorkflowDiagramView({
               style={{
                 display: 'flex',
                 alignItems: 'center',
-                gap: 10,
-                padding: '6px 10px',
+                gap: 12,
+                padding: '8px 12px',
                 borderRadius: 6,
                 background: 'var(--color-panel-translucent)',
                 border: '1px solid var(--gray-5)',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-                fontSize: 11,
+                boxShadow: 'var(--shadow-2)',
                 color: 'var(--gray-11)'
               }}
               title="How inputs get their values"
@@ -1181,7 +1180,7 @@ export function WorkflowDiagramView({
               <Text size="1" weight="medium" style={{ color: 'var(--gray-12)' }}>
                 Input source:
               </Text>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <span
                   style={{
                     display: 'inline-block',
@@ -1194,7 +1193,7 @@ export function WorkflowDiagramView({
                 />
                 <Text size="1">workflow input</Text>
               </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <span
                   style={{
                     display: 'inline-block',
@@ -1207,19 +1206,19 @@ export function WorkflowDiagramView({
                 />
                 <Text size="1">form field</Text>
               </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <Badge variant="soft" size="1" color="grass">
                   =
                 </Badge>
                 <Text size="1">constant</Text>
               </span>
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <span
                   style={{
                     display: 'inline-block',
                     width: 18,
                     height: 2,
-                    background: 'var(--gray-9)',
+                    background: 'var(--gray-8)',
                     borderRadius: 1
                   }}
                 />
