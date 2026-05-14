@@ -537,7 +537,9 @@ export function ContextSpineDesigner({
               const block = detectBlockForStep(step, tools)
               const tool = tools.get(step.tool)
               const isSelected = selectedStep === i
-              const hasError = validation.errors.some((e) => e.message.includes(step.name))
+              // Match by stepName, not substring — 'convert' would otherwise
+              // light up errors that mention 'convert_t1' and vice versa.
+              const hasError = validation.errors.some((e) => e.stepName === step.name)
 
               const inputInfos = tool
                 ? analyzeInputs(step, i, tool, block, slots, draft.steps, tools, wfInputTypes, ctxFieldTypes)
