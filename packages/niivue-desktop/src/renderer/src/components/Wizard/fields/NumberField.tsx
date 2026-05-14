@@ -9,6 +9,8 @@ interface NumberFieldProps {
   min?: number
   max?: number
   disabled?: boolean
+  ariaInvalid?: boolean
+  ariaDescribedBy?: string
 }
 
 export function NumberField({
@@ -18,7 +20,9 @@ export function NumberField({
   onChange,
   min,
   max,
-  disabled
+  disabled,
+  ariaInvalid,
+  ariaDescribedBy
 }: NumberFieldProps): React.ReactElement {
   const hasRange = min != null && max != null
 
@@ -26,7 +30,8 @@ export function NumberField({
     <div className="flex flex-col gap-1.5 py-1">
       <div className="flex items-center gap-1">
         <Text as="label" size="2" weight="medium" className="text-neutral-12">
-          {label}{hasRange ? `: ${value}` : ''}
+          {label}
+          {hasRange ? `: ${value}` : ''}
         </Text>
         {tooltip && (
           <Tooltip content={tooltip}>
@@ -43,6 +48,8 @@ export function NumberField({
           step={1}
           disabled={disabled}
           size="1"
+          aria-invalid={ariaInvalid || undefined}
+          aria-describedby={ariaDescribedBy}
         />
       ) : (
         <TextField.Root
@@ -51,6 +58,8 @@ export function NumberField({
           onChange={(e) => onChange(Number(e.target.value))}
           disabled={disabled}
           size="2"
+          aria-invalid={ariaInvalid || undefined}
+          aria-describedby={ariaDescribedBy}
         />
       )}
     </div>

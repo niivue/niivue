@@ -8,6 +8,8 @@ interface TextFieldProps {
   onChange: (value: string) => void
   placeholder?: string
   disabled?: boolean
+  ariaInvalid?: boolean
+  ariaDescribedBy?: string
 }
 
 export function TextField({
@@ -16,7 +18,9 @@ export function TextField({
   value,
   onChange,
   placeholder,
-  disabled
+  disabled,
+  ariaInvalid,
+  ariaDescribedBy
 }: TextFieldProps): React.ReactElement {
   return (
     <div className="flex flex-col gap-1.5 py-1">
@@ -36,6 +40,8 @@ export function TextField({
         placeholder={placeholder}
         disabled={disabled}
         size="2"
+        aria-invalid={ariaInvalid || undefined}
+        aria-describedby={ariaDescribedBy}
       />
     </div>
   )

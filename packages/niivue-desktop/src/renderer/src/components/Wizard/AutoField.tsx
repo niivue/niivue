@@ -41,6 +41,13 @@ export function AutoField({
   // would be noise.
   const helperText = fieldDef.label && fieldDef.description ? fieldDef.description : undefined
 
+  // Stable IDs let the input announce its error/helper text to screen readers.
+  // aria-describedby points at whichever is currently rendered.
+  const errorId = `auto-field-${fieldName}-error`
+  const helperId = `auto-field-${fieldName}-help`
+  const ariaInvalid = !!error
+  const ariaDescribedBy = error ? errorId : helperText ? helperId : undefined
+
   const inner = ((): React.ReactElement => {
     // Series list (from heuristic)
     if (fieldDef.heuristic === 'list-dicom-series') {
@@ -115,6 +122,8 @@ export function AutoField({
           }
           value={String(value ?? '')}
           onChange={(v) => onChange(v)}
+          ariaInvalid={ariaInvalid}
+          ariaDescribedBy={ariaDescribedBy}
         />
       )
     }
@@ -165,6 +174,8 @@ export function AutoField({
           onChange={(v) => onChange(v)}
           min={fieldDef.min}
           max={fieldDef.max}
+          ariaInvalid={ariaInvalid}
+          ariaDescribedBy={ariaDescribedBy}
         />
       )
     }
@@ -176,6 +187,8 @@ export function AutoField({
         tooltip={tooltip}
         value={String(value ?? '')}
         onChange={(v) => onChange(v)}
+        ariaInvalid={ariaInvalid}
+        ariaDescribedBy={ariaDescribedBy}
       />
     )
   })()
@@ -186,12 +199,12 @@ export function AutoField({
     <div className="flex flex-col gap-1">
       {inner}
       {helperText && !error && (
-        <Text size="1" className="text-neutral-9 pl-0.5">
+        <Text id={helperId} size="1" className="text-neutral-9 pl-0.5">
           {helperText}
         </Text>
       )}
       {error && (
-        <Text size="1" className="text-[var(--red-11)] pl-0.5" role="alert">
+        <Text id={errorId} size="1" className="text-[var(--red-11)] pl-0.5" role="alert">
           {error}
         </Text>
       )}

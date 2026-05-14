@@ -9,6 +9,8 @@ interface DirectoryFieldProps {
   value: string
   onChange: (value: string) => void
   disabled?: boolean
+  ariaInvalid?: boolean
+  ariaDescribedBy?: string
 }
 
 export function DirectoryField({
@@ -16,7 +18,9 @@ export function DirectoryField({
   tooltip,
   value,
   onChange,
-  disabled
+  disabled,
+  ariaInvalid,
+  ariaDescribedBy
 }: DirectoryFieldProps): React.ReactElement {
   const handleBrowse = async (): Promise<void> => {
     const dir = await electron.ipcRenderer.invoke('workflow:select-directory', {
@@ -45,6 +49,8 @@ export function DirectoryField({
             placeholder="Select or type a directory path..."
             disabled={disabled}
             size="2"
+            aria-invalid={ariaInvalid || undefined}
+            aria-describedby={ariaDescribedBy}
           />
         </div>
         <Button variant="soft" size="2" onClick={handleBrowse} disabled={disabled}>
