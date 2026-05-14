@@ -355,7 +355,10 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
         </div>
       </div>
 
-      {/* Step name footer (small) */}
+      {/* Step name footer — this is the authoritative identifier that
+          validation errors and downstream `steps.X.outputs.Y` refs use,
+          so it needs to scan cleanly. Code font marks it as an id; full
+          gray-12 contrast keeps it from disappearing into chrome. */}
       <div
         style={{
           padding: '4px 10px 6px',
@@ -364,7 +367,11 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
           borderRadius: '0 0 6px 6px'
         }}
       >
-        <Text size="1" style={{ color: 'var(--gray-10)', fontFamily: 'var(--code-font-family)' }}>
+        <Text
+          size="1"
+          weight="medium"
+          style={{ color: 'var(--gray-12)', fontFamily: 'var(--code-font-family)' }}
+        >
           {step.name}
         </Text>
       </div>
