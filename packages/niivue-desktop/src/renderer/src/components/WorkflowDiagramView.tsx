@@ -44,6 +44,7 @@ import {
 import type { ToolDefinition } from '../../../common/workflowTypes.js'
 import {
   detectBlockForStep,
+  isToolRunnable,
   TYPE_COLORS,
   TYPE_LABELS,
   type StepDraft,
@@ -89,6 +90,11 @@ interface StepNodeData extends Record<string, unknown> {
   selected: boolean
   hasError: boolean
   hasWarning: boolean
+  /** True when the step's tool has no executor registered. The palette
+   *  already badges these "config-only"; mirror it on placed nodes so authors
+   *  who land on someone else's draft can tell at a glance which steps won't
+   *  actually run. */
+  configOnly: boolean
   /** First validation error/warning message for this step, surfaced inline under the header. */
   issue?: { kind: 'error' | 'warning'; message: string }
   /**
@@ -123,6 +129,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
     onMove
   } = data
 
+  const { configOnly } = data
   const inputs = tool ? Object.entries(tool.inputs) : []
   const outputs = tool ? Object.entries(tool.outputs) : []
 
@@ -163,6 +170,16 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
         <Text size="2" weight="bold" style={{ flex: 1, minWidth: 0 }} truncate>
           {blockLabel}
         </Text>
+        {configOnly && (
+          <Badge
+            variant="outline"
+            size="1"
+            color="gray"
+            title="This tool has no executor; the step is configuration-only"
+          >
+            config-only
+          </Badge>
+        )}
         <Badge variant="soft" size="1" color={hasError ? 'red' : 'gray'}>
           {index + 1}
         </Badge>
@@ -531,6 +548,10 @@ interface WorkflowDiagramViewProps {
    *  inspector's "Edit details" affordance so authors can jump into the
    *  richer per-step editor when the diagram inspector is read-only. */
   onSwitchToListView?: () => void
+  /** Tools known to have an executor; used to badge nodes whose tool has no
+   *  registered runner. Matches the palette's "config-only" badge so authors
+   *  can spot non-runnable steps at a glance. */
+  runnableTools?: Set<string>
 }
 
 // ── Component ────────────────────────────────────────────────────────
@@ -548,7 +569,8 @@ export function WorkflowDiagramView({
   stepIssueByIndex,
   onOpenGallery,
   onAddBlockById,
-  onSwitchToListView
+  onSwitchToListView,
+  runnableTools
 }: WorkflowDiagramViewProps): React.ReactElement {
   // Build nodes: one per step, laid out left-to-right.
   const nodes = useMemo<Node<StepNodeData>[]>(() => {
@@ -600,6 +622,7 @@ export function WorkflowDiagramView({
           selected: selectedStep === i,
           hasError: errorSteps.has(i),
           hasWarning: warnSteps?.has(i) ?? false,
+          configOnly: !isToolRunnable(tool, runnableTools),
           issue: stepIssueByIndex?.get(i),
           inputAnnotations,
           onSelect: (): void => onSelectStep(selectedStep === i ? null : i),
@@ -620,7 +643,8 @@ export function WorkflowDiagramView({
     stepIssueByIndex,
     onSelectStep,
     onRemoveStep,
-    onMoveStep
+    onMoveStep,
+    runnableTools
   ])
 
   // Clear the input binding for a target step. Used by both the inline
