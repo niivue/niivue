@@ -51,7 +51,11 @@ export function WizardTransition({
     <div
       className={className}
       data-direction={direction}
-      style={{ minHeight: 0, flex: 1 }}
+      // display: flex + flex-direction: column lets the step content opt into
+      // `flex-1 min-h-0` so primary lists grow to fill empty vertical space.
+      // The flex: 1 + minHeight: 0 anchor this div to WizardShell's flex-col
+      // inner so it never clips below the visible area.
+      style={{ minHeight: 0, flex: 1, display: 'flex', flexDirection: 'column' }}
     >
       {displayedChildren}
     </div>

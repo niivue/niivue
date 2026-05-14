@@ -165,9 +165,13 @@ export function WizardShell({
             </aside>
           )}
 
-          {/* Main content area — single scroll context */}
+          {/* Main content area — overflows when the step's natural height
+              exceeds the viewport. The inner wrapper is min-h-full + flex-col
+              so steps that opt in (FormSection + step containers) can use
+              flex-1 min-h-0 to grow primary lists into the empty space below
+              short forms, instead of clipping at a fixed pixel max-h. */}
           <main className="flex-1 min-w-0 overflow-y-auto">
-            <div className="p-6 max-w-4xl mx-auto">
+            <div className="p-6 max-w-4xl mx-auto w-full min-h-full flex flex-col">
               <WizardTransition stepIndex={currentStep} direction={direction}>
                 {children}
               </WizardTransition>

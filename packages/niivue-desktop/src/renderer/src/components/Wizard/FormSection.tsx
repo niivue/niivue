@@ -77,7 +77,10 @@ export function FormSection({
         .map((name) => ({ name, def: fields[name] }))
         .filter((f) => f.def && isSimpleInputType(f.def.type))
       return (
-        <div className="flex flex-col gap-4">
+        // flex-1 min-h-0 anchors this section to WizardTransition's known
+        // height so a step's primary list (wrapped below) can claim leftover
+        // vertical space instead of clipping at a fixed pixel max-h.
+        <div className="flex flex-col gap-4 flex-1 min-h-0">
           <div>
             <Heading size="3" weight="bold" className="text-neutral-12">
               {section.title}
@@ -107,14 +110,20 @@ export function FormSection({
               ))}
             </div>
           )}
-          <CustomComponent
-            context={context}
-            stepOutputs={stepOutputs}
-            onFieldChange={onFieldChange}
-            onLoadFile={onLoadFile}
-            fields={section.fields}
-            fieldDefs={fields}
-          />
+          {/* Wrapper lets the custom component (e.g. StepClassification's
+              table) grow into remaining vertical space via `flex-1 min-h-0`
+              on its own outer div, without every step needing to know about
+              FormSection's flex column. */}
+          <div className="flex-1 min-h-0 flex flex-col">
+            <CustomComponent
+              context={context}
+              stepOutputs={stepOutputs}
+              onFieldChange={onFieldChange}
+              onLoadFile={onLoadFile}
+              fields={section.fields}
+              fieldDefs={fields}
+            />
+          </div>
         </div>
       )
     }
@@ -122,7 +131,7 @@ export function FormSection({
 
   // Auto-generated fields
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 flex-1 min-h-0">
       <div>
         <Heading size="3" weight="bold" className="text-neutral-12">
           {section.title}

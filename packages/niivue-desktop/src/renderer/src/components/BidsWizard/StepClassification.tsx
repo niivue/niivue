@@ -72,9 +72,9 @@ export function StepClassification({
   }
 
   return (
-    <div className="flex gap-4">
+    <div className="flex gap-4 flex-1 min-h-0">
       {/* Left: classification table */}
-      <div className="flex-1 min-w-0">
+      <div className="flex-1 min-w-0 flex flex-col min-h-0">
         <Text size="2" weight="bold" className="block mb-2">
           Review Classifications
         </Text>
@@ -83,7 +83,7 @@ export function StepClassification({
           edit additional entities and sidecar metadata.
         </Text>
 
-        <div className="overflow-auto max-h-[350px] border rounded">
+        <div className="overflow-auto flex-1 min-h-[200px] border rounded">
           <table className="w-full text-xs">
             <thead className="bg-[var(--gray-2)] sticky top-0">
               <tr>

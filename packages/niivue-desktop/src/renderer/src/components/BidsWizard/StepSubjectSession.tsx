@@ -42,13 +42,13 @@ export function StepSubjectSession({
 
   if (isMultiSubject) {
     return (
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 flex-1 min-h-0">
         <Text size="2" weight="bold">Sessions</Text>
         <Text size="1" color="gray">
           {includedSubjects.length} included subject{includedSubjects.length !== 1 ? 's' : ''}. Edit labels, sessions, and demographics below.
         </Text>
 
-        <div className="overflow-auto max-h-[350px] border rounded">
+        <div className="overflow-auto flex-1 min-h-[200px] border rounded">
           <table className="w-full text-xs">
             <thead className="bg-[var(--gray-2)] sticky top-0">
               <tr>

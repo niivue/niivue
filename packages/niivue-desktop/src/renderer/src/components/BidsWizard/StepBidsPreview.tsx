@@ -207,7 +207,7 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
   }, [mappings, subjects, context.dataset_name, context.dataset_version, context.license, context.authors, context.readme, context.output_dir])
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 flex-1 min-h-0">
       {/* Summary stats */}
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-[var(--accent-3)] border border-[var(--accent-6)] rounded p-3 text-center">
@@ -242,9 +242,9 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
 
       {/* Series list with NIfTI previews */}
       {included.length > 0 && (
-        <div>
+        <div className="flex flex-col min-h-0 flex-1">
           <Text size="2" weight="medium" className="mb-1">Series</Text>
-          <div className="max-h-[300px] overflow-y-auto flex flex-col gap-1.5">
+          <div className="flex-1 min-h-[200px] overflow-y-auto flex flex-col gap-1.5">
             {included.flatMap((m) => {
               const bidsPath = generateBidsPath(m)
               const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
