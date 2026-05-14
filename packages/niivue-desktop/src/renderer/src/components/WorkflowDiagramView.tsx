@@ -30,7 +30,7 @@ import {
   MarkerType
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Badge, Text } from '@radix-ui/themes'
+import { Badge, Text, Button, TextField, IconButton } from '@radix-ui/themes'
 import {
   TrashIcon,
   ChevronUpIcon,
@@ -527,6 +527,10 @@ interface WorkflowDiagramViewProps {
    *  Receives the block id from the dataTransfer payload; the dialog owns the
    *  blocks list and is responsible for resolving the id and appending a step. */
   onAddBlockById?: (blockId: string) => void
+  /** Switch the parent dialog back to the list view. Surfaced from the
+   *  inspector's "Edit details" affordance so authors can jump into the
+   *  richer per-step editor when the diagram inspector is read-only. */
+  onSwitchToListView?: () => void
 }
 
 // ── Component ────────────────────────────────────────────────────────
@@ -543,7 +547,8 @@ export function WorkflowDiagramView({
   warnSteps,
   stepIssueByIndex,
   onOpenGallery,
-  onAddBlockById
+  onAddBlockById,
+  onSwitchToListView
 }: WorkflowDiagramViewProps): React.ReactElement {
   // Build nodes: one per step, laid out left-to-right.
   const nodes = useMemo<Node<StepNodeData>[]>(() => {
@@ -831,81 +836,287 @@ export function WorkflowDiagramView({
     [onAddBlockById]
   )
 
+  const selectedStepData = selectedStep !== null ? draft.steps[selectedStep] : null
+  const selectedTool = selectedStepData ? tools.get(selectedStepData.tool) : undefined
+  const selectedBlock = selectedStepData ? detectBlockForStep(selectedStepData, tools) : undefined
+
   return (
     <div
-      style={{ flex: 1, height: '100%', minHeight: 0 }}
+      style={{ flex: 1, height: '100%', minHeight: 0, display: 'flex' }}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        nodeTypes={nodeTypes}
-        edgeTypes={edgeTypes}
-        onConnect={onConnect}
-        onEdgesChange={onEdgesChange}
-        isValidConnection={isValidConnection}
-        deleteKeyCode={['Delete', 'Backspace']}
-        edgesFocusable
-        fitView
-        fitViewOptions={{ padding: 0.2, maxZoom: 1.0 }}
-        proOptions={{ hideAttribution: true }}
-        defaultEdgeOptions={{ type: 'deletable' }}
-      >
-        <Background gap={16} />
-        <Controls showInteractive={false} />
-        <Panel position="top-right">
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <ReactFlow
+          nodes={nodes}
+          edges={edges}
+          nodeTypes={nodeTypes}
+          edgeTypes={edgeTypes}
+          onConnect={onConnect}
+          onEdgesChange={onEdgesChange}
+          isValidConnection={isValidConnection}
+          deleteKeyCode={['Delete', 'Backspace']}
+          edgesFocusable
+          fitView
+          fitViewOptions={{ padding: 0.2, maxZoom: 1.0 }}
+          proOptions={{ hideAttribution: true }}
+          defaultEdgeOptions={{ type: 'deletable' }}
+        >
+          <Background gap={16} />
+          <Controls showInteractive={false} />
+          <Panel position="top-right">
+            <div
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: 10,
+                padding: '6px 10px',
+                borderRadius: 6,
+                background: 'var(--color-panel-translucent)',
+                border: '1px solid var(--gray-5)',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
+                fontSize: 11,
+                color: 'var(--gray-11)'
+              }}
+              title="How inputs get their values"
+            >
+              <Text size="1" weight="medium" style={{ color: 'var(--gray-12)' }}>
+                Input source:
+              </Text>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Badge variant="soft" size="1" color="iris">
+                  in
+                </Badge>
+                <Text size="1">workflow input</Text>
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Badge variant="soft" size="1" color="orange">
+                  form
+                </Badge>
+                <Text size="1">user form</Text>
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <Badge variant="soft" size="1" color="grass">
+                  =
+                </Badge>
+                <Text size="1">constant</Text>
+              </span>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    width: 18,
+                    height: 2,
+                    background: 'var(--gray-9)',
+                    borderRadius: 1
+                  }}
+                />
+                <Text size="1">step output</Text>
+              </span>
+            </div>
+          </Panel>
+        </ReactFlow>
+      </div>
+
+      {selectedStepData && selectedStep !== null && (
+        <aside
+          aria-label={`Inspector for ${selectedBlock?.label || selectedStepData.tool}`}
+          style={{
+            width: 320,
+            flexShrink: 0,
+            borderLeft: '1px solid var(--gray-5)',
+            background: 'var(--color-panel-solid)',
+            display: 'flex',
+            flexDirection: 'column',
+            overflow: 'hidden'
+          }}
+        >
+          {/* Inspector header */}
           <div
             style={{
               display: 'flex',
               alignItems: 'center',
-              gap: 10,
-              padding: '6px 10px',
-              borderRadius: 6,
-              background: 'var(--color-panel-translucent)',
-              border: '1px solid var(--gray-5)',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-              fontSize: 11,
-              color: 'var(--gray-11)'
+              gap: 8,
+              padding: '10px 12px',
+              borderBottom: '1px solid var(--gray-5)',
+              background: 'var(--gray-2)'
             }}
-            title="How inputs get their values"
           >
-            <Text size="1" weight="medium" style={{ color: 'var(--gray-12)' }}>
-              Input source:
+            <span style={{ color: 'var(--accent-11)', display: 'flex' }}>
+              {selectedBlock ? getBlockIcon(selectedBlock.icon || '') : null}
+            </span>
+            <Text size="2" weight="bold" style={{ flex: 1, minWidth: 0 }} truncate>
+              {selectedBlock?.label || selectedStepData.tool}
             </Text>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Badge variant="soft" size="1" color="iris">
-                in
-              </Badge>
-              <Text size="1">workflow input</Text>
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Badge variant="soft" size="1" color="orange">
-                form
-              </Badge>
-              <Text size="1">user form</Text>
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <Badge variant="soft" size="1" color="grass">
-                =
-              </Badge>
-              <Text size="1">constant</Text>
-            </span>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-              <span
-                style={{
-                  display: 'inline-block',
-                  width: 18,
-                  height: 2,
-                  background: 'var(--gray-9)',
-                  borderRadius: 1
-                }}
-              />
-              <Text size="1">step output</Text>
-            </span>
+            <Badge variant="soft" size="1" color="gray">
+              {selectedStep + 1}
+            </Badge>
+            <IconButton
+              size="1"
+              variant="ghost"
+              color="gray"
+              onClick={(): void => onSelectStep(null)}
+              aria-label="Close inspector"
+              title="Close inspector"
+            >
+              <Cross1Icon />
+            </IconButton>
           </div>
-        </Panel>
-      </ReactFlow>
+
+          {/* Inspector body */}
+          <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 12 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <Text size="1" weight="medium" style={{ color: 'var(--gray-11)' }}>
+                  Step name
+                </Text>
+                <TextField.Root
+                  size="2"
+                  value={selectedStepData.name}
+                  onChange={(e): void => {
+                    const newName = e.target.value
+                    setDraft((prev) => {
+                      const steps = [...prev.steps]
+                      steps[selectedStep] = { ...steps[selectedStep], name: newName }
+                      return { ...prev, steps }
+                    })
+                  }}
+                />
+              </label>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                <Text size="1" weight="medium" style={{ color: 'var(--gray-11)' }}>
+                  Tool
+                </Text>
+                <Text size="2" style={{ color: 'var(--gray-12)', fontFamily: 'var(--font-mono)' }}>
+                  {selectedStepData.tool}
+                </Text>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <Text size="1" weight="medium" style={{ color: 'var(--gray-11)' }}>
+                  Inputs
+                </Text>
+                {selectedTool && Object.entries(selectedTool.inputs).length > 0 ? (
+                  Object.entries(selectedTool.inputs).map(([inputName, def]) => {
+                    const binding = selectedStepData.inputs[inputName]
+                    const summary = !binding?.value
+                      ? { label: 'unset', color: 'gray' as const }
+                      : binding.mode === 'constant'
+                        ? {
+                            label: `= ${truncateForTooltip(binding.value)}`,
+                            color: 'grass' as const
+                          }
+                        : binding.value.startsWith('inputs.')
+                          ? {
+                              label: `in: ${binding.value.slice('inputs.'.length)}`,
+                              color: 'iris' as const
+                            }
+                          : binding.value.startsWith('context.')
+                            ? {
+                                label: `form: ${binding.value.slice('context.'.length)}`,
+                                color: 'orange' as const
+                              }
+                            : {
+                                label: binding.value.replace(/^steps\./, ''),
+                                color: 'gray' as const
+                              }
+                    return (
+                      <div
+                        key={inputName}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: 6,
+                          padding: '4px 0',
+                          borderBottom: '1px dashed var(--gray-4)'
+                        }}
+                      >
+                        <Text
+                          size="1"
+                          style={{ color: 'var(--gray-12)', flex: 1, minWidth: 0 }}
+                          truncate
+                          title={inputName}
+                        >
+                          {inputName}
+                          <Text size="1" style={{ color: 'var(--gray-9)' }}>
+                            {' '}
+                            ({def.type})
+                          </Text>
+                        </Text>
+                        <Badge variant="soft" size="1" color={summary.color}>
+                          {summary.label}
+                        </Badge>
+                      </div>
+                    )
+                  })
+                ) : (
+                  <Text size="1" style={{ color: 'var(--gray-9)' }}>
+                    No inputs.
+                  </Text>
+                )}
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <Text size="1" weight="medium" style={{ color: 'var(--gray-11)' }}>
+                  Outputs
+                </Text>
+                {selectedTool && Object.entries(selectedTool.outputs).length > 0 ? (
+                  Object.entries(selectedTool.outputs).map(([outName, def]) => (
+                    <div
+                      key={outName}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 6,
+                        padding: '4px 0',
+                        borderBottom: '1px dashed var(--gray-4)'
+                      }}
+                    >
+                      <Text
+                        size="1"
+                        style={{ color: 'var(--gray-12)', flex: 1, minWidth: 0 }}
+                        truncate
+                        title={outName}
+                      >
+                        {outName}
+                      </Text>
+                      <Badge variant="soft" size="1" color="gray">
+                        {def.type}
+                      </Badge>
+                    </div>
+                  ))
+                ) : (
+                  <Text size="1" style={{ color: 'var(--gray-9)' }}>
+                    No outputs.
+                  </Text>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Inspector footer — escape hatch to the richer list editor where
+              input bindings can actually be changed. */}
+          {onSwitchToListView && (
+            <div
+              style={{
+                padding: '10px 12px',
+                borderTop: '1px solid var(--gray-5)',
+                background: 'var(--gray-2)'
+              }}
+            >
+              <Button
+                variant="soft"
+                size="1"
+                onClick={onSwitchToListView}
+                style={{ width: '100%' }}
+              >
+                Edit bindings in list view →
+              </Button>
+            </div>
+          )}
+        </aside>
+      )}
     </div>
   )
 }

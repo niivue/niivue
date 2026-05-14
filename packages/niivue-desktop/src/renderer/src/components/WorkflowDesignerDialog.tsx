@@ -769,6 +769,7 @@ export function WorkflowDesignerDialog({
               stepIssueByIndex={stepIssueByIndex}
               onOpenGallery={onOpenGallery}
               onAddBlockById={handleAddBlockById}
+              onSwitchToListView={(): void => setView('list')}
             />
             <div className="border-t border-neutral-5 bg-[var(--gray-2)] px-3 py-2 max-h-56 overflow-y-auto shrink-0">
               <BlockPalette
