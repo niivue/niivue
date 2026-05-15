@@ -789,6 +789,24 @@ export function ContextSpineDesigner({
                           const hasContextSources = inp.suggestions.length > 0
                           const isRequired = !inp.paramDef.optional
 
+                          // Per-field validation lookup — surfaces the matching
+                          // error/warning beneath the row and binds it to the
+                          // Select via aria-describedby. Match on (stepName,
+                          // field) so an unbound `T1` doesn't light up a
+                          // sibling input.
+                          const fieldError = validation.errors.find(
+                            (e) => e.stepName === step.name && e.field === inp.name
+                          )
+                          const fieldWarning = !fieldError
+                            ? validation.warnings.find(
+                                (w) => w.stepName === step.name && w.field === inp.name
+                              )
+                            : undefined
+                          const fieldIssue = fieldError ?? fieldWarning
+                          const fieldErrorId = fieldIssue
+                            ? `step-${i}-${inp.name}-issue`
+                            : undefined
+
                           // For enum fields with a constant, just show the select.
                           // Draft constants are stored JSON-stringified (e.g. '"y"'), so
                           // unwrap the quotes before comparing to Select.Item values.
@@ -802,220 +820,253 @@ export function ContextSpineDesigner({
                               /* not valid JSON — use raw */
                             }
                             return (
-                              <div key={inp.name} className="flex items-center gap-2">
-                                <Text size="1" className="text-neutral-9 w-28 shrink-0 truncate">
-                                  {inp.name}
-                                </Text>
-                                <Select.Root
-                                  value={displayValue}
-                                  onValueChange={(v) =>
-                                    updateStepInput(i, inp.name, JSON.stringify(v))
-                                  }
-                                  size="1"
-                                >
-                                  <Select.Trigger className="flex-1" />
-                                  <Select.Content>
-                                    {inp.paramDef.enum.map((opt) => {
-                                      const isObj = opt && typeof opt === 'object' && 'value' in opt
-                                      const entry = isObj
-                                        ? (opt as { value: unknown; label?: unknown })
-                                        : { value: opt, label: opt }
-                                      return (
-                                        <Select.Item
-                                          key={String(entry.value)}
-                                          value={String(entry.value)}
-                                        >
-                                          {String(entry.label ?? entry.value)}
-                                        </Select.Item>
-                                      )
-                                    })}
-                                  </Select.Content>
-                                </Select.Root>
+                              <div key={inp.name} className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <Text size="1" className="text-neutral-9 w-28 shrink-0 truncate">
+                                    {inp.name}
+                                  </Text>
+                                  <Select.Root
+                                    value={displayValue}
+                                    onValueChange={(v) =>
+                                      updateStepInput(i, inp.name, JSON.stringify(v))
+                                    }
+                                    size="1"
+                                  >
+                                    <Select.Trigger
+                                      className="flex-1"
+                                      aria-invalid={fieldError ? true : undefined}
+                                      aria-describedby={fieldErrorId}
+                                    />
+                                    <Select.Content>
+                                      {inp.paramDef.enum.map((opt) => {
+                                        const isObj =
+                                          opt && typeof opt === 'object' && 'value' in opt
+                                        const entry = isObj
+                                          ? (opt as { value: unknown; label?: unknown })
+                                          : { value: opt, label: opt }
+                                        return (
+                                          <Select.Item
+                                            key={String(entry.value)}
+                                            value={String(entry.value)}
+                                          >
+                                            {String(entry.label ?? entry.value)}
+                                          </Select.Item>
+                                        )
+                                      })}
+                                    </Select.Content>
+                                  </Select.Root>
+                                </div>
+                                {fieldIssue && (
+                                  <Text
+                                    id={fieldErrorId}
+                                    size="1"
+                                    color={fieldError ? 'red' : 'amber'}
+                                    className="ml-28 pl-2"
+                                    role={fieldError ? 'alert' : 'status'}
+                                  >
+                                    {fieldIssue.message}
+                                  </Text>
+                                )}
                               </div>
                             )
                           }
 
                           return (
-                            <div key={inp.name} className="flex items-center gap-2">
-                              <Text size="1" className="text-neutral-9 w-28 shrink-0 truncate">
-                                {inp.name}
-                              </Text>
+                            <div key={inp.name} className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                <Text size="1" className="text-neutral-9 w-28 shrink-0 truncate">
+                                  {inp.name}
+                                </Text>
 
-                              {/* Source selector dropdown */}
-                              <Select.Root
-                                value={
-                                  inp.isUserForm
-                                    ? USER_FORM_VALUE
-                                    : inp.source === 'context'
-                                      ? inp.value
-                                      : inp.source === 'unset'
-                                        ? ''
-                                        : inp.value
-                                }
-                                onValueChange={(v) => {
-                                  if (v === USER_FORM_VALUE) {
-                                    handleSourceChange(i, inp.name, inp.paramDef, USER_FORM_VALUE)
-                                  } else {
-                                    handleSourceChange(i, inp.name, inp.paramDef, v)
+                                {/* Source selector dropdown */}
+                                <Select.Root
+                                  value={
+                                    inp.isUserForm
+                                      ? USER_FORM_VALUE
+                                      : inp.source === 'context'
+                                        ? inp.value
+                                        : inp.source === 'unset'
+                                          ? ''
+                                          : inp.value
                                   }
-                                }}
-                                size="1"
-                              >
-                                <Select.Trigger
-                                  className="flex-1"
-                                  placeholder={
-                                    isRequired ? 'Select source…' : 'Select source (optional)'
-                                  }
-                                  style={
-                                    inp.source === 'unset' && isRequired
-                                      ? { borderColor: 'var(--red-7)' }
-                                      : undefined
-                                  }
-                                />
-                                <Select.Content>
-                                  {/* Context sources */}
-                                  {hasContextSources && (
+                                  onValueChange={(v) => {
+                                    if (v === USER_FORM_VALUE) {
+                                      handleSourceChange(i, inp.name, inp.paramDef, USER_FORM_VALUE)
+                                    } else {
+                                      handleSourceChange(i, inp.name, inp.paramDef, v)
+                                    }
+                                  }}
+                                  size="1"
+                                >
+                                  <Select.Trigger
+                                    className="flex-1"
+                                    placeholder={
+                                      isRequired ? 'Select source…' : 'Select source (optional)'
+                                    }
+                                    style={
+                                      inp.source === 'unset' && isRequired
+                                        ? { borderColor: 'var(--red-7)' }
+                                        : undefined
+                                    }
+                                    aria-invalid={fieldError ? true : undefined}
+                                    aria-describedby={fieldErrorId}
+                                  />
+                                  <Select.Content>
+                                    {/* Context sources */}
+                                    {hasContextSources && (
+                                      <Select.Group>
+                                        <Select.Label>From Context</Select.Label>
+                                        {inp.suggestions.map((s) => (
+                                          <Select.Item key={s.ref} value={s.ref}>
+                                            <div className="flex items-center gap-1.5">
+                                              <span>{s.label}</span>
+                                              {s.exact && (
+                                                <Badge variant="soft" size="1" color="green">
+                                                  exact
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          </Select.Item>
+                                        ))}
+                                      </Select.Group>
+                                    )}
+                                    {/* User form option */}
                                     <Select.Group>
-                                      <Select.Label>From Context</Select.Label>
-                                      {inp.suggestions.map((s) => (
-                                        <Select.Item key={s.ref} value={s.ref}>
-                                          <div className="flex items-center gap-1.5">
-                                            <span>{s.label}</span>
-                                            {s.exact && (
-                                              <Badge variant="soft" size="1" color="green">
-                                                exact
-                                              </Badge>
-                                            )}
-                                          </div>
-                                        </Select.Item>
-                                      ))}
+                                      <Select.Label>User Provides</Select.Label>
+                                      <Select.Item value={USER_FORM_VALUE}>
+                                        <div className="flex items-center gap-1.5">
+                                          <PersonIcon />
+                                          <span>Ask user at runtime</span>
+                                        </div>
+                                      </Select.Item>
                                     </Select.Group>
-                                  )}
-                                  {/* User form option */}
-                                  <Select.Group>
-                                    <Select.Label>User Provides</Select.Label>
-                                    <Select.Item value={USER_FORM_VALUE}>
-                                      <div className="flex items-center gap-1.5">
-                                        <PersonIcon />
-                                        <span>Ask user at runtime</span>
-                                      </div>
-                                    </Select.Item>
-                                  </Select.Group>
-                                </Select.Content>
-                              </Select.Root>
+                                  </Select.Content>
+                                </Select.Root>
 
-                              {/* User-form indicator + attach-heuristic popover.
+                                {/* User-form indicator + attach-heuristic popover.
                                   Authors can wire a registered heuristic to the
                                   underlying context field so the runtime form
                                   comes pre-filled (e.g. list-dicom-series). */}
-                              {inp.isUserForm &&
-                                (() => {
-                                  const ctxFieldName = inp.value.startsWith('context.')
-                                    ? inp.value.slice('context.'.length)
-                                    : ''
-                                  const ctxField = ctxFieldName
-                                    ? draft.contextFields[ctxFieldName]
-                                    : undefined
-                                  const heuristic = ctxField?.heuristic || ''
-                                  return (
-                                    <Popover.Root>
-                                      <Popover.Trigger>
-                                        <button
-                                          type="button"
-                                          className="cursor-pointer"
-                                          aria-label="Edit form field"
-                                          title="Edit form field"
-                                        >
-                                          <Badge
-                                            variant={heuristic ? 'solid' : 'soft'}
-                                            size="1"
-                                            color={heuristic ? 'violet' : 'orange'}
+                                {inp.isUserForm &&
+                                  (() => {
+                                    const ctxFieldName = inp.value.startsWith('context.')
+                                      ? inp.value.slice('context.'.length)
+                                      : ''
+                                    const ctxField = ctxFieldName
+                                      ? draft.contextFields[ctxFieldName]
+                                      : undefined
+                                    const heuristic = ctxField?.heuristic || ''
+                                    return (
+                                      <Popover.Root>
+                                        <Popover.Trigger>
+                                          <button
+                                            type="button"
+                                            className="cursor-pointer"
+                                            aria-label="Edit form field"
+                                            title="Edit form field"
                                           >
-                                            {heuristic ? (
-                                              <>
-                                                <MagicWandIcon /> {heuristic}
-                                              </>
-                                            ) : (
-                                              'form'
-                                            )}
-                                          </Badge>
-                                        </button>
-                                      </Popover.Trigger>
-                                      {ctxFieldName && ctxField && (
-                                        <Popover.Content size="1" maxWidth="380px">
-                                          <Flex direction="column" gap="2">
-                                            <Text size="1" weight="bold">
-                                              User-provided field
-                                            </Text>
-                                            <Text size="1" color="gray" className="font-mono">
-                                              context.{ctxFieldName}
-                                            </Text>
-                                            <Flex direction="column" gap="1">
-                                              <Text size="1" weight="medium">
-                                                Pre-fill heuristic
+                                            <Badge
+                                              variant={heuristic ? 'solid' : 'soft'}
+                                              size="1"
+                                              color={heuristic ? 'violet' : 'orange'}
+                                            >
+                                              {heuristic ? (
+                                                <>
+                                                  <MagicWandIcon /> {heuristic}
+                                                </>
+                                              ) : (
+                                                'form'
+                                              )}
+                                            </Badge>
+                                          </button>
+                                        </Popover.Trigger>
+                                        {ctxFieldName && ctxField && (
+                                          <Popover.Content size="1" maxWidth="380px">
+                                            <Flex direction="column" gap="2">
+                                              <Text size="1" weight="bold">
+                                                User-provided field
                                               </Text>
-                                              <Select.Root
-                                                value={heuristic || '__none__'}
-                                                onValueChange={(v) =>
-                                                  updateContextField(ctxFieldName, {
-                                                    heuristic: v === '__none__' ? '' : v
-                                                  })
-                                                }
-                                                size="1"
-                                              >
-                                                <Select.Trigger />
-                                                <Select.Content>
-                                                  <Select.Item value="__none__">
-                                                    None — empty until user fills it
-                                                  </Select.Item>
-                                                  {heuristicNames.map((n) => (
-                                                    <Select.Item key={n} value={n}>
-                                                      {n}
+                                              <Text size="1" color="gray" className="font-mono">
+                                                context.{ctxFieldName}
+                                              </Text>
+                                              <Flex direction="column" gap="1">
+                                                <Text size="1" weight="medium">
+                                                  Pre-fill heuristic
+                                                </Text>
+                                                <Select.Root
+                                                  value={heuristic || '__none__'}
+                                                  onValueChange={(v) =>
+                                                    updateContextField(ctxFieldName, {
+                                                      heuristic: v === '__none__' ? '' : v
+                                                    })
+                                                  }
+                                                  size="1"
+                                                >
+                                                  <Select.Trigger />
+                                                  <Select.Content>
+                                                    <Select.Item value="__none__">
+                                                      None — empty until user fills it
                                                     </Select.Item>
-                                                  ))}
-                                                </Select.Content>
-                                              </Select.Root>
-                                              <Text size="1" color="gray">
-                                                Runs before the form opens; the user can edit the
-                                                result.
-                                              </Text>
+                                                    {heuristicNames.map((n) => (
+                                                      <Select.Item key={n} value={n}>
+                                                        {n}
+                                                      </Select.Item>
+                                                    ))}
+                                                  </Select.Content>
+                                                </Select.Root>
+                                                <Text size="1" color="gray">
+                                                  Runs before the form opens; the user can edit the
+                                                  result.
+                                                </Text>
+                                              </Flex>
+                                              <Flex direction="column" gap="1">
+                                                <Text size="1" weight="medium">
+                                                  Label
+                                                </Text>
+                                                <TextField.Root
+                                                  size="1"
+                                                  value={ctxField.label}
+                                                  onChange={(e) =>
+                                                    updateContextField(ctxFieldName, {
+                                                      label: e.target.value
+                                                    })
+                                                  }
+                                                  placeholder={ctxFieldName}
+                                                />
+                                              </Flex>
+                                              <Flex direction="column" gap="1">
+                                                <Text size="1" weight="medium">
+                                                  Help text
+                                                </Text>
+                                                <TextField.Root
+                                                  size="1"
+                                                  value={ctxField.description}
+                                                  onChange={(e) =>
+                                                    updateContextField(ctxFieldName, {
+                                                      description: e.target.value
+                                                    })
+                                                  }
+                                                  placeholder="Shown under the field at runtime"
+                                                />
+                                              </Flex>
                                             </Flex>
-                                            <Flex direction="column" gap="1">
-                                              <Text size="1" weight="medium">
-                                                Label
-                                              </Text>
-                                              <TextField.Root
-                                                size="1"
-                                                value={ctxField.label}
-                                                onChange={(e) =>
-                                                  updateContextField(ctxFieldName, {
-                                                    label: e.target.value
-                                                  })
-                                                }
-                                                placeholder={ctxFieldName}
-                                              />
-                                            </Flex>
-                                            <Flex direction="column" gap="1">
-                                              <Text size="1" weight="medium">
-                                                Help text
-                                              </Text>
-                                              <TextField.Root
-                                                size="1"
-                                                value={ctxField.description}
-                                                onChange={(e) =>
-                                                  updateContextField(ctxFieldName, {
-                                                    description: e.target.value
-                                                  })
-                                                }
-                                                placeholder="Shown under the field at runtime"
-                                              />
-                                            </Flex>
-                                          </Flex>
-                                        </Popover.Content>
-                                      )}
-                                    </Popover.Root>
-                                  )
-                                })()}
+                                          </Popover.Content>
+                                        )}
+                                      </Popover.Root>
+                                    )
+                                  })()}
+                              </div>
+                              {fieldIssue && (
+                                <Text
+                                  id={fieldErrorId}
+                                  size="1"
+                                  color={fieldError ? 'red' : 'amber'}
+                                  className="ml-28 pl-2"
+                                  role={fieldError ? 'alert' : 'status'}
+                                >
+                                  {fieldIssue.message}
+                                </Text>
+                              )}
                             </div>
                           )
                         })}
