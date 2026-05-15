@@ -282,14 +282,30 @@ export const registerIpcHandlers = (): void => {
       try {
         const allFiles: string[] = []
         for (const seriesNumber of payload.seriesNumbers) {
-          const res = await convertSeriesByNumber(payload.dicomDir, seriesNumber, {
-            pattern: '%f_%p_%t_%s', // MRIcroGL-style filenames
-            bids: 'y',
-            compress: 'y',
-            merge: 2,
-            verbose: 2,
-            ...payload.options
-          })
+          let res: Awaited<ReturnType<typeof convertSeriesByNumber>>
+          try {
+            res = await convertSeriesByNumber(payload.dicomDir, seriesNumber, {
+              pattern: '%f_%p_%t_%s', // MRIcroGL-style filenames
+              bids: 'y',
+              compress: 'y',
+              merge: 2,
+              verbose: 2,
+              ...payload.options
+            })
+          } catch (err) {
+            const msg = err instanceof Error ? err.message : String(err)
+            throw new Error(`series ${seriesNumber} failed: ${msg}`, { cause: err })
+          }
+
+          // dcm2niix may exit non-zero without throwing; surface that with the
+          // failing series number so the user isn't left wondering which of N
+          // selected series caused a silent zero-file result.
+          if (res.code !== 0) {
+            const tail = res.stderr ? `: ${res.stderr.trim()}` : ''
+            throw new Error(
+              `series ${seriesNumber} failed (dcm2niix exited with code ${res.code})${tail}`
+            )
+          }
 
           // Collect produced NIfTI paths
           const files = fs

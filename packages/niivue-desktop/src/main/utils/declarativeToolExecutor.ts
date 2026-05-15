@@ -242,6 +242,23 @@ export function matchGlob(filename: string, pattern: string): boolean {
   return regex.test(filename)
 }
 
+// ── Iteration labels ────────────────────────────────────────────────
+
+/**
+ * Build a human-readable identifier for a single iteration so a mid-loop
+ * failure can point the user at the failing item. For dcm2niix iterating
+ * over series this yields e.g. `"series 5"`; for tools iterating over file
+ * paths it yields the basename; without a `forEach` it's an empty string.
+ */
+export function labelForIteration(forEachKey: string | undefined, item: unknown): string {
+  if (item == null || !forEachKey) return ''
+  if (typeof item === 'string') return path.basename(item)
+  if (typeof item === 'number' || typeof item === 'boolean') {
+    return `${forEachKey} ${item}`
+  }
+  return `${forEachKey} item`
+}
+
 // ── Main factory ────────────────────────────────────────────────────
 
 /**
@@ -299,6 +316,8 @@ export function createDeclarativeToolExecutor(def: ToolDefinition): ToolExecutor
 
     const acceptedCodes = new Set(exec.exitCodes ?? [0])
 
+    const labelForItem = (item: unknown): string => labelForIteration(exec.forEach, item)
+
     const runOne = async (
       item: unknown
     ): Promise<{ outputFile: string; stdout: string; stderr: string }> => {
@@ -333,10 +352,22 @@ export function createDeclarativeToolExecutor(def: ToolDefinition): ToolExecutor
       }
 
       const args = buildArgs(exec.args, iterInputs, templateVars)
-      const { stdout, stderr, code } = await spawnBinary(binPath, args)
+      const label = labelForItem(item)
+      let stdout: string
+      let stderr: string
+      let code: number
+      try {
+        ;({ stdout, stderr, code } = await spawnBinary(binPath, args))
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+        const where = label ? ` (${label})` : ''
+        throw new Error(`${def.name}${where} failed to spawn: ${msg}`, { cause: err })
+      }
 
       if (!acceptedCodes.has(code)) {
-        throw new Error(`${def.name} exited with code ${code}: ${stderr}`)
+        const where = label ? ` for ${label}` : ''
+        const tail = stderr ? `: ${stderr.trim()}` : ''
+        throw new Error(`${def.name}${where} exited with code ${code}${tail}`)
       }
 
       return { outputFile, stdout, stderr }

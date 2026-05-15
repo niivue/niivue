@@ -11,7 +11,8 @@ import {
   interpolate,
   buildArgs,
   resolveOutputFile,
-  matchGlob
+  matchGlob,
+  labelForIteration
 } from '../../src/main/utils/declarativeToolExecutor.js'
 import type { ToolExecDef, ArgDef } from '../../src/common/workflowTypes.js'
 
@@ -191,5 +192,29 @@ describe('matchGlob', () => {
 
   it('handles brace expansion that does not match', () => {
     expect(matchGlob('brain.dcm', '{*.nii,*.nii.gz}')).toBe(false)
+  })
+})
+
+// ── labelForIteration ───────────────────────────────────────────────
+
+describe('labelForIteration', () => {
+  it('labels numeric iteration values with the forEach key', () => {
+    expect(labelForIteration('series', 5)).toBe('series 5')
+  })
+
+  it('labels file-path iteration values with the basename', () => {
+    expect(labelForIteration('volumes', '/data/sub-001/anat/T1w.nii.gz')).toBe('T1w.nii.gz')
+  })
+
+  it('returns an empty label when no forEach is configured', () => {
+    expect(labelForIteration(undefined, 5)).toBe('')
+  })
+
+  it('returns an empty label when the item is null', () => {
+    expect(labelForIteration('series', null)).toBe('')
+  })
+
+  it('falls back to a generic noun for object items', () => {
+    expect(labelForIteration('series', { seriesNumber: 5 })).toBe('series item')
   })
 })
