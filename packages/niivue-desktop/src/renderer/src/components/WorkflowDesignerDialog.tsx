@@ -783,6 +783,29 @@ export function WorkflowDesignerDialog({
               Saved.
             </Text>
           )}
+          {/* Screen-reader announcement of validation state. Radix
+              Popover.Trigger button label only updates while focused; this
+              polite live region tells AT users about issue counts the moment
+              they change, so they don't have to chase the trigger button. */}
+          <span
+            aria-live="polite"
+            aria-atomic="true"
+            style={{
+              position: 'absolute',
+              width: 1,
+              height: 1,
+              padding: 0,
+              margin: -1,
+              overflow: 'hidden',
+              clip: 'rect(0 0 0 0)',
+              whiteSpace: 'nowrap',
+              border: 0
+            }}
+          >
+            {validation.errors.length > 0 || validation.warnings.length > 0
+              ? `${validation.errors.length} error${validation.errors.length !== 1 ? 's' : ''}, ${validation.warnings.length} warning${validation.warnings.length !== 1 ? 's' : ''}`
+              : 'No validation issues.'}
+          </span>
           {(validation.errors.length > 0 || validation.warnings.length > 0) && (
             <Popover.Root>
               <Popover.Trigger>
@@ -790,6 +813,7 @@ export function WorkflowDesignerDialog({
                   size="1"
                   variant="soft"
                   color={validation.errors.length > 0 ? 'red' : 'amber'}
+                  aria-label={`${validation.errors.length} error${validation.errors.length !== 1 ? 's' : ''}, ${validation.warnings.length} warning${validation.warnings.length !== 1 ? 's' : ''}. Click to view details.`}
                 >
                   <ExclamationTriangleIcon />
                   {validation.errors.length > 0

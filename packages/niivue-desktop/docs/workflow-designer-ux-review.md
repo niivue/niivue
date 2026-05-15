@@ -303,15 +303,15 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 - **A11Y-1 (P0)** ~~`display:none` on `Dialog.Title` / `Description`.~~ MOOT — designer is no longer wrapped in Radix `Dialog`; the title is a real `<Heading>` in `WorkflowDesignerDialog.tsx` header.
 - **A11Y-2 (P0)** ~~Icon-only buttons without `aria-label`.~~ DONE — workflow surfaces already labelled; swept remaining offenders (`HeuristicDesigner`, `NiimathToolbar`, `NiimathConfig`, `AddModelWizard`).
 - **A11Y-3 (P0)** ~~No `aria-current="step"`.~~ DONE — already wired in `WizardStepIndicator.tsx`.
-- **A11Y-4 (P0)** Validation errors not associated with fields; popover not announced.
+- **A11Y-4 (P0)** PARTIAL — popover trigger now carries a verbose `aria-label` and an `aria-live="polite"` visually-hidden region announces the issue counts when they change. Per-field association is still pending: errors are keyed to step names (and surfaced on diagram nodes), not to individual binding inputs in `ContextSpineDesigner`.
 - **A11Y-5 (P1)** Diagram not keyboard-operable — nodes not focusable, no SR fallback for wiring.
 - **A11Y-6 (P1)** ~~Edge encoding is color-only for color-blind users.~~ DONE — incompatible edges now carry a warning glyph; legend gained matched/coerced/incompatible swatches.
 - **A11Y-7 (P1)** ~~`prefers-reduced-motion` ignored.~~ DONE — `WizardTransition` skips slide animation for users with the preference.
-- **A11Y-8 (P1)** ~~No focus trap in `WizardShell`.~~ PARTIAL — `useFocusTrap(containerRef, open)` is wired in `WizardShell.tsx`; `WorkflowTemplateGallery` is still a hand-rolled overlay that needs a trap added.
+- **A11Y-8 (P1)** ~~No focus trap in `WizardShell`.~~ DONE — `useFocusTrap` is wired in `WizardShell.tsx` and in `WorkflowTemplateGallery.tsx:51`.
 - **A11Y-9 (P2)** Native `confirm()` for destructive delete.
 - **COPY-1 (P1)** Inconsistent save verbs ("Save" / "Run" / "Done").
 - **COPY-2 (P1)** ~~Save errors are unactionable.~~ DONE — toast carries step + field name and gets `role="alert"`; each row in the errors popover is a clickable button that jumps to the offending step and switches to the diagram view.
-- **COPY-3 (P1)** Diagram empty-state lacks an action; palette is below the fold.
+- **COPY-3 (P1)** ~~Diagram empty-state lacks an action; palette is below the fold.~~ DONE — `WorkflowDiagramView` empty-state renders a RocketIcon hero, dashed drop zone with hover styling, ArrowDownIcon pointer to "Palette", and a "Browse templates" CTA.
 - **COPY-4 (P1)** ~~IPC failures silently swallowed.~~ DONE — designer's `list-tools` shows a red callout with retry; the auxiliary `list-runnable-tools` and `list-heuristics` failures now surface as an amber callout with retry instead of console-only. Wizard heuristic + update failures already wired (see Wizard #21).
 - **COPY-5 (P2)** Config-only tooltip is a paragraph.
 - **COPY-6 (P2)** Mixed gerund + noun forms for loading messages.
