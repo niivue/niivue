@@ -32,7 +32,7 @@ import {
   MarkerType
 } from '@xyflow/react'
 import '@xyflow/react/dist/style.css'
-import { Badge, Text, Button, TextField, IconButton } from '@radix-ui/themes'
+import { Badge, Text, Button, TextField, IconButton, ContextMenu } from '@radix-ui/themes'
 import {
   TrashIcon,
   ChevronUpIcon,
@@ -163,248 +163,272 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
   const ringWidth = hasError || hasWarning || selected ? 2 : 1
 
   return (
-    <div
-      onClick={onSelect}
-      onKeyDown={(e) => {
-        // Enter / Space selects the node, matching the click behavior. Once
-        // selected, the dialog's global Delete handler picks up Backspace /
-        // Delete so a single keyboard path covers select-then-remove without
-        // duplicating the handler here.
-        if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault()
-          onSelect()
-        }
-      }}
-      tabIndex={0}
-      role="button"
-      aria-pressed={selected}
-      aria-label={`Step ${index + 1}: ${blockLabel}${hasError ? ' — has errors' : hasWarning ? ' — has warnings' : ''}`}
-      className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
-      style={{
-        width: NODE_WIDTH,
-        background: 'var(--color-panel-solid)',
-        border: `${ringWidth}px solid ${ringColor}`,
-        borderRadius: NODE_RADIUS,
-        boxShadow: 'var(--shadow-2)',
-        cursor: 'pointer',
-        fontFamily: 'inherit'
-      }}
-    >
-      {/* Header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: NODE_HEADER_GAP,
-          padding: NODE_HEADER_PADDING,
-          borderBottom: '1px solid var(--gray-5)',
-          background: selected ? 'var(--accent-3)' : 'var(--gray-2)',
-          borderRadius: NODE_INNER_RADIUS
-        }}
-      >
-        <span style={{ color: selected ? 'var(--accent-11)' : 'var(--gray-11)' }}>{blockIcon}</span>
-        <Text size="2" weight="bold" style={{ flex: 1, minWidth: 0 }} truncate>
-          {blockLabel}
-        </Text>
-        {configOnly && (
-          <Badge
-            variant="outline"
-            size="1"
-            color="gray"
-            title="No executor — won't run without a custom backend"
-          >
-            config-only
-          </Badge>
-        )}
-        <Badge variant="soft" size="1" color={hasError ? 'red' : 'gray'}>
-          {index + 1}
-        </Badge>
-        <IconButton
-          size="1"
-          variant="ghost"
-          color="gray"
-          onClick={(e) => {
-            e.stopPropagation()
-            onMove(-1)
-          }}
-          disabled={index === 0}
-          aria-label="Move step earlier"
-          title="Move earlier"
-        >
-          <ChevronUpIcon />
-        </IconButton>
-        <IconButton
-          size="1"
-          variant="ghost"
-          color="gray"
-          onClick={(e) => {
-            e.stopPropagation()
-            onMove(1)
-          }}
-          disabled={index === totalSteps - 1}
-          aria-label="Move step later"
-          title="Move later"
-        >
-          <ChevronDownIcon />
-        </IconButton>
-        <IconButton
-          size="1"
-          variant="ghost"
-          color="gray"
-          onClick={(e) => {
-            e.stopPropagation()
-            onRemove()
-          }}
-          aria-label={`Remove step ${step.name || index + 1}`}
-          title="Remove step"
-        >
-          <TrashIcon />
-        </IconButton>
-      </div>
-
-      {/* Inline validation message — surfaced on the offending node so authors
-          don't have to open the header popover to discover what's wrong. */}
-      {issue && (
+    <ContextMenu.Root>
+      <ContextMenu.Trigger>
         <div
-          role={issue.kind === 'error' ? 'alert' : 'status'}
-          style={{
-            display: 'flex',
-            alignItems: 'flex-start',
-            gap: NODE_ROW_GAP,
-            padding: NODE_ROW_PADDING,
-            background: issue.kind === 'error' ? 'var(--red-3)' : 'var(--amber-3)',
-            color: issue.kind === 'error' ? 'var(--red-11)' : 'var(--amber-11)',
-            borderBottom: '1px solid var(--gray-5)'
+          onClick={onSelect}
+          onKeyDown={(e) => {
+            // Enter / Space selects the node, matching the click behavior. Once
+            // selected, the dialog's global Delete handler picks up Backspace /
+            // Delete so a single keyboard path covers select-then-remove without
+            // duplicating the handler here.
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault()
+              onSelect()
+            }
           }}
-          title={issue.message}
+          tabIndex={0}
+          role="button"
+          aria-pressed={selected}
+          aria-label={`Step ${index + 1}: ${blockLabel}${hasError ? ' — has errors' : hasWarning ? ' — has warnings' : ''}`}
+          className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
+          style={{
+            width: NODE_WIDTH,
+            background: 'var(--color-panel-solid)',
+            border: `${ringWidth}px solid ${ringColor}`,
+            borderRadius: NODE_RADIUS,
+            boxShadow: 'var(--shadow-2)',
+            cursor: 'pointer',
+            fontFamily: 'inherit'
+          }}
         >
-          <ExclamationTriangleIcon style={{ marginTop: 2, flexShrink: 0 }} />
-          <Text size="1" style={{ lineHeight: 1.3, minWidth: 0 }}>
-            {issue.message}
-          </Text>
-        </div>
-      )}
-
-      {/* Inputs / Outputs side-by-side */}
-      <div style={{ display: 'flex', padding: NODE_BODY_PADDING }}>
-        {/* Inputs column */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: NODE_IO_GAP }}>
-          {inputs.length === 0 ? (
-            <Text size="1" style={{ color: 'var(--gray-9)', padding: '0 12px' }}>
-              —
+          {/* Header */}
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: NODE_HEADER_GAP,
+              padding: NODE_HEADER_PADDING,
+              borderBottom: '1px solid var(--gray-5)',
+              background: selected ? 'var(--accent-3)' : 'var(--gray-2)',
+              borderRadius: NODE_INNER_RADIUS
+            }}
+          >
+            <span style={{ color: selected ? 'var(--accent-11)' : 'var(--gray-11)' }}>
+              {blockIcon}
+            </span>
+            <Text size="2" weight="bold" style={{ flex: 1, minWidth: 0 }} truncate>
+              {blockLabel}
             </Text>
-          ) : (
-            inputs.map(([name, def]) => {
-              const annot = inputAnnotations[name]
-              return (
-                <div
-                  key={name}
-                  style={{
-                    position: 'relative',
-                    paddingLeft: 14,
-                    paddingRight: 6,
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: NODE_IO_GAP,
-                    minHeight: NODE_IO_ROW_MIN_HEIGHT
-                  }}
+            {configOnly && (
+              <Badge
+                variant="outline"
+                size="1"
+                color="gray"
+                title="No executor — won't run without a custom backend"
+              >
+                config-only
+              </Badge>
+            )}
+            <Badge variant="soft" size="1" color={hasError ? 'red' : 'gray'}>
+              {index + 1}
+            </Badge>
+            <IconButton
+              size="1"
+              variant="ghost"
+              color="gray"
+              onClick={(e) => {
+                e.stopPropagation()
+                onMove(-1)
+              }}
+              disabled={index === 0}
+              aria-label="Move step earlier"
+              title="Move earlier"
+            >
+              <ChevronUpIcon />
+            </IconButton>
+            <IconButton
+              size="1"
+              variant="ghost"
+              color="gray"
+              onClick={(e) => {
+                e.stopPropagation()
+                onMove(1)
+              }}
+              disabled={index === totalSteps - 1}
+              aria-label="Move step later"
+              title="Move later"
+            >
+              <ChevronDownIcon />
+            </IconButton>
+            <IconButton
+              size="1"
+              variant="ghost"
+              color="gray"
+              onClick={(e) => {
+                e.stopPropagation()
+                onRemove()
+              }}
+              aria-label={`Remove step ${step.name || index + 1}`}
+              title="Remove step"
+            >
+              <TrashIcon />
+            </IconButton>
+          </div>
+
+          {/* Inline validation message — surfaced on the offending node so authors
+          don't have to open the header popover to discover what's wrong. */}
+          {issue && (
+            <div
+              role={issue.kind === 'error' ? 'alert' : 'status'}
+              style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: NODE_ROW_GAP,
+                padding: NODE_ROW_PADDING,
+                background: issue.kind === 'error' ? 'var(--red-3)' : 'var(--amber-3)',
+                color: issue.kind === 'error' ? 'var(--red-11)' : 'var(--amber-11)',
+                borderBottom: '1px solid var(--gray-5)'
+              }}
+              title={issue.message}
+            >
+              <ExclamationTriangleIcon style={{ marginTop: 2, flexShrink: 0 }} />
+              <Text size="1" style={{ lineHeight: 1.3, minWidth: 0 }}>
+                {issue.message}
+              </Text>
+            </div>
+          )}
+
+          {/* Inputs / Outputs side-by-side */}
+          <div style={{ display: 'flex', padding: NODE_BODY_PADDING }}>
+            {/* Inputs column */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: NODE_IO_GAP }}>
+              {inputs.length === 0 ? (
+                <Text size="1" style={{ color: 'var(--gray-9)', padding: '0 12px' }}>
+                  —
+                </Text>
+              ) : (
+                inputs.map(([name, def]) => {
+                  const annot = inputAnnotations[name]
+                  return (
+                    <div
+                      key={name}
+                      style={{
+                        position: 'relative',
+                        paddingLeft: 14,
+                        paddingRight: 6,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: NODE_IO_GAP,
+                        minHeight: NODE_IO_ROW_MIN_HEIGHT
+                      }}
+                    >
+                      <Handle
+                        type="target"
+                        position={Position.Left}
+                        id={`in:${name}`}
+                        style={{
+                          background: typeColorVar(def.type),
+                          width: 10,
+                          height: 10,
+                          border: '2px solid var(--color-panel-solid)',
+                          left: -6
+                        }}
+                        title={`${name}: ${TYPE_LABELS[def.type] || def.type}`}
+                      />
+                      <Text
+                        size="1"
+                        style={{ color: 'var(--gray-12)', flex: 1, minWidth: 0 }}
+                        truncate
+                      >
+                        {(def as { label?: string }).label || name}
+                      </Text>
+                      {annot?.kind === 'constant' && (
+                        <span title={annot.tooltip} style={{ display: 'inline-flex' }}>
+                          <Badge variant="soft" size="1" color="grass">
+                            =
+                          </Badge>
+                        </span>
+                      )}
+                    </div>
+                  )
+                })
+              )}
+            </div>
+
+            {/* Outputs column */}
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: NODE_IO_GAP }}>
+              {outputs.length === 0 ? (
+                <Text
+                  size="1"
+                  style={{ color: 'var(--gray-9)', padding: '0 12px', textAlign: 'right' }}
                 >
-                  <Handle
-                    type="target"
-                    position={Position.Left}
-                    id={`in:${name}`}
+                  —
+                </Text>
+              ) : (
+                outputs.map(([name, def]) => (
+                  <div
+                    key={name}
                     style={{
-                      background: typeColorVar(def.type),
-                      width: 10,
-                      height: 10,
-                      border: '2px solid var(--color-panel-solid)',
-                      left: -6
+                      position: 'relative',
+                      paddingLeft: 6,
+                      paddingRight: 14,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'flex-end',
+                      gap: NODE_IO_GAP,
+                      minHeight: NODE_IO_ROW_MIN_HEIGHT
                     }}
                     title={`${name}: ${TYPE_LABELS[def.type] || def.type}`}
-                  />
-                  <Text size="1" style={{ color: 'var(--gray-12)', flex: 1, minWidth: 0 }} truncate>
-                    {(def as { label?: string }).label || name}
-                  </Text>
-                  {annot?.kind === 'constant' && (
-                    <span title={annot.tooltip} style={{ display: 'inline-flex' }}>
-                      <Badge variant="soft" size="1" color="grass">
-                        =
-                      </Badge>
-                    </span>
-                  )}
-                </div>
-              )
-            })
-          )}
-        </div>
+                  >
+                    <Text size="1" style={{ color: 'var(--gray-12)' }}>
+                      {TYPE_LABELS[def.type] || def.type}
+                    </Text>
+                    <Handle
+                      type="source"
+                      position={Position.Right}
+                      id={`out:${name}`}
+                      style={{
+                        background: typeColorVar(def.type),
+                        width: 10,
+                        height: 10,
+                        border: '2px solid var(--color-panel-solid)',
+                        right: -6
+                      }}
+                    />
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
 
-        {/* Outputs column */}
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: NODE_IO_GAP }}>
-          {outputs.length === 0 ? (
-            <Text
-              size="1"
-              style={{ color: 'var(--gray-9)', padding: '0 12px', textAlign: 'right' }}
-            >
-              —
-            </Text>
-          ) : (
-            outputs.map(([name, def]) => (
-              <div
-                key={name}
-                style={{
-                  position: 'relative',
-                  paddingLeft: 6,
-                  paddingRight: 14,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'flex-end',
-                  gap: NODE_IO_GAP,
-                  minHeight: NODE_IO_ROW_MIN_HEIGHT
-                }}
-                title={`${name}: ${TYPE_LABELS[def.type] || def.type}`}
-              >
-                <Text size="1" style={{ color: 'var(--gray-12)' }}>
-                  {TYPE_LABELS[def.type] || def.type}
-                </Text>
-                <Handle
-                  type="source"
-                  position={Position.Right}
-                  id={`out:${name}`}
-                  style={{
-                    background: typeColorVar(def.type),
-                    width: 10,
-                    height: 10,
-                    border: '2px solid var(--color-panel-solid)',
-                    right: -6
-                  }}
-                />
-              </div>
-            ))
-          )}
-        </div>
-      </div>
-
-      {/* Step name footer — this is the authoritative identifier that
+          {/* Step name footer — this is the authoritative identifier that
           validation errors and downstream `steps.X.outputs.Y` refs use,
           so it needs to scan cleanly. Code font marks it as an id; full
           gray-12 contrast keeps it from disappearing into chrome. */}
-      <div
-        style={{
-          padding: NODE_FOOTER_PADDING,
-          borderTop: '1px solid var(--gray-4)',
-          background: 'var(--gray-1)',
-          borderRadius: '0 0 6px 6px'
-        }}
-      >
-        <Text
-          size="2"
-          weight="medium"
-          style={{ color: 'var(--gray-12)', fontFamily: 'var(--code-font-family)' }}
-        >
-          {step.name}
-        </Text>
-      </div>
-    </div>
+          <div
+            style={{
+              padding: NODE_FOOTER_PADDING,
+              borderTop: '1px solid var(--gray-4)',
+              background: 'var(--gray-1)',
+              borderRadius: '0 0 6px 6px'
+            }}
+          >
+            <Text
+              size="2"
+              weight="medium"
+              style={{ color: 'var(--gray-12)', fontFamily: 'var(--code-font-family)' }}
+            >
+              {step.name}
+            </Text>
+          </div>
+        </div>
+      </ContextMenu.Trigger>
+      <ContextMenu.Content size="1">
+        <ContextMenu.Item onSelect={onSelect}>Select / Edit details</ContextMenu.Item>
+        <ContextMenu.Separator />
+        <ContextMenu.Item disabled={index === 0} onSelect={(): void => onMove(-1)}>
+          Move earlier
+        </ContextMenu.Item>
+        <ContextMenu.Item disabled={index === totalSteps - 1} onSelect={(): void => onMove(1)}>
+          Move later
+        </ContextMenu.Item>
+        <ContextMenu.Separator />
+        <ContextMenu.Item color="red" onSelect={onRemove}>
+          Remove step
+        </ContextMenu.Item>
+      </ContextMenu.Content>
+    </ContextMenu.Root>
   )
 }
 

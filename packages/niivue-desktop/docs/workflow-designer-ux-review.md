@@ -227,7 +227,7 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 1. (P1) ~~"Advanced Editor" card is a lie.~~ MOOT — gallery now offers a single "Start from Scratch" card; `TemplateChoice` has only `blank | run-workflow | customize | use-as-template | edit-user` (no `advanced`).
 2. (P1) ~~Blank-start has no in-designer empty state outside the diagram.~~ DONE — `ContextSpineDesigner` has its own RocketIcon hero + "Build your first pipeline" + ArrowDown to palette + "Browse templates" CTA.
 3. (P2) ~~No way back to the gallery from the designer.~~ DONE — when the designer is entered from the gallery, `MainApp.openDesignerMode` preserves the gallery as the workspace-mode parent; the header back button now reads "Back to templates" and `closeDesignerMode` pops back to the gallery.
-4. (P1) Layout shifts between List and Diagram views — palette in different locations and orientations.
+4. (P1) ~~Layout shifts between List and Diagram views — palette in different locations and orientations.~~ DONE — `WorkflowDesignerDialog.tsx:1033-1042` owns the palette dock once, below whichever view is active; List/Diagram toggle only swaps the upper content panel so position, height, and orientation of the palette stay identical across the view switch.
 5. (P0) ~~No properties panel in diagram mode.~~ DONE — `WorkflowDiagramView` renders a right-side inspector `<aside>` when a step is selected, with field annotations and an "Edit details" jump-to-list affordance.
 6. (P1) ~~No drag from palette to canvas.~~ DONE — `BLOCK_DRAG_MIME` set on palette `draggable` items; diagram's ReactFlow wrapper has `onDragOver` / `onDrop` that route through `onAddBlockById`.
 7. (P2) ~~Reorder is button-only; DragHandleDots2Icon imported but unused.~~ DONE — unused import removed; chevron buttons remain the keyboard-friendly path, and React Flow handles its own native node-drag layout (not data-order) so there's no in-canvas "drag to reorder" affordance to wire up.
@@ -237,7 +237,7 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 11. (P2) ~~Save success has no visible feedback.~~ DONE — green "Saved." toast next to the save button (`role="status" aria-live="polite"`).
 12. (P0) ~~Validation match by `String.includes(step.name)` mis-fires on overlapping names.~~ DONE — issues now carry an explicit `stepName` field and `WorkflowDesignerDialog` matches with `s.name === e.stepName` (exact, not substring).
 13. (P1) ~~Errors siloed in header popover only.~~ DONE (this session) — each row in the popover is now a button that jumps to the offending step and switches to the diagram view; selected step shows the inline error badge.
-14. (P2) No right-click menus, no keyboard shortcuts.
+14. (P2) ~~No right-click menus, no keyboard shortcuts.~~ DONE — keyboard shortcuts already wired in `WorkflowDesignerDialog.tsx` (⌘Z undo, ⌘⇧Z / ⌘Y redo, ⌘S save, Delete / Backspace removes the selected step). Right-click context menus now exist on diagram step nodes (`WorkflowDiagramView.tsx` wraps `StepNode` in a Radix `ContextMenu.Root` with Select / Edit details, Move earlier, Move later, Remove step). The list view keeps its visible chevron + trash affordances and is keyboard-navigable, so it doesn't need a redundant context menu.
 15. (P2) ~~`config-only` badge shown in palette but not on placed nodes.~~ DONE — `StepNode` reads `configOnly` from `data` and `WorkflowDiagramView` populates it from `isToolRunnable(tool, runnableTools)`; `ContextSpineDesigner` shows the same badge in list view.
 
 ### Wizard runtime UX
@@ -253,7 +253,7 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 9. (P1) ~~Flat `flex-col gap-3` for all fields.~~ DONE — `FormSection.tsx` uses `grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3` with per-field span classes.
 10. (P1) ~~`AutoField` leaks API identifiers when label missing.~~ DONE — `humanizeFieldName` fallback.
 11. (P1) ~~`AutoField` silently coerces undefined to a number.~~ DONE — `useEffect` seeds undefined numbers before render.
-12. (P2) Section spinner replaces the entire panel including the heading.
+12. (P2) ~~Section spinner replaces the entire panel including the heading.~~ DONE — `FormSection.tsx:82-103` keeps `Heading` + description + `Separator` on top of the `role="status"` spinner panel during initial heuristic load (commit `07028192f` "Keep section heading visible while initial heuristic spins").
 13. (P1) ~~`AutoField` only surfaces descriptions when label exists.~~ DONE — helperText renders whenever description is present.
 14. (P0) ~~Generic "Running…" spinner.~~ DONE — `runningLabel` prop wired from `useWizardEngine`; per-step verbs (`Converting series…`, etc.) flow through.
 15. (P0) ~~Cancel disabled during loading.~~ DONE — `WizardFooter` keeps Back/Cancel paths enabled mid-run (footer comment).
