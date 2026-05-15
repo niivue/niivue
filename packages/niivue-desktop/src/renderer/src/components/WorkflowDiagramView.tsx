@@ -1536,7 +1536,7 @@ export function WorkflowDiagramView({
                 onClick={onSwitchToListView}
                 style={{ width: '100%' }}
               >
-                Edit bindings in list view →
+                Edit bindings in list view <ArrowRightIcon />
               </Button>
             </div>
           )}
