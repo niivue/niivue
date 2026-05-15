@@ -301,8 +301,8 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 ### Accessibility + microcopy
 
 - **A11Y-1 (P0)** `display:none` on `Dialog.Title` / `Description` — `WorkflowDesignerDialog.tsx:401-404`.
-- **A11Y-2 (P0)** Icon-only buttons without `aria-label` — `WorkflowDesignerDialog.tsx:484`, `WorkflowDiagramView.tsx:157,176,194,434`, `WorkflowTemplateGallery.tsx:127`.
-- **A11Y-3 (P0)** No `aria-current="step"` in `WizardStepIndicator.tsx:24-67`.
+- **A11Y-2 (P0)** ~~Icon-only buttons without `aria-label`.~~ DONE — workflow surfaces already labelled; swept remaining offenders (`HeuristicDesigner`, `NiimathToolbar`, `NiimathConfig`, `AddModelWizard`).
+- **A11Y-3 (P0)** ~~No `aria-current="step"`.~~ DONE — already wired in `WizardStepIndicator.tsx`.
 - **A11Y-4 (P0)** Validation errors not associated with fields; popover not announced.
 - **A11Y-5 (P1)** Diagram not keyboard-operable — nodes not focusable, no SR fallback for wiring.
 - **A11Y-6 (P1)** ~~Edge encoding is color-only for color-blind users.~~ DONE — incompatible edges now carry a warning glyph; legend gained matched/coerced/incompatible swatches.

@@ -215,6 +215,8 @@ export default function NiimathConfig({
                       variant="ghost"
                       size="1"
                       onClick={(): void => removeOperation(operationIndex)}
+                      aria-label={`Remove ${operation.operator} operation`}
+                      title="Remove operation"
                     >
                       <Cross2Icon />
                     </IconButton>

@@ -197,7 +197,12 @@ export function AddModelWizard({ open, onClose, onModelAdded }: AddModelWizardPr
                   </Text>
                 </Dialog.Title>
                 <Dialog.Close asChild>
-                  <button className="p-1 rounded hover:bg-[var(--gray-4)]">
+                  <button
+                    type="button"
+                    className="p-1 rounded hover:bg-[var(--gray-4)]"
+                    aria-label="Close"
+                    title="Close"
+                  >
                     <Cross2Icon />
                   </button>
                 </Dialog.Close>

@@ -120,13 +120,36 @@ function OperationEditor({
             </Select.Content>
           </Select.Root>
           <div className="flex items-center gap-1">
-            <IconButton variant="ghost" color="gray" size="1" onClick={onMoveUp} disabled={index === 0}>
+            <IconButton
+              variant="ghost"
+              color="gray"
+              size="1"
+              onClick={onMoveUp}
+              disabled={index === 0}
+              aria-label="Move rule earlier"
+              title="Move earlier"
+            >
               <ChevronUpIcon />
             </IconButton>
-            <IconButton variant="ghost" color="gray" size="1" onClick={onMoveDown} disabled={index === total - 1}>
+            <IconButton
+              variant="ghost"
+              color="gray"
+              size="1"
+              onClick={onMoveDown}
+              disabled={index === total - 1}
+              aria-label="Move rule later"
+              title="Move later"
+            >
               <ChevronDownIcon />
             </IconButton>
-            <IconButton variant="ghost" color="red" size="1" onClick={onRemove}>
+            <IconButton
+              variant="ghost"
+              color="red"
+              size="1"
+              onClick={onRemove}
+              aria-label="Remove rule"
+              title="Remove rule"
+            >
               <TrashIcon />
             </IconButton>
           </div>

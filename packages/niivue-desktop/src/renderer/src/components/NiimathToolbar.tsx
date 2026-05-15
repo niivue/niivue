@@ -105,7 +105,14 @@ export function NiimathToolbar({ modeMap, indexMap }: NiimathToolbarProps): JSX.
       {/* Toolbar header row */}
       <Flex align="center" justify="between" className="p-2 bg-[var(--gray-4)] border-b">
         <Text weight="medium">Niimath Toolbar</Text>
-        <IconButton size="1" variant="ghost" onClick={(): void => setOpen(!open)}>
+        <IconButton
+          size="1"
+          variant="ghost"
+          onClick={(): void => setOpen(!open)}
+          aria-label={open ? 'Collapse niimath toolbar' : 'Expand niimath toolbar'}
+          aria-expanded={open}
+          title={open ? 'Collapse' : 'Expand'}
+        >
           {open ? <ChevronUpIcon /> : <ChevronDownIcon />}
         </IconButton>
       </Flex>
@@ -148,7 +155,14 @@ export function NiimathToolbar({ modeMap, indexMap }: NiimathToolbarProps): JSX.
                 <Text size="2" weight="medium">
                   Generated Command
                 </Text>
-                <IconButton size="1" variant="ghost" onClick={(): void => setCmdOpen(!cmdOpen)}>
+                <IconButton
+                  size="1"
+                  variant="ghost"
+                  onClick={(): void => setCmdOpen(!cmdOpen)}
+                  aria-label={cmdOpen ? 'Hide generated command' : 'Show generated command'}
+                  aria-expanded={cmdOpen}
+                  title={cmdOpen ? 'Hide' : 'Show'}
+                >
                   {cmdOpen ? <ChevronUpIcon /> : <ChevronDownIcon />}
                 </IconButton>
               </Flex>
