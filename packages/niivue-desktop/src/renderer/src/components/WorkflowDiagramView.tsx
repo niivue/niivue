@@ -596,7 +596,7 @@ function DeletableEdge({
               style={{
                 fontSize: 10,
                 lineHeight: 1,
-                padding: '2px 6px',
+                padding: 'var(--space-1) var(--space-2)',
                 borderRadius: 999,
                 border: `1px solid ${badgeBorder}`,
                 background: 'var(--color-panel-solid)',
@@ -1282,7 +1282,7 @@ export function WorkflowDiagramView({
                 display: 'flex',
                 alignItems: 'center',
                 gap: 12,
-                padding: '8px 12px',
+                padding: 'var(--space-2) var(--space-3)',
                 borderRadius: 6,
                 background: 'var(--color-panel-translucent)',
                 border: '1px solid var(--gray-5)',
@@ -1362,7 +1362,7 @@ export function WorkflowDiagramView({
               display: 'flex',
               alignItems: 'center',
               gap: 8,
-              padding: '10px 12px',
+              padding: 'var(--space-3) var(--space-3)',
               borderBottom: '1px solid var(--gray-5)',
               background: 'var(--gray-2)'
             }}
@@ -1401,7 +1401,7 @@ export function WorkflowDiagramView({
                       display: 'flex',
                       alignItems: 'flex-start',
                       gap: 8,
-                      padding: '8px 10px',
+                      padding: 'var(--space-2) var(--space-3)',
                       borderRadius: 6,
                       background: issue.kind === 'error' ? 'var(--red-3)' : 'var(--amber-3)',
                       color: issue.kind === 'error' ? 'var(--red-11)' : 'var(--amber-11)',
@@ -1549,7 +1549,7 @@ export function WorkflowDiagramView({
           {onSwitchToListView && (
             <div
               style={{
-                padding: '10px 12px',
+                padding: 'var(--space-3) var(--space-3)',
                 borderTop: '1px solid var(--gray-5)',
                 background: 'var(--gray-2)'
               }}
