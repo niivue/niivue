@@ -95,13 +95,15 @@ export function StepValidation({
     return (
       <button
         key={i}
-        className={`text-left w-full text-xs px-2 py-1 rounded ${
+        type="button"
+        className={`text-left w-full text-xs px-2 py-1 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)] ${
           isError
             ? 'bg-[var(--red-3)] text-[var(--red-11)]'
             : 'bg-[var(--yellow-3)] text-[var(--yellow-11)]'
         } ${clickable ? 'hover:opacity-80 cursor-pointer' : 'cursor-default'}`}
         onClick={() => clickable && onNavigateToIssue(issue)}
         disabled={!clickable}
+        title={clickable ? 'Jump to the affected file' : undefined}
       >
         <span className="font-medium">{isError ? 'ERROR' : 'WARN'}: </span>
         {issue.message}
