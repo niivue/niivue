@@ -165,8 +165,10 @@ export function BlockPalette({
             <div key={category}>
               {/* Category header */}
               <button
-                className="flex items-center gap-1.5 w-full px-2 py-1 rounded text-left hover:bg-[var(--gray-3)] transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 w-full px-2 py-1 rounded text-left hover:bg-[var(--gray-3)] transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
                 onClick={() => toggleCategory(category)}
+                aria-expanded={!isCollapsed}
+                aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} ${category} category (${blocks.length} blocks)`}
               >
                 {isCollapsed ? (
                   <ChevronRightIcon className="text-neutral-8 shrink-0" />
@@ -195,7 +197,7 @@ export function BlockPalette({
                     return (
                       <Tooltip key={block.id} content={block.description}>
                         <button
-                          className={`flex items-center gap-2 w-full px-3 py-1.5 rounded text-left transition-colors cursor-pointer ${
+                          className={`flex items-center gap-2 w-full px-3 py-1.5 rounded text-left transition-colors cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)] ${
                             isCompatible
                               ? 'bg-[var(--accent-3)] hover:bg-[var(--accent-4)] border border-[var(--accent-6)]'
                               : 'hover:bg-[var(--gray-3)]'
