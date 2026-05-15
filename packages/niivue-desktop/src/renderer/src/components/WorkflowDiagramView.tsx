@@ -162,6 +162,29 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
         : 'var(--gray-6)'
   const ringWidth = hasError || hasWarning || selected ? 2 : 1
 
+  // Screen-reader fallback for the wiring. The edges drawn between handles
+  // convey input → step bindings visually but are invisible to a screen
+  // reader, so summarize each input's source in a hidden description tied
+  // to the node via aria-describedby.
+  const wiringDescriptionId = `step-wiring-${index}`
+  const wiringDescription = ((): string => {
+    if (inputs.length === 0) return 'No inputs.'
+    const parts = inputs.map(([name]) => {
+      const binding = step.inputs[name]
+      if (!binding || !binding.value) return `${name} unbound`
+      if (binding.mode === 'constant') return `${name} constant`
+      const v = binding.value
+      if (v.startsWith('steps.')) {
+        const [, refStep, , refOutput] = v.split('.')
+        return `${name} from step ${refStep} output ${refOutput}`
+      }
+      if (v.startsWith('inputs.')) return `${name} from workflow input ${v.slice('inputs.'.length)}`
+      if (v.startsWith('context.')) return `${name} from form field ${v.slice('context.'.length)}`
+      return `${name} from ${v}`
+    })
+    return `Inputs: ${parts.join('; ')}.`
+  })()
+
   return (
     <ContextMenu.Root>
       <ContextMenu.Trigger>
@@ -181,6 +204,7 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
           role="button"
           aria-pressed={selected}
           aria-label={`Step ${index + 1}: ${blockLabel}${hasError ? ' — has errors' : hasWarning ? ' — has warnings' : ''}`}
+          aria-describedby={wiringDescriptionId}
           className="focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
           style={{
             width: NODE_WIDTH,
@@ -412,6 +436,22 @@ function StepNode({ data }: NodeProps<Node<StepNodeData>>): React.ReactElement {
               {step.name}
             </Text>
           </div>
+          <span
+            id={wiringDescriptionId}
+            style={{
+              position: 'absolute',
+              width: 1,
+              height: 1,
+              padding: 0,
+              margin: -1,
+              overflow: 'hidden',
+              clip: 'rect(0 0 0 0)',
+              whiteSpace: 'nowrap',
+              border: 0
+            }}
+          >
+            {wiringDescription}
+          </span>
         </div>
       </ContextMenu.Trigger>
       <ContextMenu.Content size="1">
