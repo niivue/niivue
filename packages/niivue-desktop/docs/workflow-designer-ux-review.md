@@ -225,13 +225,13 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 ### Designer IA & interaction
 
 1. (P1) "Advanced Editor" card is a lie — `WorkflowTemplateGallery.tsx:241-256` advertises features the designer doesn't have. `MainApp.tsx:1713-1715` routes both `blank` and `advanced` to the same dialog with `initialDefinition=null`.
-2. (P1) Blank-start has no in-designer empty state outside the diagram. List view (`ContextSpineDesigner`) has none.
+2. (P1) ~~Blank-start has no in-designer empty state outside the diagram.~~ DONE — `ContextSpineDesigner` has its own RocketIcon hero + "Build your first pipeline" + ArrowDown to palette + "Browse templates" CTA.
 3. (P2) No way back to the gallery from the designer (`WorkflowDesignerDialog.tsx:390-404`).
 4. (P1) Layout shifts between List and Diagram views — palette in different locations and orientations.
-5. (P0) No properties panel in diagram mode — `WorkflowDiagramView.tsx:541` tracks selected state but nothing renders the inspector.
-6. (P1) No drag from palette to canvas — `BlockPalette.tsx:202` is `onClick` only.
-7. (P2) Reorder is button-only — `WorkflowDiagramView.tsx:158-191` ChevronUp/Down; `DragHandleDots2Icon` imported but unused.
-8. (P1) Workflow-input / context-field refs are invisible as connections.
+5. (P0) ~~No properties panel in diagram mode.~~ DONE — `WorkflowDiagramView` renders a right-side inspector `<aside>` when a step is selected, with field annotations and an "Edit details" jump-to-list affordance.
+6. (P1) ~~No drag from palette to canvas.~~ DONE — `BLOCK_DRAG_MIME` set on palette `draggable` items; diagram's ReactFlow wrapper has `onDragOver` / `onDrop` that route through `onAddBlockById`.
+7. (P2) ~~Reorder is button-only; DragHandleDots2Icon imported but unused.~~ DONE — unused import removed; chevron buttons remain the keyboard-friendly path, and React Flow handles its own native node-drag layout (not data-order) so there's no in-canvas "drag to reorder" affordance to wire up.
+8. (P1) ~~Workflow-input / context-field refs are invisible as connections.~~ DONE — synthetic `src-wfinputs` and `src-ctxfields` source nodes in the diagram emit typed edges to every step that binds them.
 9. (P0) ~~No dirty-state tracking.~~ DONE — `baselineDraftRef` + a Radix AlertDialog gate every close path on a dirty draft.
 10. (P0) ~~No undo / redo.~~ DONE — undo/redo stacks + ResetIcon/ReloadIcon header buttons + ⌘Z / ⌘⇧Z keybindings.
 11. (P2) ~~Save success has no visible feedback.~~ DONE — green "Saved." toast next to the save button (`role="status" aria-live="polite"`).
