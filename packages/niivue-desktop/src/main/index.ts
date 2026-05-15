@@ -354,6 +354,13 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 900,
     height: 670,
+    // Workflow shells (gallery, wizard, designer) assume the Tailwind `md`
+    // breakpoint (768px) for the step rail / palette dock; below that the
+    // designer's diagram inspector and the wizard sidebar overlap the
+    // canvas. 800x600 keeps the layout usable while still letting users
+    // dock the window narrow.
+    minWidth: 800,
+    minHeight: 600,
     show: !isHeadless,
     icon: getPlatformIcon(),
     ...(process.platform === 'linux' ? { icon } : {}),

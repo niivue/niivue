@@ -242,12 +242,12 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 
 ### Wizard runtime UX
 
-1. (P2) Step descriptions only render for current step (`WizardStepIndicator.tsx:61`).
-2. (P2) Future steps use `cursor-default`, no tooltip explaining why unreachable (`WizardStepIndicator.tsx:35`).
+1. (P2) ~~Step descriptions only render for current step.~~ DONE — `WizardStepIndicator.tsx` renders `step.description` for every step; styling is the only thing that varies by state.
+2. (P2) ~~Future steps use `cursor-default`, no tooltip explaining why unreachable.~~ DONE — unreached steps use `cursor-not-allowed` and carry `title="Complete the earlier steps to unlock this one"`.
 3. (P2) ~~No progress bar~~ DONE — progress strip in `WizardHeader.tsx` (gated on `totalSteps > 1`, which still leaves a single-step wizard bare — accepted).
 4. (P0) ~~Two Cancel buttons on non-first step.~~ DONE — `WizardFooter.tsx` now renders Back only; header owns the Cancel/Back-to-viewer affordance.
 5. (P0) ~~`disabled` with no surfaced reason.~~ DONE — `disabledReason` prop wired and surfaced as a Tooltip on the disabled Next.
-6. (P1) `handleStepClick` only allows backward jumps (`WizardShell.tsx:73-80`).
+6. (P1) ~~`handleStepClick` only allows backward jumps.~~ DONE — `WizardShell.handleStepClick` gates on `step <= maxStepReached`, which permits forward jumps to any step the author has already advanced through.
 7. (P1) ~~Close X has no confirm.~~ DONE — `requireConfirmOnClose` opens an AlertDialog (Keep working / Close, keep running / Cancel run).
 8. (P1) ~~Transition 250ms blocking on every Next/Back.~~ DONE — `WizardTransition.tsx` honors `prefers-reduced-motion` and swaps instantly.
 9. (P1) ~~Flat `flex-col gap-3` for all fields.~~ DONE — `FormSection.tsx` uses `grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3` with per-field span classes.
@@ -268,12 +268,12 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 24. (P1) Serial preview rendering — 50 files = 30+ seconds.
 25. (P1) ~~"Done" is primary CTA; "Load All in Viewer" should be.~~ DONE — Load All is now `variant="solid"`, Done is the soft secondary.
 26. (P1) ~~Fixed 224px rail + 896px max-width.~~ DONE — rail is `w-16 md:w-56 shrink-0`; main pane is `max-w-4xl xl:max-w-5xl 2xl:max-w-6xl`.
-27. (P2) No minimum window-size enforcement.
+27. (P2) ~~No minimum window-size enforcement.~~ DONE — `BrowserWindow` now sets `minWidth: 800, minHeight: 600` so the wizard rail / palette dock can't be squeezed below the Tailwind `md` breakpoint.
 
 ### Visual design
 
-1. (P1) `WorkflowDesignerDialog.tsx:409` uses `Text size="3"` for the H1; others use `Heading size="4"`.
-2. (P2) `WorkflowTemplateGallery.tsx:137` competes with the parent header.
+1. (P1) ~~`WorkflowDesignerDialog.tsx:409` uses `Text size="3"` for the H1; others use `Heading size="4"`.~~ DONE — the designer header now uses `<Heading size="4" weight="bold">` matching the gallery + wizard.
+2. (P2) ~~`WorkflowTemplateGallery.tsx:137` competes with the parent header.~~ MOOT — gallery now renders as an inline workspace panel with its own header (`<Heading size="4">`); there is no parent header to compete with.
 3. (P1) `BlockPalette.tsx:177` uppercase-tracked category headings vs mixed-case headings elsewhere.
 4. (P2) Step-name `--code-font-family` at `size="1"` is visually subordinate to a label — but it's the authoritative identifier.
 5. (P1) Three header paddings for the same role: `py-2 px-4` vs `py-4 px-6`.
