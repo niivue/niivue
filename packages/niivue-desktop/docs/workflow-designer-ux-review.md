@@ -232,11 +232,11 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 6. (P1) No drag from palette to canvas — `BlockPalette.tsx:202` is `onClick` only.
 7. (P2) Reorder is button-only — `WorkflowDiagramView.tsx:158-191` ChevronUp/Down; `DragHandleDots2Icon` imported but unused.
 8. (P1) Workflow-input / context-field refs are invisible as connections.
-9. (P0) No dirty-state tracking — closing silently discards work.
-10. (P0) No undo / redo — single misclick destroys a step.
-11. (P2) Save success has no visible feedback.
+9. (P0) ~~No dirty-state tracking.~~ DONE — `baselineDraftRef` + a Radix AlertDialog gate every close path on a dirty draft.
+10. (P0) ~~No undo / redo.~~ DONE — undo/redo stacks + ResetIcon/ReloadIcon header buttons + ⌘Z / ⌘⇧Z keybindings.
+11. (P2) ~~Save success has no visible feedback.~~ DONE — green "Saved." toast next to the save button (`role="status" aria-live="polite"`).
 12. (P0) Validation match by `String.includes(step.name)` mis-fires on overlapping names.
-13. (P1) Errors siloed in header popover only.
+13. (P1) ~~Errors siloed in header popover only.~~ DONE (this session) — each row in the popover is now a button that jumps to the offending step and switches to the diagram view; selected step shows the inline error badge.
 14. (P2) No right-click menus, no keyboard shortcuts.
 15. (P2) `config-only` badge shown in palette but not on placed nodes.
 
@@ -244,30 +244,30 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 
 1. (P2) Step descriptions only render for current step (`WizardStepIndicator.tsx:61`).
 2. (P2) Future steps use `cursor-default`, no tooltip explaining why unreachable (`WizardStepIndicator.tsx:35`).
-3. (P2) No progress bar; rail hides when `steps.length <= 1` (`WizardShell.tsx:111`).
-4. (P0) Two Cancel buttons on non-first step — `WizardFooter.tsx:38-47`.
-5. (P0) `disabled={!canProceed || loading}` with no surfaced reason — `WizardFooter.tsx:52`.
+3. (P2) ~~No progress bar~~ DONE — progress strip in `WizardHeader.tsx` (gated on `totalSteps > 1`, which still leaves a single-step wizard bare — accepted).
+4. (P0) ~~Two Cancel buttons on non-first step.~~ DONE — `WizardFooter.tsx` now renders Back only; header owns the Cancel/Back-to-viewer affordance.
+5. (P0) ~~`disabled` with no surfaced reason.~~ DONE — `disabledReason` prop wired and surfaced as a Tooltip on the disabled Next.
 6. (P1) `handleStepClick` only allows backward jumps (`WizardShell.tsx:73-80`).
-7. (P1) Close X has no confirm — `WizardHeader.tsx:29-37`.
-8. (P1) Transition 250ms blocking on every Next/Back — `WizardTransition.tsx:29-38`.
-9. (P1) Flat `flex-col gap-3` for all fields — `FormSection.tsx:90-104`.
-10. (P1) `AutoField.tsx:33` leaks API identifiers when label missing.
-11. (P1) `AutoField.tsx:155` silently coerces undefined to a number.
+7. (P1) ~~Close X has no confirm.~~ DONE — `requireConfirmOnClose` opens an AlertDialog (Keep working / Close, keep running / Cancel run).
+8. (P1) ~~Transition 250ms blocking on every Next/Back.~~ DONE — `WizardTransition.tsx` honors `prefers-reduced-motion` and swaps instantly.
+9. (P1) ~~Flat `flex-col gap-3` for all fields.~~ DONE — `FormSection.tsx` uses `grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-3` with per-field span classes.
+10. (P1) ~~`AutoField` leaks API identifiers when label missing.~~ DONE — `humanizeFieldName` fallback.
+11. (P1) ~~`AutoField` silently coerces undefined to a number.~~ DONE — `useEffect` seeds undefined numbers before render.
 12. (P2) Section spinner replaces the entire panel including the heading.
-13. (P1) `AutoField.tsx:34` only surfaces descriptions when label exists.
-14. (P0) Generic "Running…" spinner with no name/progress/ETA.
-15. (P0) Cancel disabled during loading — no escape hatch on a 5-minute run.
-16. (P1) `handleClose` cancels run but doesn't surface partial-write warning.
-17. (P1) No resumability — `useWizardEngine.ts:81-141` re-starts on `open`.
-18. (P0) `WizardShell` doesn't render `engine.error`.
-19. (P0) `AutoField` has no field-level error display.
+13. (P1) ~~`AutoField` only surfaces descriptions when label exists.~~ DONE — helperText renders whenever description is present.
+14. (P0) ~~Generic "Running…" spinner.~~ DONE — `runningLabel` prop wired from `useWizardEngine`; per-step verbs (`Converting series…`, etc.) flow through.
+15. (P0) ~~Cancel disabled during loading.~~ DONE — `WizardFooter` keeps Back/Cancel paths enabled mid-run (footer comment).
+16. (P1) ~~`handleClose` cancels run without partial-write warning.~~ DONE — AlertDialog explicitly mentions partial outputs.
+17. (P1) ~~No resumability.~~ DONE — `wizardRunStorage` + `workflow:get-state` probe + Resume / Start fresh AlertDialog.
+18. (P0) ~~`WizardShell` doesn't render `engine.error`.~~ DONE — `WorkflowDialog.tsx:824-830` renders a red Callout for fatal errors and `engine.updateError` as an amber dismissable callout below it.
+19. (P0) ~~`AutoField` has no field-level error display.~~ DONE — `error` prop with `aria-invalid` + `aria-describedby`.
 20. (P1) Failed conversions don't tell user which series failed.
 21. (P1) `console.error` swallows heuristic and update failures.
-22. (P2) Completion screen is understated; no celebratory state, no summary stats.
+22. (P2) ~~Completion screen understated.~~ DONE — hero CheckCircled state + summary stats.
 23. (P2) "Load All in Viewer" gated on `>1 file`; entire row should be clickable.
 24. (P1) Serial preview rendering — 50 files = 30+ seconds.
-25. (P1) "Done" is primary CTA; "Load All in Viewer" should be.
-26. (P1) Fixed 224px rail + 896px max-width — bad on both narrow and wide windows.
+25. (P1) ~~"Done" is primary CTA; "Load All in Viewer" should be.~~ DONE — Load All is now `variant="solid"`, Done is the soft secondary.
+26. (P1) ~~Fixed 224px rail + 896px max-width.~~ DONE — rail is `w-16 md:w-56 shrink-0`; main pane is `max-w-4xl xl:max-w-5xl 2xl:max-w-6xl`.
 27. (P2) No minimum window-size enforcement.
 
 ### Visual design
@@ -292,22 +292,22 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 18. (P1) Focus rings absent on custom buttons in `WorkflowDiagramView.tsx:163-208`.
 19. (P2) Disabled state doesn't change opacity — looks identical to enabled.
 20. (P1) Three spinner colors across `WizardFooter.tsx`, `FormSection.tsx`, `CompletionScreen.tsx`.
-21. (P1) Diagram empty canvas is the worst first-impression in the app.
-22. (P1) Legend Panel: 11px text, hardcoded shadow, low-fidelity.
-23. (P2) Edge stroke uses `--*-9` (solid brand) — should be `--*-8` (UI element).
+21. (P1) ~~Diagram empty canvas was the worst first-impression.~~ DONE — empty-state hero with rocket icon, dashed drop zone, palette arrow, and "Browse templates" CTA.
+22. (P1) ~~Legend Panel: 11px text, hardcoded shadow.~~ DONE — uses Radix `<Text size="1">`, `var(--shadow-2)`, and gained matched/coerced/incompatible swatches.
+23. (P2) ~~Edge stroke uses `--*-9`.~~ DONE — `typeEdgeColorVar` returns `--*-8`; `typeColorVar` (handles/badges) stays at `--*-9`.
 24. (P2) ~~Coercion vs incompatible edges visually identical.~~ DONE — coercion already uses dash; incompatible now also carries a warning glyph at the midpoint (`WorkflowDiagramView.tsx` `DeletableEdge`).
-25. (P2) 2px node border reads "tile" not "node".
+25. (P2) ~~2px node border reads "tile" not "node".~~ DONE — `StepNode` default border is 1px; thickens to 2px only on error/warning/selected.
 
 ### Accessibility + microcopy
 
-- **A11Y-1 (P0)** `display:none` on `Dialog.Title` / `Description` — `WorkflowDesignerDialog.tsx:401-404`.
+- **A11Y-1 (P0)** ~~`display:none` on `Dialog.Title` / `Description`.~~ MOOT — designer is no longer wrapped in Radix `Dialog`; the title is a real `<Heading>` in `WorkflowDesignerDialog.tsx` header.
 - **A11Y-2 (P0)** ~~Icon-only buttons without `aria-label`.~~ DONE — workflow surfaces already labelled; swept remaining offenders (`HeuristicDesigner`, `NiimathToolbar`, `NiimathConfig`, `AddModelWizard`).
 - **A11Y-3 (P0)** ~~No `aria-current="step"`.~~ DONE — already wired in `WizardStepIndicator.tsx`.
 - **A11Y-4 (P0)** Validation errors not associated with fields; popover not announced.
 - **A11Y-5 (P1)** Diagram not keyboard-operable — nodes not focusable, no SR fallback for wiring.
 - **A11Y-6 (P1)** ~~Edge encoding is color-only for color-blind users.~~ DONE — incompatible edges now carry a warning glyph; legend gained matched/coerced/incompatible swatches.
-- **A11Y-7 (P1)** `prefers-reduced-motion` ignored.
-- **A11Y-8 (P1)** No focus trap / restore in `WorkflowTemplateGallery` and `WizardShell` (hand-rolled overlays).
+- **A11Y-7 (P1)** ~~`prefers-reduced-motion` ignored.~~ DONE — `WizardTransition` skips slide animation for users with the preference.
+- **A11Y-8 (P1)** ~~No focus trap in `WizardShell`.~~ PARTIAL — `useFocusTrap(containerRef, open)` is wired in `WizardShell.tsx`; `WorkflowTemplateGallery` is still a hand-rolled overlay that needs a trap added.
 - **A11Y-9 (P2)** Native `confirm()` for destructive delete.
 - **COPY-1 (P1)** Inconsistent save verbs ("Save" / "Run" / "Done").
 - **COPY-2 (P1)** ~~Save errors are unactionable.~~ DONE — toast carries step + field name and gets `role="alert"`; each row in the errors popover is a clickable button that jumps to the offending step and switches to the diagram view.
