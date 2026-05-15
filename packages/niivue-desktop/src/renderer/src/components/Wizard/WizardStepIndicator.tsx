@@ -40,7 +40,7 @@ export function WizardStepIndicator({
             aria-label={`Step ${i + 1}: ${step.label}${isCompleted ? ' (completed)' : ''}`}
             title={isUnreached ? 'Complete the earlier steps to unlock this one' : undefined}
             className={
-              'flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition-colors duration-150 ' +
+              'flex items-center gap-3 px-4 py-2.5 rounded-lg text-left transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)] ' +
               (isCurrent
                 ? 'bg-accent-3 text-accent-11'
                 : isVisited
