@@ -119,7 +119,9 @@ export function VolumePickerField({
         </Heading>
         <button
           type="button"
-          className="text-xs text-accent-11 hover:underline"
+          aria-pressed={allSelected}
+          aria-label={allSelected ? 'Deselect all volumes' : 'Select all volumes'}
+          className="text-xs text-accent-11 hover:underline rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
           onClick={toggleAll}
         >
           {allSelected ? 'Deselect all' : 'Select all'}
