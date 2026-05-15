@@ -633,8 +633,11 @@ export function ContextSpineDesigner({
                       <DragHandleDots2Icon />
                     </span>
                     <button
-                      className="flex-1 flex items-center gap-2 cursor-pointer text-left min-w-0"
-                      onClick={() => setSelectedStep(isSelected ? null : i)}
+                      type="button"
+                      className="flex-1 flex items-center gap-2 cursor-pointer text-left min-w-0 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
+                      onClick={(): void => setSelectedStep(isSelected ? null : i)}
+                      aria-pressed={isSelected}
+                      aria-label={`${isSelected ? 'Collapse' : 'Expand'} step ${i + 1}: ${block?.label || step.tool}`}
                     >
                       <span className={isSelected ? 'text-[var(--accent-9)]' : 'text-neutral-9'}>
                         {block ? getBlockIcon(block.icon || '') : null}
@@ -755,12 +758,15 @@ export function ContextSpineDesigner({
                       {i + 1}
                     </Badge>
                     <button
-                      className="text-neutral-7 hover:text-[var(--red-9)] transition-colors cursor-pointer p-1 shrink-0"
-                      onClick={(e) => {
+                      type="button"
+                      className="text-neutral-7 hover:text-[var(--red-9)] transition-colors cursor-pointer p-1 shrink-0 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
+                      onClick={(e): void => {
                         e.stopPropagation()
                         onRemoveStep(i)
                         if (selectedStep === i) setSelectedStep(null)
                       }}
+                      aria-label={`Remove step ${i + 1}: ${block?.label || step.tool}`}
+                      title="Remove step"
                     >
                       <TrashIcon />
                     </button>
