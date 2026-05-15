@@ -274,8 +274,8 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 
 1. (P1) ~~`WorkflowDesignerDialog.tsx:409` uses `Text size="3"` for the H1; others use `Heading size="4"`.~~ DONE — the designer header now uses `<Heading size="4" weight="bold">` matching the gallery + wizard.
 2. (P2) ~~`WorkflowTemplateGallery.tsx:137` competes with the parent header.~~ MOOT — gallery now renders as an inline workspace panel with its own header (`<Heading size="4">`); there is no parent header to compete with.
-3. (P1) `BlockPalette.tsx:177` uppercase-tracked category headings vs mixed-case headings elsewhere.
-4. (P2) Step-name `--code-font-family` at `size="1"` is visually subordinate to a label — but it's the authoritative identifier.
+3. (P1) ~~`BlockPalette.tsx` uppercase-tracked category headings vs mixed-case headings elsewhere.~~ DONE — category headers now use `<Text size="2" weight="medium">` (mixed-case) matching the rest of the workflow surfaces.
+4. (P2) ~~Step-name `--code-font-family` at `size="1"` is visually subordinate to a label.~~ DONE — the diagram's step-name footer now renders at `size="2" weight="medium"`, peer to the block label rather than a subscript.
 5. (P1) ~~Three header paddings for the same role: `py-2 px-4` vs `py-4 px-6`.~~ DONE — `WorkflowDesignerDialog`, `WorkflowTemplateGallery`, `WizardHeader` and `HeuristicDesigner` headers all share `px-6 py-4 border-b border-neutral-5 shrink-0 bg-panel`.
 6. (P1) Magic numbers in `WorkflowDiagramView.tsx`: `8px 10px`, `4px 10px 6px`, `gap: 10`, etc.
 7. (P0 dirty) Hardcoded shadows (`WorkflowDiagramView.tsx:133,428,452,767`, `WorkflowTemplateGallery.tsx:163,228,243`).
@@ -289,8 +289,8 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 15. (P2) Cards use `hover:shadow-md` Tailwind black shadow.
 16. (P2) Palette dock `max-h-56` feels squeezed.
 17. (P1) Three different "selected/active" treatments.
-18. (P1) Focus rings absent on custom buttons in `WorkflowDiagramView.tsx:163-208`.
-19. (P2) Disabled state doesn't change opacity — looks identical to enabled.
+18. (P1) ~~Focus rings absent on custom buttons in `WorkflowDiagramView`.~~ DONE — `StepNode` root carries `focus-visible:outline-2 focus-visible:outline-[var(--accent-9)]`; the edge-delete button uses the `workflow-edge-delete` class which has the same focus ring (see `main.css`); chevron / inspector affordances use Radix `IconButton` / `Button` which carry the framework default ring.
+19. (P2) ~~Disabled state doesn't change opacity — looks identical to enabled.~~ DONE — bare `<button>[disabled]` and `[aria-disabled="true"]` pick up `opacity: 0.55; cursor: not-allowed` from a low-specificity `:where()` rule in `main.css` (Radix Themes buttons retain their own disabled style).
 20. (P1) Three spinner colors across `WizardFooter.tsx`, `FormSection.tsx`, `CompletionScreen.tsx`.
 21. (P1) ~~Diagram empty canvas was the worst first-impression.~~ DONE — empty-state hero with rocket icon, dashed drop zone, palette arrow, and "Browse templates" CTA.
 22. (P1) ~~Legend Panel: 11px text, hardcoded shadow.~~ DONE — uses Radix `<Text size="1">`, `var(--shadow-2)`, and gained matched/coerced/incompatible swatches.
