@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect, useRef } from 'react'
+import { AlertDialog, Button, Flex } from '@radix-ui/themes'
 import { WizardProvider, type WizardStep } from './WizardContext.js'
 import { WizardHeader } from './WizardHeader.js'
 import { WizardStepIndicator } from './WizardStepIndicator.js'
@@ -72,6 +73,12 @@ export function WizardShell({
   // is stacked on top — the topmost shell owns the trap in that case.
   useFocusTrap(containerRef, open && !disableEscape)
 
+  // Visibility flag for the cancel-run confirm. Lives in state so the Radix
+  // AlertDialog can mount/unmount on the dirty close path; without it the
+  // user sees the OS-native confirm() prompt instead of an app-themed dialog
+  // with named actions.
+  const [cancelRunOpen, setCancelRunOpen] = useState(false)
+
   const [direction, setDirection] = useState<'forward' | 'backward'>('forward')
   const prevStep = useRef(currentStep)
   // Highest step the user has actually advanced through. Forward step-rail
@@ -94,14 +101,8 @@ export function WizardShell({
   const isLastStep = currentStep === steps.length - 1
 
   const guardedClose = useCallback(() => {
-    if (
-      requireConfirmOnClose &&
-      !confirm(
-        'A workflow step is still running. Cancelling now will abort the step ' +
-          'immediately — any files it has already written to disk will stay where ' +
-          'they are (not rolled back) and may be partial or invalid. Continue?'
-      )
-    ) {
+    if (requireConfirmOnClose) {
+      setCancelRunOpen(true)
       return
     }
     onClose()
@@ -227,6 +228,36 @@ export function WizardShell({
           />
         )}
       </WizardProvider>
+
+      <AlertDialog.Root open={cancelRunOpen} onOpenChange={(o): void => setCancelRunOpen(o)}>
+        <AlertDialog.Content maxWidth="480px">
+          <AlertDialog.Title>Cancel the running step?</AlertDialog.Title>
+          <AlertDialog.Description size="2">
+            A workflow step is still running. Cancelling now aborts the step immediately &mdash; any
+            files it has already written to disk will stay where they are (not rolled back) and may
+            be partial or invalid.
+          </AlertDialog.Description>
+          <Flex gap="3" mt="4" justify="end">
+            <AlertDialog.Cancel>
+              <Button variant="soft" color="gray">
+                Keep running
+              </Button>
+            </AlertDialog.Cancel>
+            <AlertDialog.Action>
+              <Button
+                variant="solid"
+                color="red"
+                onClick={(): void => {
+                  setCancelRunOpen(false)
+                  onClose()
+                }}
+              >
+                Cancel run
+              </Button>
+            </AlertDialog.Action>
+          </Flex>
+        </AlertDialog.Content>
+      </AlertDialog.Root>
     </div>
   )
 }
