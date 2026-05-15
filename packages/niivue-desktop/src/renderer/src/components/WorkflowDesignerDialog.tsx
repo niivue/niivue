@@ -11,7 +11,16 @@
 // file in their text editor.
 
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
-import { Button, Text, Flex, Heading, SegmentedControl, Popover, Badge } from '@radix-ui/themes'
+import {
+  AlertDialog,
+  Button,
+  Text,
+  Flex,
+  Heading,
+  SegmentedControl,
+  Popover,
+  Badge
+} from '@radix-ui/themes'
 import {
   ArrowLeftIcon,
   ExclamationTriangleIcon,
@@ -260,6 +269,11 @@ export function WorkflowDesignerDialog({
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [view, setView] = useState<'list' | 'diagram'>('list')
   const [selectedStep, setSelectedStep] = useState<number | null>(null)
+  // Visibility flag for the discard-changes confirm. Lives in state so the
+  // Radix AlertDialog can mount/unmount as the dirty-close path fires;
+  // without it the user would see the OS-native confirm() prompt instead
+  // of an app-themed dialog with named actions.
+  const [discardChangesOpen, setDiscardChangesOpen] = useState(false)
 
   // Snapshot of the draft at last open / last successful save. We compare the
   // current draft against this to decide whether the close button should warn
@@ -584,12 +598,12 @@ export function WorkflowDesignerDialog({
   }, [savedAt])
 
   // Intercepts every close path (X button, ESC, backdrop). Warns before
-  // discarding unsaved changes; on confirm, proceeds with onClose().
+  // discarding unsaved changes by opening a Radix AlertDialog so the prompt
+  // matches the app's chrome and offers named actions ("Discard changes" vs
+  // "Keep editing") instead of OS-native OK/Cancel.
   const requestClose = useCallback((): void => {
-    if (
-      dirty &&
-      !window.confirm('You have unsaved changes. Discard them and close the designer?')
-    ) {
+    if (dirty) {
+      setDiscardChangesOpen(true)
       return
     }
     onClose()
@@ -869,6 +883,38 @@ export function WorkflowDesignerDialog({
           />
         </div>
       </div>
+
+      <AlertDialog.Root
+        open={discardChangesOpen}
+        onOpenChange={(o): void => setDiscardChangesOpen(o)}
+      >
+        <AlertDialog.Content maxWidth="450px">
+          <AlertDialog.Title>Discard unsaved changes?</AlertDialog.Title>
+          <AlertDialog.Description size="2">
+            Your workflow has edits that haven&rsquo;t been saved. Closing the designer now will
+            discard them.
+          </AlertDialog.Description>
+          <Flex gap="3" mt="4" justify="end">
+            <AlertDialog.Cancel>
+              <Button variant="soft" color="gray">
+                Keep editing
+              </Button>
+            </AlertDialog.Cancel>
+            <AlertDialog.Action>
+              <Button
+                variant="solid"
+                color="red"
+                onClick={(): void => {
+                  setDiscardChangesOpen(false)
+                  onClose()
+                }}
+              >
+                Discard changes
+              </Button>
+            </AlertDialog.Action>
+          </Flex>
+        </AlertDialog.Content>
+      </AlertDialog.Root>
     </div>
   )
 }
