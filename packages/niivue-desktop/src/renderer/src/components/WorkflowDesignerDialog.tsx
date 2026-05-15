@@ -756,7 +756,7 @@ export function WorkflowDesignerDialog({
         </Flex>
         <Flex gap="2" align="center">
           {saveError && (
-            <Text size="1" color="red">
+            <Text size="1" color="red" role="alert" aria-live="assertive">
               {saveError}
             </Text>
           )}
@@ -786,16 +786,45 @@ export function WorkflowDesignerDialog({
                       <Text size="1" weight="bold" color="red">
                         Errors
                       </Text>
-                      {validation.errors.map((e, i) => (
-                        <Flex key={`e-${i}`} gap="2" align="start">
-                          {e.stepName && (
-                            <Badge size="1" color="red" variant="soft">
-                              {e.stepName}
-                            </Badge>
-                          )}
-                          <Text size="1">{e.message}</Text>
-                        </Flex>
-                      ))}
+                      {validation.errors.map((e, i) => {
+                        const stepIdx = e.stepName
+                          ? draft.steps.findIndex((s) => s.name === e.stepName)
+                          : -1
+                        const canJump = stepIdx >= 0
+                        const ariaLabel = `Jump to ${e.stepName ?? 'step'}: ${e.message}`
+                        return (
+                          <Popover.Close key={`e-${i}`}>
+                            <button
+                              type="button"
+                              disabled={!canJump}
+                              onClick={(): void => {
+                                if (!canJump) return
+                                setSelectedStep(stepIdx)
+                                setView('diagram')
+                              }}
+                              aria-label={canJump ? ariaLabel : undefined}
+                              title={canJump ? 'Jump to this step' : undefined}
+                              style={{
+                                all: 'unset',
+                                cursor: canJump ? 'pointer' : 'default',
+                                display: 'flex',
+                                gap: 'var(--space-2)',
+                                alignItems: 'flex-start',
+                                padding: 'var(--space-1) var(--space-2)',
+                                borderRadius: 'var(--radius-2)'
+                              }}
+                              className={canJump ? 'workflow-issue-row' : undefined}
+                            >
+                              {e.stepName && (
+                                <Badge size="1" color="red" variant="soft">
+                                  {e.stepName}
+                                </Badge>
+                              )}
+                              <Text size="1">{e.message}</Text>
+                            </button>
+                          </Popover.Close>
+                        )
+                      })}
                     </Flex>
                   )}
                   {validation.warnings.length > 0 && (
@@ -803,16 +832,45 @@ export function WorkflowDesignerDialog({
                       <Text size="1" weight="bold" color="amber">
                         Warnings
                       </Text>
-                      {validation.warnings.map((w, i) => (
-                        <Flex key={`w-${i}`} gap="2" align="start">
-                          {w.stepName && (
-                            <Badge size="1" color="amber" variant="soft">
-                              {w.stepName}
-                            </Badge>
-                          )}
-                          <Text size="1">{w.message}</Text>
-                        </Flex>
-                      ))}
+                      {validation.warnings.map((w, i) => {
+                        const stepIdx = w.stepName
+                          ? draft.steps.findIndex((s) => s.name === w.stepName)
+                          : -1
+                        const canJump = stepIdx >= 0
+                        const ariaLabel = `Jump to ${w.stepName ?? 'step'}: ${w.message}`
+                        return (
+                          <Popover.Close key={`w-${i}`}>
+                            <button
+                              type="button"
+                              disabled={!canJump}
+                              onClick={(): void => {
+                                if (!canJump) return
+                                setSelectedStep(stepIdx)
+                                setView('diagram')
+                              }}
+                              aria-label={canJump ? ariaLabel : undefined}
+                              title={canJump ? 'Jump to this step' : undefined}
+                              style={{
+                                all: 'unset',
+                                cursor: canJump ? 'pointer' : 'default',
+                                display: 'flex',
+                                gap: 'var(--space-2)',
+                                alignItems: 'flex-start',
+                                padding: 'var(--space-1) var(--space-2)',
+                                borderRadius: 'var(--radius-2)'
+                              }}
+                              className={canJump ? 'workflow-issue-row' : undefined}
+                            >
+                              {w.stepName && (
+                                <Badge size="1" color="amber" variant="soft">
+                                  {w.stepName}
+                                </Badge>
+                              )}
+                              <Text size="1">{w.message}</Text>
+                            </button>
+                          </Popover.Close>
+                        )
+                      })}
                     </Flex>
                   )}
                 </Flex>

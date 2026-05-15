@@ -64,6 +64,18 @@ body {
   outline-offset: 2px;
 }
 
+/* ── Validation popover issue row ────────────────────────────────────
+   Each row jumps to the offending step on click. The unstyled <button>
+   wrapper gets a subtle hover/focus state so it reads as actionable
+   without competing visually with the message text. */
+.workflow-issue-row:hover {
+  background: var(--gray-3);
+}
+.workflow-issue-row:focus-visible {
+  outline: 2px solid var(--focus-8);
+  outline-offset: 1px;
+}
+
 /* ── Disabled bare buttons ───────────────────────────────────────────
    Many hand-rolled <button> elements throughout the wizard pass
    `disabled` but otherwise share the enabled style, leaving them

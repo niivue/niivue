@@ -310,7 +310,7 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 - **A11Y-8 (P1)** No focus trap / restore in `WorkflowTemplateGallery` and `WizardShell` (hand-rolled overlays).
 - **A11Y-9 (P2)** Native `confirm()` for destructive delete.
 - **COPY-1 (P1)** Inconsistent save verbs ("Save" / "Run" / "Done").
-- **COPY-2 (P1)** Save errors are unactionable — don't point to the offending field.
+- **COPY-2 (P1)** ~~Save errors are unactionable.~~ DONE — toast carries step + field name and gets `role="alert"`; each row in the errors popover is a clickable button that jumps to the offending step and switches to the diagram view.
 - **COPY-3 (P1)** Diagram empty-state lacks an action; palette is below the fold.
 - **COPY-4 (P1)** IPC failures silently swallowed.
 - **COPY-5 (P2)** Config-only tooltip is a paragraph.
