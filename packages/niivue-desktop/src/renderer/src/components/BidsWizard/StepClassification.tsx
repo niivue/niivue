@@ -118,11 +118,13 @@ export function StepClassification({
         {hasFmaps && (
           <div className="mt-3 border rounded">
             <button
-              className="w-full flex items-center justify-between px-3 py-2 bg-[var(--gray-2)] hover:bg-[var(--gray-4)] text-xs font-medium"
+              type="button"
+              aria-expanded={fmapExpanded}
+              className="w-full flex items-center justify-between px-3 py-2 bg-[var(--gray-2)] hover:bg-[var(--gray-4)] text-xs font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
               onClick={() => setFmapExpanded(!fmapExpanded)}
             >
               <span>Fieldmap Mappings (IntendedFor)</span>
-              <span>{fmapExpanded ? '\u25B2' : '\u25BC'}</span>
+              <span aria-hidden="true">{fmapExpanded ? '\u25B2' : '\u25BC'}</span>
             </button>
             {fmapExpanded && (
               <div className="p-3">
