@@ -416,7 +416,12 @@ export function BidsWizard({
           </Callout.Icon>
           <Callout.Text>
             {error}
-            <button className="ml-2 underline" onClick={() => setError(null)}>
+            <button
+              type="button"
+              className="ml-2 underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)] rounded-sm"
+              onClick={(): void => setError(null)}
+              aria-label="Dismiss this error"
+            >
               Dismiss
             </button>
           </Callout.Text>

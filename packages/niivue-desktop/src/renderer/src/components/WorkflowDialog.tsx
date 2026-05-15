@@ -780,8 +780,9 @@ export function WorkflowDialog({
               <span>Couldn’t apply your edit: {engine.updateError}</span>
               <button
                 type="button"
-                className="text-xs underline text-[var(--amber-12)] shrink-0"
+                className="text-xs underline text-[var(--amber-12)] shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)] rounded-sm"
                 onClick={engine.dismissUpdateError}
+                aria-label="Dismiss this edit error"
               >
                 Dismiss
               </button>
