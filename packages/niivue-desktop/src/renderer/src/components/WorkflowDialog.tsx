@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { Text, Callout, Heading, TextField, Progress } from '@radix-ui/themes'
+import { Button, Text, Callout, Heading, TextField, Progress } from '@radix-ui/themes'
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons'
 import type {
   BidsSeriesMapping,
@@ -720,9 +720,10 @@ export function WorkflowDialog({
                             size="2"
                             className="flex-1"
                           />
-                          <button
-                            className="px-3 py-1.5 rounded bg-[var(--accent-3)] text-[var(--accent-11)] hover:bg-[var(--accent-4)] transition-colors text-sm cursor-pointer"
-                            onClick={async () => {
+                          <Button
+                            variant="soft"
+                            size="2"
+                            onClick={async (): Promise<void> => {
                               const dir = await electron.ipcRenderer.invoke(
                                 'workflow:select-directory',
                                 { title: m.description }
@@ -733,7 +734,7 @@ export function WorkflowDialog({
                             }}
                           >
                             Browse…
-                          </button>
+                          </Button>
                         </div>
                       ) : (
                         <TextField.Root
