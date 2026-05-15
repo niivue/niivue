@@ -859,8 +859,8 @@ export function WorkflowDesignerDialog({
                 <ExclamationTriangleIcon />
               </Callout.Icon>
               <Callout.Text className="flex-1">
-                Couldn&rsquo;t load the tool catalog: {toolsLoadError}. The palette will be empty
-                until this succeeds.
+                Failed to load the tool catalog: {toolsLoadError}. The palette will be empty until
+                this succeeds.
               </Callout.Text>
               <Button
                 size="1"
