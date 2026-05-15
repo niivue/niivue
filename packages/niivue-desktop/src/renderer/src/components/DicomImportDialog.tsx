@@ -173,21 +173,32 @@ export function DicomImportDialog({ onLoadVolume }: DicomImportDialogProps): JSX
             {convertedFiles.map((f) => {
               const fname = f.split(/[\\/]/).pop() ?? f
               const isLoading = loadingFile === f
+              const rowDisabled = !onLoadVolume || loadingFile !== null
+              if (!onLoadVolume) {
+                return (
+                  <div key={f} className="flex items-center gap-2 py-1">
+                    <span className="text-sm flex-1 truncate" title={f}>
+                      {fname}
+                    </span>
+                  </div>
+                )
+              }
               return (
-                <div key={f} className="flex items-center gap-2 py-1">
+                <button
+                  key={f}
+                  type="button"
+                  disabled={rowDisabled}
+                  onClick={() => handleLoadFile(f)}
+                  className="group flex w-full items-center gap-2 py-1 px-1 rounded text-left hover:bg-[var(--gray-3)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-7)] disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                  title={`Load ${fname} in viewer`}
+                >
                   <span className="text-sm flex-1 truncate" title={f}>
                     {fname}
                   </span>
-                  {onLoadVolume && (
-                    <button
-                      className="text-xs px-2 py-1 bg-[var(--accent-9)] text-white rounded hover:bg-[var(--accent-10)] disabled:opacity-50"
-                      disabled={isLoading || loadingFile !== null}
-                      onClick={() => handleLoadFile(f)}
-                    >
-                      {isLoading ? 'Loading volume…' : 'Load in Viewer'}
-                    </button>
-                  )}
-                </div>
+                  <span className="text-xs px-2 py-1 rounded bg-[var(--accent-9)] text-white group-hover:bg-[var(--accent-10)]">
+                    {isLoading ? 'Loading volume…' : 'Load in Viewer'}
+                  </span>
+                </button>
               )
             })}
           </div>
