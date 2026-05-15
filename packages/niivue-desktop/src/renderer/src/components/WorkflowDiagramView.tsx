@@ -539,6 +539,10 @@ interface DeletableEdgeData extends Record<string, unknown> {
   targetType?: string
   /** Hex/CSS color string used for the badge border to match the edge stroke. */
   edgeColor?: string
+  /** True when the source type cannot flow into the target. Triggers a
+   *  warning-triangle glyph at the midpoint so the error reads even when
+   *  the red stroke is invisible to a color-blind viewer. */
+  isIncompatible?: boolean
 }
 
 function DeletableEdge({
@@ -570,9 +574,14 @@ function DeletableEdge({
 
   const sourceType = data?.sourceType
   const targetType = data?.targetType
-  const isCoercion = !!sourceType && !!targetType && sourceType !== targetType
+  const isIncompatible = !!data?.isIncompatible
+  const isCoercion = !!sourceType && !!targetType && sourceType !== targetType && !isIncompatible
   const typeLabel = sourceType ? TYPE_LABELS[sourceType] || sourceType : null
   const badgeBorder = data?.edgeColor || 'var(--gray-7)'
+  const incompatibleTitle =
+    sourceType && targetType
+      ? `Type mismatch: ${sourceType} cannot connect to ${targetType}`
+      : 'Type mismatch'
 
   return (
     <>
@@ -590,9 +599,35 @@ function DeletableEdge({
             gap: 4
           }}
         >
+          {isIncompatible && (
+            <span
+              role="img"
+              aria-label={incompatibleTitle}
+              title={incompatibleTitle}
+              style={{
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                width: 18,
+                height: 18,
+                borderRadius: '50%',
+                background: 'var(--red-9)',
+                color: 'var(--red-contrast)',
+                boxShadow: 'var(--shadow-2)'
+              }}
+            >
+              <ExclamationTriangleIcon width={11} height={11} />
+            </span>
+          )}
           {typeLabel && (
             <span
-              title={isCoercion ? `${sourceType} → ${targetType} (coerced)` : `${sourceType}`}
+              title={
+                isIncompatible
+                  ? incompatibleTitle
+                  : isCoercion
+                    ? `${sourceType} → ${targetType} (coerced)`
+                    : `${sourceType}`
+              }
               style={{
                 fontSize: 10,
                 lineHeight: 1,
@@ -920,7 +955,8 @@ export function WorkflowDiagramView({
               onDelete: (): void => clearInputBinding(targetIdx, inputName),
               sourceType,
               targetType,
-              edgeColor: color
+              edgeColor: color,
+              isIncompatible: !compatible
             },
             style: {
               stroke: color,
@@ -957,7 +993,8 @@ export function WorkflowDiagramView({
               onDelete: (): void => clearInputBinding(targetIdx, inputName),
               sourceType,
               targetType,
-              edgeColor: color
+              edgeColor: color,
+              isIncompatible: !compatible
             },
             style: {
               stroke: color,
@@ -1004,7 +1041,8 @@ export function WorkflowDiagramView({
             onDelete: (): void => clearInputBinding(targetIdx, inputName),
             sourceType,
             targetType,
-            edgeColor: color
+            edgeColor: color,
+            isIncompatible: !compatible
           },
           style: {
             stroke: color,
@@ -1337,6 +1375,61 @@ export function WorkflowDiagramView({
                   }}
                 />
                 <Text size="1">step output</Text>
+              </span>
+              <span
+                aria-hidden="true"
+                style={{
+                  width: 1,
+                  alignSelf: 'stretch',
+                  background: 'var(--gray-5)',
+                  margin: '0 var(--space-1)'
+                }}
+              />
+              <span
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                title="Source type matches the target — value flows through unchanged."
+              >
+                <svg width={20} height={6} aria-hidden="true">
+                  <line x1={1} y1={3} x2={19} y2={3} stroke="var(--gray-9)" strokeWidth={2} />
+                </svg>
+                <Text size="1">matched</Text>
+              </span>
+              <span
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                title="Source type is coerced to the target type at runtime."
+              >
+                <svg width={20} height={6} aria-hidden="true">
+                  <line
+                    x1={1}
+                    y1={3}
+                    x2={19}
+                    y2={3}
+                    stroke="var(--gray-9)"
+                    strokeWidth={2}
+                    strokeDasharray="3 3"
+                  />
+                </svg>
+                <Text size="1">coerced</Text>
+              </span>
+              <span
+                style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}
+                title="Source type cannot connect to the target — the wiring is invalid."
+              >
+                <span
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 14,
+                    height: 14,
+                    borderRadius: '50%',
+                    background: 'var(--red-9)',
+                    color: 'var(--red-contrast)'
+                  }}
+                >
+                  <ExclamationTriangleIcon width={9} height={9} />
+                </span>
+                <Text size="1">incompatible</Text>
               </span>
             </div>
           </Panel>

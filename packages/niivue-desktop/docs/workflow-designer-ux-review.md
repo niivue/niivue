@@ -295,7 +295,7 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 21. (P1) Diagram empty canvas is the worst first-impression in the app.
 22. (P1) Legend Panel: 11px text, hardcoded shadow, low-fidelity.
 23. (P2) Edge stroke uses `--*-9` (solid brand) — should be `--*-8` (UI element).
-24. (P2) Coercion vs incompatible edges visually identical.
+24. (P2) ~~Coercion vs incompatible edges visually identical.~~ DONE — coercion already uses dash; incompatible now also carries a warning glyph at the midpoint (`WorkflowDiagramView.tsx` `DeletableEdge`).
 25. (P2) 2px node border reads "tile" not "node".
 
 ### Accessibility + microcopy
@@ -305,7 +305,7 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 - **A11Y-3 (P0)** No `aria-current="step"` in `WizardStepIndicator.tsx:24-67`.
 - **A11Y-4 (P0)** Validation errors not associated with fields; popover not announced.
 - **A11Y-5 (P1)** Diagram not keyboard-operable — nodes not focusable, no SR fallback for wiring.
-- **A11Y-6 (P1)** Edge encoding is color-only for color-blind users.
+- **A11Y-6 (P1)** ~~Edge encoding is color-only for color-blind users.~~ DONE — incompatible edges now carry a warning glyph; legend gained matched/coerced/incompatible swatches.
 - **A11Y-7 (P1)** `prefers-reduced-motion` ignored.
 - **A11Y-8 (P1)** No focus trap / restore in `WorkflowTemplateGallery` and `WizardShell` (hand-rolled overlays).
 - **A11Y-9 (P2)** Native `confirm()` for destructive delete.
