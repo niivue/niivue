@@ -271,6 +271,13 @@ export function WorkflowDesignerDialog({
   // designer would render with an empty palette and the user wouldn't know
   // whether the workflow has no tools or the IPC call silently failed.
   const [toolsLoadError, setToolsLoadError] = useState<string | null>(null)
+  // Non-fatal warnings from the auxiliary IPC loads (runnable-tools list,
+  // heuristic registry). These don't break the designer but they degrade
+  // signal — e.g. without runnable-tools every node looks "config-only", and
+  // without heuristics the suggestion dropdowns are silently empty. Surface
+  // them as a soft amber callout so authors know to retry instead of chasing
+  // phantom bugs.
+  const [secondaryLoadWarnings, setSecondaryLoadWarnings] = useState<string[]>([])
   // Bumped to retry the tool/heuristic loads on Retry click without remounting
   // the whole dialog.
   const [reloadKey, setReloadKey] = useState(0)
@@ -433,6 +440,7 @@ export function WorkflowDesignerDialog({
     }
 
     setToolsLoadError(null)
+    setSecondaryLoadWarnings([])
     electron.ipcRenderer
       .invoke('workflow:list-tools')
       .then((t: ToolDefinition[]) => setTools(t))
@@ -446,6 +454,11 @@ export function WorkflowDesignerDialog({
       .catch((err) => {
         console.error('[WorkflowDesigner] workflow:list-runnable-tools failed:', err)
         setRunnableTools(new Set())
+        const msg = err instanceof Error ? err.message : String(err)
+        setSecondaryLoadWarnings((prev) => [
+          ...prev,
+          `Runnable-tool list unavailable (${msg}). All tools will display as "config-only".`
+        ])
       })
     electron.ipcRenderer
       .invoke('workflow:list-heuristics')
@@ -453,6 +466,11 @@ export function WorkflowDesignerDialog({
       .catch((err) => {
         console.error('[WorkflowDesigner] workflow:list-heuristics failed:', err)
         setHeuristicNames([])
+        const msg = err instanceof Error ? err.message : String(err)
+        setSecondaryLoadWarnings((prev) => [
+          ...prev,
+          `Heuristic registry unavailable (${msg}). Suggestion dropdowns will be empty.`
+        ])
       })
 
     const initialDraft = initialDefinition
@@ -924,6 +942,30 @@ export function WorkflowDesignerDialog({
                 size="1"
                 variant="soft"
                 color="red"
+                onClick={(): void => setReloadKey((k) => k + 1)}
+              >
+                Retry
+              </Button>
+            </Callout.Root>
+          </div>
+        )}
+        {secondaryLoadWarnings.length > 0 && (
+          <div className="px-4 pt-3 shrink-0">
+            <Callout.Root color="amber" size="2">
+              <Callout.Icon>
+                <ExclamationTriangleIcon />
+              </Callout.Icon>
+              <Callout.Text className="flex-1">
+                <div className="flex flex-col gap-1">
+                  {secondaryLoadWarnings.map((w, i) => (
+                    <span key={i}>{w}</span>
+                  ))}
+                </div>
+              </Callout.Text>
+              <Button
+                size="1"
+                variant="soft"
+                color="amber"
                 onClick={(): void => setReloadKey((k) => k + 1)}
               >
                 Retry

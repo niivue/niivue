@@ -262,7 +262,7 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 18. (P0) ~~`WizardShell` doesn't render `engine.error`.~~ DONE — `WorkflowDialog.tsx:824-830` renders a red Callout for fatal errors and `engine.updateError` as an amber dismissable callout below it.
 19. (P0) ~~`AutoField` has no field-level error display.~~ DONE — `error` prop with `aria-invalid` + `aria-describedby`.
 20. (P1) Failed conversions don't tell user which series failed.
-21. (P1) `console.error` swallows heuristic and update failures.
+21. (P1) ~~`console.error` swallows heuristic and update failures.~~ DONE — heuristic errors flow through `heuristicErrors` → `fieldErrors` → `AutoField`'s `error` prop; update failures surface as the amber `engine.updateError` callout in `WorkflowDialog`.
 22. (P2) ~~Completion screen understated.~~ DONE — hero CheckCircled state + summary stats.
 23. (P2) "Load All in Viewer" gated on `>1 file`; entire row should be clickable.
 24. (P1) Serial preview rendering — 50 files = 30+ seconds.
@@ -312,7 +312,7 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 - **COPY-1 (P1)** Inconsistent save verbs ("Save" / "Run" / "Done").
 - **COPY-2 (P1)** ~~Save errors are unactionable.~~ DONE — toast carries step + field name and gets `role="alert"`; each row in the errors popover is a clickable button that jumps to the offending step and switches to the diagram view.
 - **COPY-3 (P1)** Diagram empty-state lacks an action; palette is below the fold.
-- **COPY-4 (P1)** IPC failures silently swallowed.
+- **COPY-4 (P1)** ~~IPC failures silently swallowed.~~ DONE — designer's `list-tools` shows a red callout with retry; the auxiliary `list-runnable-tools` and `list-heuristics` failures now surface as an amber callout with retry instead of console-only. Wizard heuristic + update failures already wired (see Wizard #21).
 - **COPY-5 (P2)** Config-only tooltip is a paragraph.
 - **COPY-6 (P2)** Mixed gerund + noun forms for loading messages.
 - **COPY-7 (P2)** `BidsSidecarFixAdapter` empty state exposes `bids_dir`.
