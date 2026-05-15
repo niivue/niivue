@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { Button, Text } from '@radix-ui/themes'
 import { CheckIcon } from '@radix-ui/react-icons'
 import { Niivue, NVImage, SLICE_TYPE } from '@niivue/niivue'
@@ -87,28 +87,115 @@ async function renderPreviewImage(niftiPath: string): Promise<string | null> {
   }
 }
 
-/** Hook that renders all preview thumbnails sequentially (one GL context at a time) */
-function useSeriesPreviews(paths: string[]): Map<string, string> {
+/**
+ * Lazy thumbnail render queue. Callers register interest in a path (typically
+ * when it scrolls into view via IntersectionObserver), and a single worker
+ * renders them one at a time so we never hold two WebGL contexts at once. Paths
+ * the user never scrolls past are never rendered — that's the whole point.
+ */
+function useLazySeriesPreviews(resetKey: string): {
+  images: Map<string, string>
+  requestPreview: (path: string) => void
+} {
   const [images, setImages] = useState<Map<string, string>>(new Map())
+  const queueRef = useRef<string[]>([])
+  // Tracks paths we've already rendered (or attempted to). Rendered paths
+  // appear in `images`; failed paths stay out of `images` but still go in
+  // here so we don't retry forever on a broken file.
+  const seenRef = useRef<Set<string>>(new Set())
+  const runningRef = useRef(false)
+  const cancelledRef = useRef(false)
+
+  const pump = useCallback((): void => {
+    if (runningRef.current) return
+    runningRef.current = true
+    void (async (): Promise<void> => {
+      while (queueRef.current.length > 0 && !cancelledRef.current) {
+        const path = queueRef.current.shift() as string
+        if (seenRef.current.has(path)) continue
+        seenRef.current.add(path)
+        const url = await renderPreviewImage(path)
+        if (cancelledRef.current) break
+        if (url) setImages((prev) => new Map(prev).set(path, url))
+      }
+      runningRef.current = false
+    })()
+  }, [])
+
+  const requestPreview = useCallback(
+    (path: string): void => {
+      if (seenRef.current.has(path)) return
+      if (queueRef.current.includes(path)) return
+      queueRef.current.push(path)
+      pump()
+    },
+    [pump]
+  )
+
+  // When the underlying mappings change (e.g. a different subject / different
+  // run of the wizard), throw away the cache so a stale thumbnail can't leak.
+  useEffect(() => {
+    cancelledRef.current = true
+    queueRef.current = []
+    seenRef.current = new Set()
+    setImages(new Map())
+    cancelledRef.current = false
+    return (): void => {
+      cancelledRef.current = true
+    }
+  }, [resetKey])
+
+  return { images, requestPreview }
+}
+
+/**
+ * Thumbnail slot that requests its preview the first time it scrolls into
+ * view, then renders the resulting image (or a spinner placeholder while
+ * the render is pending / hasn't been requested yet).
+ */
+interface LazyThumbnailProps {
+  path: string
+  imageUrl: string | undefined
+  requestPreview: (path: string) => void
+}
+
+function LazyThumbnail({ path, imageUrl, requestPreview }: LazyThumbnailProps): React.ReactElement {
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    let cancelled = false
-    void (async () => {
-      for (const path of paths) {
-        if (cancelled) break
-        const url = await renderPreviewImage(path)
-        if (cancelled) break
-        if (url) {
-          setImages((prev) => new Map(prev).set(path, url))
+    if (imageUrl) return
+    const el = containerRef.current
+    if (!el) return
+    // rootMargin pre-warms thumbnails slightly above/below the viewport so
+    // smooth scrolling never sees a row of blank squares.
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (entry.isIntersecting) {
+            requestPreview(path)
+            observer.disconnect()
+            break
+          }
         }
-      }
-    })()
-    return () => {
-      cancelled = true
-    }
-  }, [paths.join('\n')])
+      },
+      { rootMargin: '200px 0px' }
+    )
+    observer.observe(el)
+    return (): void => observer.disconnect()
+  }, [path, imageUrl, requestPreview])
 
-  return images
+  if (imageUrl) {
+    return <img src={imageUrl} width={60} height={60} className="rounded flex-shrink-0" />
+  }
+  return (
+    <div
+      ref={containerRef}
+      className="rounded bg-black flex-shrink-0 flex items-center justify-center"
+      style={{ width: 60, height: 60 }}
+    >
+      <Spinner size="sm" tone="neutral" />
+    </div>
+  )
 }
 
 export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): React.ReactElement {
@@ -145,20 +232,24 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
     return orig.replace(/\.nii(\.gz)?$/, '.brain.nii.gz')
   }
 
-  // Collect all unique NIfTI paths that need previews
-  const previewPaths = React.useMemo(() => {
+  // Reset key for the preview cache — changes whenever the set of included
+  // paths shifts (mappings reclassified, skull-strip toggled, etc.) so a stale
+  // thumbnail can't survive into a new run.
+  const previewResetKey = React.useMemo(() => {
     const paths: string[] = []
     for (const m of included) {
       paths.push(strippedPathFor(m))
       const orig = originalPaths[m.index]
       if (orig) paths.push(orig)
     }
-    return paths
+    return paths.join('\n')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [included, originalPaths])
 
-  // Render all thumbnails sequentially (one GL context at a time)
-  const previewImages = useSeriesPreviews(previewPaths)
+  // Render thumbnails on demand as rows scroll into view (one GL context at a
+  // time). Previously we'd render all N paths eagerly on mount — at ~0.6s per
+  // file that pegged a 50-series review at 30+s before the first scroll.
+  const { images: previewImages, requestPreview } = useLazySeriesPreviews(previewResetKey)
   const includedSubjects = subjects.filter((s) => !s.excluded)
   const tree = buildBidsTree(mappings, originalPaths)
 
@@ -292,21 +383,11 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                   key={`${m.index}-main`}
                   className="flex items-center gap-3 px-3 py-1.5 bg-[var(--gray-2)] rounded hover:bg-[var(--gray-3)]"
                 >
-                  {previewImages.has(mainPath) ? (
-                    <img
-                      src={previewImages.get(mainPath)}
-                      width={60}
-                      height={60}
-                      className="rounded flex-shrink-0"
-                    />
-                  ) : (
-                    <div
-                      className="rounded bg-black flex-shrink-0 flex items-center justify-center"
-                      style={{ width: 60, height: 60 }}
-                    >
-                      <Spinner size="sm" tone="neutral" />
-                    </div>
-                  )}
+                  <LazyThumbnail
+                    path={mainPath}
+                    imageUrl={previewImages.get(mainPath)}
+                    requestPreview={requestPreview}
+                  />
                   <div className="flex flex-col min-w-0 flex-1">
                     <Text size="2" className="truncate">
                       {bidsPath}
@@ -350,21 +431,11 @@ export function StepBidsPreview({ context, onLoadFile }: StepBidsPreviewProps): 
                     key={`${m.index}-original`}
                     className="flex items-center gap-3 px-3 py-1.5 bg-[var(--gray-2)] rounded hover:bg-[var(--gray-3)]"
                   >
-                    {previewImages.has(origPath) ? (
-                      <img
-                        src={previewImages.get(origPath)}
-                        width={60}
-                        height={60}
-                        className="rounded flex-shrink-0"
-                      />
-                    ) : (
-                      <div
-                        className="rounded bg-black flex-shrink-0 flex items-center justify-center"
-                        style={{ width: 60, height: 60 }}
-                      >
-                        <Spinner size="sm" tone="neutral" />
-                      </div>
-                    )}
+                    <LazyThumbnail
+                      path={origPath}
+                      imageUrl={previewImages.get(origPath)}
+                      requestPreview={requestPreview}
+                    />
                     <div className="flex flex-col min-w-0 flex-1">
                       <Text size="2" className="truncate">
                         {bidsPath}
