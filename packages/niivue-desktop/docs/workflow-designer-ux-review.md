@@ -276,16 +276,16 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 2. (P2) ~~`WorkflowTemplateGallery.tsx:137` competes with the parent header.~~ MOOT — gallery now renders as an inline workspace panel with its own header (`<Heading size="4">`); there is no parent header to compete with.
 3. (P1) `BlockPalette.tsx:177` uppercase-tracked category headings vs mixed-case headings elsewhere.
 4. (P2) Step-name `--code-font-family` at `size="1"` is visually subordinate to a label — but it's the authoritative identifier.
-5. (P1) Three header paddings for the same role: `py-2 px-4` vs `py-4 px-6`.
+5. (P1) ~~Three header paddings for the same role: `py-2 px-4` vs `py-4 px-6`.~~ DONE — `WorkflowDesignerDialog`, `WorkflowTemplateGallery`, `WizardHeader` and `HeuristicDesigner` headers all share `px-6 py-4 border-b border-neutral-5 shrink-0 bg-panel`.
 6. (P1) Magic numbers in `WorkflowDiagramView.tsx`: `8px 10px`, `4px 10px 6px`, `gap: 10`, etc.
 7. (P0 dirty) Hardcoded shadows (`WorkflowDiagramView.tsx:133,428,452,767`, `WorkflowTemplateGallery.tsx:163,228,243`).
 8. (P1) Mixed token namespaces: `border-neutral-5` vs `var(--gray-5)`.
-9. (P1) Header background mismatch — designer is transparent, others use `bg-panel`.
-10. (P2) `text-neutral-8` for body text in `WorkflowTemplateGallery.tsx:146`.
-11. (P2) Placeholder thumb `bg-neutral-12` (ink-black) — should be `bg-neutral-3`.
+9. (P1) ~~Header background mismatch — designer is transparent, others use `bg-panel`.~~ DONE — every workflow header uses `bg-panel`.
+10. (P2) ~~`text-neutral-8` for body text in `WorkflowTemplateGallery`.~~ DONE — body Text uses `text-neutral-9`; the deprecated `text-neutral-8` body class is gone.
+11. (P2) ~~Placeholder thumb `bg-neutral-12` (ink-black) — should be `bg-neutral-3`.~~ DONE — `CompletionScreen` uses `bg-neutral-3` for the preview thumb placeholder.
 12. (P1) Icon size drift across 12/14/15/20/32px.
-13. (P2) ASCII `×` and `⇢` next to Radix icons — inconsistent stroke.
-14. (P1) Two big-modal containment metaphors (`95vw × 90vh` vs full-viewport).
+13. (P2) ~~ASCII `×` and `⇢` next to Radix icons — inconsistent stroke.~~ DONE — no literal ASCII `×`/`⇢` in workflow JSX; close affordances use Radix `Cross1Icon` / `Cross2Icon` and edges use SVG strokes.
+14. (P1) ~~Two big-modal containment metaphors (`95vw × 90vh` vs full-viewport).~~ DONE — workflow shells (gallery, wizard, designer, heuristic designer) all render as full-viewport inline panels; only legacy non-workflow dialogs (Preferences, Label Manager, BIDS Filter, Add Model) retain the `95vw × 90vh` modal metaphor, which is appropriate for ad-hoc overlays.
 15. (P2) Cards use `hover:shadow-md` Tailwind black shadow.
 16. (P2) Palette dock `max-h-56` feels squeezed.
 17. (P1) Three different "selected/active" treatments.
@@ -308,12 +308,12 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 - **A11Y-6 (P1)** ~~Edge encoding is color-only for color-blind users.~~ DONE — incompatible edges now carry a warning glyph; legend gained matched/coerced/incompatible swatches.
 - **A11Y-7 (P1)** ~~`prefers-reduced-motion` ignored.~~ DONE — `WizardTransition` skips slide animation for users with the preference.
 - **A11Y-8 (P1)** ~~No focus trap in `WizardShell`.~~ DONE — `useFocusTrap` is wired in `WizardShell.tsx` and in `WorkflowTemplateGallery.tsx:51`.
-- **A11Y-9 (P2)** Native `confirm()` for destructive delete.
+- **A11Y-9 (P2)** ~~Native `confirm()` for destructive delete.~~ MOOT (workflow scope) — workflow gallery delete uses a themed Radix `AlertDialog`; step deletion is undoable so no confirm. The only remaining `window.confirm()` is in `menuHandlers.ts` for reset-preferences, which is out of audit scope.
 - **COPY-1 (P1)** Inconsistent save verbs ("Save" / "Run" / "Done").
 - **COPY-2 (P1)** ~~Save errors are unactionable.~~ DONE — toast carries step + field name and gets `role="alert"`; each row in the errors popover is a clickable button that jumps to the offending step and switches to the diagram view.
 - **COPY-3 (P1)** ~~Diagram empty-state lacks an action; palette is below the fold.~~ DONE — `WorkflowDiagramView` empty-state renders a RocketIcon hero, dashed drop zone with hover styling, ArrowDownIcon pointer to "Palette", and a "Browse templates" CTA.
 - **COPY-4 (P1)** ~~IPC failures silently swallowed.~~ DONE — designer's `list-tools` shows a red callout with retry; the auxiliary `list-runnable-tools` and `list-heuristics` failures now surface as an amber callout with retry instead of console-only. Wizard heuristic + update failures already wired (see Wizard #21).
 - **COPY-5 (P2)** ~~Config-only tooltip is a paragraph.~~ MOOT — all surfaces use a single short sentence: BlockPalette "No executor — adds a config-only step.", ContextSpineDesigner / WorkflowDiagramView "No executor — won't run without a custom backend.".
 - **COPY-6 (P2)** Mixed gerund + noun forms for loading messages.
-- **COPY-7 (P2)** `BidsSidecarFixAdapter` empty state exposes `bids_dir`.
+- **COPY-7 (P2)** ~~`BidsSidecarFixAdapter` empty state exposes `bids_dir`.~~ DONE — the empty-state Callout reads "This step needs a BIDS dataset to fix, but no earlier step has produced one yet. Ask whoever built this workflow to add a 'Write BIDS Dataset' step before this one." (no internal field names).
 - **COPY-8 (P2)** ~~Required-fields panel exposes internal names.~~ DONE — `WorkflowDialog` renders `m.description || humanizeFieldName(m.inputName)`; raw identifiers only appear in the React `key` prop, not in the visible label.
