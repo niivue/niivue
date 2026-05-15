@@ -313,7 +313,7 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 - **COPY-2 (P1)** ~~Save errors are unactionable.~~ DONE — toast carries step + field name and gets `role="alert"`; each row in the errors popover is a clickable button that jumps to the offending step and switches to the diagram view.
 - **COPY-3 (P1)** ~~Diagram empty-state lacks an action; palette is below the fold.~~ DONE — `WorkflowDiagramView` empty-state renders a RocketIcon hero, dashed drop zone with hover styling, ArrowDownIcon pointer to "Palette", and a "Browse templates" CTA.
 - **COPY-4 (P1)** ~~IPC failures silently swallowed.~~ DONE — designer's `list-tools` shows a red callout with retry; the auxiliary `list-runnable-tools` and `list-heuristics` failures now surface as an amber callout with retry instead of console-only. Wizard heuristic + update failures already wired (see Wizard #21).
-- **COPY-5 (P2)** Config-only tooltip is a paragraph.
+- **COPY-5 (P2)** ~~Config-only tooltip is a paragraph.~~ MOOT — all surfaces use a single short sentence: BlockPalette "No executor — adds a config-only step.", ContextSpineDesigner / WorkflowDiagramView "No executor — won't run without a custom backend.".
 - **COPY-6 (P2)** Mixed gerund + noun forms for loading messages.
 - **COPY-7 (P2)** `BidsSidecarFixAdapter` empty state exposes `bids_dir`.
-- **COPY-8 (P2)** Required-fields panel exposes internal names (`stepName / inputName / type`).
+- **COPY-8 (P2)** ~~Required-fields panel exposes internal names.~~ DONE — `WorkflowDialog` renders `m.description || humanizeFieldName(m.inputName)`; raw identifiers only appear in the React `key` prop, not in the visible label.
