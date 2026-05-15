@@ -224,9 +224,9 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 
 ### Designer IA & interaction
 
-1. (P1) "Advanced Editor" card is a lie — `WorkflowTemplateGallery.tsx:241-256` advertises features the designer doesn't have. `MainApp.tsx:1713-1715` routes both `blank` and `advanced` to the same dialog with `initialDefinition=null`.
+1. (P1) ~~"Advanced Editor" card is a lie.~~ MOOT — gallery now offers a single "Start from Scratch" card; `TemplateChoice` has only `blank | run-workflow | customize | use-as-template | edit-user` (no `advanced`).
 2. (P1) ~~Blank-start has no in-designer empty state outside the diagram.~~ DONE — `ContextSpineDesigner` has its own RocketIcon hero + "Build your first pipeline" + ArrowDown to palette + "Browse templates" CTA.
-3. (P2) No way back to the gallery from the designer (`WorkflowDesignerDialog.tsx:390-404`).
+3. (P2) ~~No way back to the gallery from the designer.~~ DONE — when the designer is entered from the gallery, `MainApp.openDesignerMode` preserves the gallery as the workspace-mode parent; the header back button now reads "Back to templates" and `closeDesignerMode` pops back to the gallery.
 4. (P1) Layout shifts between List and Diagram views — palette in different locations and orientations.
 5. (P0) ~~No properties panel in diagram mode.~~ DONE — `WorkflowDiagramView` renders a right-side inspector `<aside>` when a step is selected, with field annotations and an "Edit details" jump-to-list affordance.
 6. (P1) ~~No drag from palette to canvas.~~ DONE — `BLOCK_DRAG_MIME` set on palette `draggable` items; diagram's ReactFlow wrapper has `onDragOver` / `onDrop` that route through `onAddBlockById`.
@@ -235,10 +235,10 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 9. (P0) ~~No dirty-state tracking.~~ DONE — `baselineDraftRef` + a Radix AlertDialog gate every close path on a dirty draft.
 10. (P0) ~~No undo / redo.~~ DONE — undo/redo stacks + ResetIcon/ReloadIcon header buttons + ⌘Z / ⌘⇧Z keybindings.
 11. (P2) ~~Save success has no visible feedback.~~ DONE — green "Saved." toast next to the save button (`role="status" aria-live="polite"`).
-12. (P0) Validation match by `String.includes(step.name)` mis-fires on overlapping names.
+12. (P0) ~~Validation match by `String.includes(step.name)` mis-fires on overlapping names.~~ DONE — issues now carry an explicit `stepName` field and `WorkflowDesignerDialog` matches with `s.name === e.stepName` (exact, not substring).
 13. (P1) ~~Errors siloed in header popover only.~~ DONE (this session) — each row in the popover is now a button that jumps to the offending step and switches to the diagram view; selected step shows the inline error badge.
 14. (P2) No right-click menus, no keyboard shortcuts.
-15. (P2) `config-only` badge shown in palette but not on placed nodes.
+15. (P2) ~~`config-only` badge shown in palette but not on placed nodes.~~ DONE — `StepNode` reads `configOnly` from `data` and `WorkflowDiagramView` populates it from `isToolRunnable(tool, runnableTools)`; `ContextSpineDesigner` shows the same badge in list view.
 
 ### Wizard runtime UX
 

@@ -123,17 +123,19 @@ function MainApp(): JSX.Element {
       setWorkspaceMode({ kind: 'wizard', workflowName, inputs }),
     []
   )
-  // Most opens (menu, gallery handoff) drop the previous mode — closing the
-  // designer returns to the viewer. `fromWizard: true` is the "Edit Workflow"
-  // button mid-wizard, which stacks the designer on top so closing returns
-  // to the wizard the author was running.
+  // `fromWizard: true` stacks the designer over the wizard the author is
+  // running so closing returns to it. Otherwise, if entered from the
+  // template gallery we keep that as the parent so the back button drops
+  // the author back at template selection rather than the viewer. Direct
+  // entry from menus falls through to viewer.
   const openDesignerMode = useCallback(
     (initialDefinition: Record<string, unknown> | null, options?: { fromWizard?: boolean }) =>
-      setWorkspaceMode((prev) => ({
-        kind: 'designer',
-        initialDefinition,
-        parent: options?.fromWizard && prev.kind === 'wizard' ? prev : { kind: 'viewer' as const }
-      })),
+      setWorkspaceMode((prev) => {
+        let parent: WorkspaceMode = { kind: 'viewer' }
+        if (options?.fromWizard && prev.kind === 'wizard') parent = prev
+        else if (prev.kind === 'gallery') parent = prev
+        return { kind: 'designer', initialDefinition, parent }
+      }),
     []
   )
   const closeWorkspaceMode = useCallback(() => setWorkspaceMode({ kind: 'viewer' }), [])
@@ -156,6 +158,8 @@ function MainApp(): JSX.Element {
   const wizardActive = !!wizardParams
   const designerOverWizard =
     workspaceMode.kind === 'designer' && workspaceMode.parent.kind === 'wizard'
+  const designerOverGallery =
+    workspaceMode.kind === 'designer' && workspaceMode.parent.kind === 'gallery'
   const workflowShellActive = galleryOpen || wizardActive || designerActive
 
   // Heuristic designer state
@@ -1703,7 +1707,9 @@ function MainApp(): JSX.Element {
                     })
                 }}
                 initialDefinition={designerInitialDefinition}
-                backTarget={designerOverWizard ? 'wizard' : 'viewer'}
+                backTarget={
+                  designerOverWizard ? 'wizard' : designerOverGallery ? 'templates' : 'viewer'
+                }
                 onOpenGallery={openGalleryMode}
               />
             </div>
