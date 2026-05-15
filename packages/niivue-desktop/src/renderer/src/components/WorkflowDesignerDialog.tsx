@@ -14,6 +14,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   AlertDialog,
   Button,
+  Callout,
   Text,
   Flex,
   Heading,
@@ -266,6 +267,13 @@ export function WorkflowDesignerDialog({
   const [heuristicNames, setHeuristicNames] = useState<string[]>([])
   const [validation, setValidation] = useState<ValidationResult>({ errors: [], warnings: [] })
   const [saveError, setSaveError] = useState<string | null>(null)
+  // Error surfaced when the initial tool-catalog load fails. Without this the
+  // designer would render with an empty palette and the user wouldn't know
+  // whether the workflow has no tools or the IPC call silently failed.
+  const [toolsLoadError, setToolsLoadError] = useState<string | null>(null)
+  // Bumped to retry the tool/heuristic loads on Retry click without remounting
+  // the whole dialog.
+  const [reloadKey, setReloadKey] = useState(0)
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [view, setView] = useState<'list' | 'diagram'>('list')
   const [selectedStep, setSelectedStep] = useState<number | null>(null)
@@ -414,6 +422,7 @@ export function WorkflowDesignerDialog({
     if (!open) {
       setDraft({ ...DEFAULT_DRAFT })
       setSaveError(null)
+      setToolsLoadError(null)
       setSavedAt(null)
       baselineDraftRef.current = JSON.stringify(DEFAULT_DRAFT)
       undoStackRef.current = []
@@ -423,10 +432,14 @@ export function WorkflowDesignerDialog({
       return
     }
 
+    setToolsLoadError(null)
     electron.ipcRenderer
       .invoke('workflow:list-tools')
       .then((t: ToolDefinition[]) => setTools(t))
-      .catch((err) => console.error('[WorkflowDesigner] workflow:list-tools failed:', err))
+      .catch((err) => {
+        console.error('[WorkflowDesigner] workflow:list-tools failed:', err)
+        setToolsLoadError(err instanceof Error ? err.message : String(err))
+      })
     electron.ipcRenderer
       .invoke('workflow:list-runnable-tools')
       .then((names: string[]) => setRunnableTools(new Set(names)))
@@ -451,7 +464,7 @@ export function WorkflowDesignerDialog({
     redoStackRef.current = []
     lastPushAtRef.current = 0
     setHistoryTick((t) => t + 1)
-  }, [open, initialDefinition])
+  }, [open, initialDefinition, reloadKey])
 
   // Once tools are loaded, repair any missing block-default bindings on the
   // current draft (e.g. a hidden `config: { ref: "context" }` that was added
@@ -839,6 +852,27 @@ export function WorkflowDesignerDialog({
           here (not by either child) so its position and height stay constant
           across the view switch. */}
       <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        {toolsLoadError && (
+          <div className="px-4 pt-3 shrink-0">
+            <Callout.Root color="red" size="2">
+              <Callout.Icon>
+                <ExclamationTriangleIcon />
+              </Callout.Icon>
+              <Callout.Text className="flex-1">
+                Couldn&rsquo;t load the tool catalog: {toolsLoadError}. The palette will be empty
+                until this succeeds.
+              </Callout.Text>
+              <Button
+                size="1"
+                variant="soft"
+                color="red"
+                onClick={(): void => setReloadKey((k) => k + 1)}
+              >
+                Retry
+              </Button>
+            </Callout.Root>
+          </div>
+        )}
         <div className="flex-1 min-h-0 flex">
           {view === 'list' ? (
             <ContextSpineDesigner
