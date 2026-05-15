@@ -219,7 +219,7 @@ export function DicomImportDialog({ onLoadVolume }: DicomImportDialogProps): JSX
                 Cancel
               </button>
               <button onClick={startConvert} disabled={busy || selected.size === 0}>
-                {busy ? 'Converting…' : 'Import Selected'}
+                {busy ? 'Converting series…' : 'Import Selected'}
               </button>
             </>
           )}

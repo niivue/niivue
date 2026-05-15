@@ -93,7 +93,7 @@ export function BidsFilterDialog(): JSX.Element {
             disabled={busy || checked.size === 0}
             data-testid="convert-selected"
           >
-            {busy ? 'Converting…' : `Convert ${checked.size} Selected`}
+            {busy ? 'Converting series…' : `Convert ${checked.size} Selected`}
           </button>
         </div>
       </div>

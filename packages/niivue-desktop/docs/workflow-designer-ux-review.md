@@ -277,21 +277,21 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 3. (P1) ~~`BlockPalette.tsx` uppercase-tracked category headings vs mixed-case headings elsewhere.~~ DONE — category headers now use `<Text size="2" weight="medium">` (mixed-case) matching the rest of the workflow surfaces.
 4. (P2) ~~Step-name `--code-font-family` at `size="1"` is visually subordinate to a label.~~ DONE — the diagram's step-name footer now renders at `size="2" weight="medium"`, peer to the block label rather than a subscript.
 5. (P1) ~~Three header paddings for the same role: `py-2 px-4` vs `py-4 px-6`.~~ DONE — `WorkflowDesignerDialog`, `WorkflowTemplateGallery`, `WizardHeader` and `HeuristicDesigner` headers all share `px-6 py-4 border-b border-neutral-5 shrink-0 bg-panel`.
-6. (P1) Magic numbers in `WorkflowDiagramView.tsx`: `8px 10px`, `4px 10px 6px`, `gap: 10`, etc.
-7. (P0 dirty) Hardcoded shadows (`WorkflowDiagramView.tsx:133,428,452,767`, `WorkflowTemplateGallery.tsx:163,228,243`).
-8. (P1) Mixed token namespaces: `border-neutral-5` vs `var(--gray-5)`.
+6. (P1) ~~Magic numbers in `WorkflowDiagramView.tsx`.~~ DONE — node geometry now extracted to `NODE_WIDTH`, `NODE_RADIUS`, `NODE_HEADER_PADDING`, `NODE_HEADER_GAP` constants and reused across step + reference-source nodes.
+7. (P0 dirty) ~~Hardcoded shadows.~~ DONE — every workflow shadow now uses `var(--shadow-2)` or `var(--shadow-3)` design tokens; no rgba/hex shadows remain in the workflow surfaces.
+8. (P1) ~~Mixed token namespaces: `border-neutral-5` vs `var(--gray-5)`.~~ INTENTIONAL — both spell the same Radix gray scale value; Tailwind classes are used in `className` props and CSS variables in inline `style` (required for React Flow node attributes that can't accept Tailwind classes). The naming difference is cosmetic, not visual.
 9. (P1) ~~Header background mismatch — designer is transparent, others use `bg-panel`.~~ DONE — every workflow header uses `bg-panel`.
 10. (P2) ~~`text-neutral-8` for body text in `WorkflowTemplateGallery`.~~ DONE — body Text uses `text-neutral-9`; the deprecated `text-neutral-8` body class is gone.
 11. (P2) ~~Placeholder thumb `bg-neutral-12` (ink-black) — should be `bg-neutral-3`.~~ DONE — `CompletionScreen` uses `bg-neutral-3` for the preview thumb placeholder.
 12. (P1) Icon size drift across 12/14/15/20/32px.
 13. (P2) ~~ASCII `×` and `⇢` next to Radix icons — inconsistent stroke.~~ DONE — no literal ASCII `×`/`⇢` in workflow JSX; close affordances use Radix `Cross1Icon` / `Cross2Icon` and edges use SVG strokes.
 14. (P1) ~~Two big-modal containment metaphors (`95vw × 90vh` vs full-viewport).~~ DONE — workflow shells (gallery, wizard, designer, heuristic designer) all render as full-viewport inline panels; only legacy non-workflow dialogs (Preferences, Label Manager, BIDS Filter, Add Model) retain the `95vw × 90vh` modal metaphor, which is appropriate for ad-hoc overlays.
-15. (P2) Cards use `hover:shadow-md` Tailwind black shadow.
-16. (P2) Palette dock `max-h-56` feels squeezed.
-17. (P1) Three different "selected/active" treatments.
+15. (P2) ~~Cards use `hover:shadow-md` Tailwind black shadow.~~ DONE — `WorkflowTemplateGallery` cards use `hover:[box-shadow:var(--shadow-3)]` (Radix design token); no `shadow-md`/`shadow-lg` remain in workflow surfaces.
+16. (P2) ~~Palette dock `max-h-56` feels squeezed.~~ DONE — `WorkflowDesignerDialog` palette dock now sizes responsively (`h-[40vh] max-h-[480px] min-h-[200px]`).
+17. (P1) ~~Three different "selected/active" treatments.~~ WONTFIX — three surfaces have intentionally distinct selection metaphors (vertical step rail uses `bg-accent-3`, free-flow diagram nodes use border + accent-3 header, list view uses `ring-2 ring-[var(--accent-7)]`). Unifying would force one metaphor onto contexts it doesn't fit.
 18. (P1) ~~Focus rings absent on custom buttons in `WorkflowDiagramView`.~~ DONE — `StepNode` root carries `focus-visible:outline-2 focus-visible:outline-[var(--accent-9)]`; the edge-delete button uses the `workflow-edge-delete` class which has the same focus ring (see `main.css`); chevron / inspector affordances use Radix `IconButton` / `Button` which carry the framework default ring.
 19. (P2) ~~Disabled state doesn't change opacity — looks identical to enabled.~~ DONE — bare `<button>[disabled]` and `[aria-disabled="true"]` pick up `opacity: 0.55; cursor: not-allowed` from a low-specificity `:where()` rule in `main.css` (Radix Themes buttons retain their own disabled style).
-20. (P1) Three spinner colors across `WizardFooter.tsx`, `FormSection.tsx`, `CompletionScreen.tsx`.
+20. (P1) ~~Three spinner colors across `WizardFooter.tsx`, `FormSection.tsx`, `CompletionScreen.tsx`.~~ DONE — extracted to a shared `Spinner` component with three intentional `tone`s: `contrast` (on solid accent buttons), `accent` (default neutral background), `neutral` (on neutral-3 placeholder thumbs).
 21. (P1) ~~Diagram empty canvas was the worst first-impression.~~ DONE — empty-state hero with rocket icon, dashed drop zone, palette arrow, and "Browse templates" CTA.
 22. (P1) ~~Legend Panel: 11px text, hardcoded shadow.~~ DONE — uses Radix `<Text size="1">`, `var(--shadow-2)`, and gained matched/coerced/incompatible swatches.
 23. (P2) ~~Edge stroke uses `--*-9`.~~ DONE — `typeEdgeColorVar` returns `--*-8`; `typeColorVar` (handles/badges) stays at `--*-9`.
@@ -309,11 +309,11 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 - **A11Y-7 (P1)** ~~`prefers-reduced-motion` ignored.~~ DONE — `WizardTransition` skips slide animation for users with the preference.
 - **A11Y-8 (P1)** ~~No focus trap in `WizardShell`.~~ DONE — `useFocusTrap` is wired in `WizardShell.tsx` and in `WorkflowTemplateGallery.tsx:51`.
 - **A11Y-9 (P2)** ~~Native `confirm()` for destructive delete.~~ MOOT (workflow scope) — workflow gallery delete uses a themed Radix `AlertDialog`; step deletion is undoable so no confirm. The only remaining `window.confirm()` is in `menuHandlers.ts` for reset-preferences, which is out of audit scope.
-- **COPY-1 (P1)** Inconsistent save verbs ("Save" / "Run" / "Done").
+- **COPY-1 (P1)** ~~Inconsistent save verbs ("Save" / "Run" / "Done").~~ MOOT — the three verbs name three distinct actions: "Save workflow" / "Save heuristic" persist to disk; "Run workflow" (or the per-section `buttonText`) executes; "Done" closes a completed wizard. No single action is labeled inconsistently.
 - **COPY-2 (P1)** ~~Save errors are unactionable.~~ DONE — toast carries step + field name and gets `role="alert"`; each row in the errors popover is a clickable button that jumps to the offending step and switches to the diagram view.
 - **COPY-3 (P1)** ~~Diagram empty-state lacks an action; palette is below the fold.~~ DONE — `WorkflowDiagramView` empty-state renders a RocketIcon hero, dashed drop zone with hover styling, ArrowDownIcon pointer to "Palette", and a "Browse templates" CTA.
 - **COPY-4 (P1)** ~~IPC failures silently swallowed.~~ DONE — designer's `list-tools` shows a red callout with retry; the auxiliary `list-runnable-tools` and `list-heuristics` failures now surface as an amber callout with retry instead of console-only. Wizard heuristic + update failures already wired (see Wizard #21).
 - **COPY-5 (P2)** ~~Config-only tooltip is a paragraph.~~ MOOT — all surfaces use a single short sentence: BlockPalette "No executor — adds a config-only step.", ContextSpineDesigner / WorkflowDiagramView "No executor — won't run without a custom backend.".
-- **COPY-6 (P2)** Mixed gerund + noun forms for loading messages.
+- **COPY-6 (P2)** ~~Mixed gerund + noun forms for loading messages.~~ DONE — bare gerunds promoted to verb+noun: `NiimathToolbar` "Running niimath…", `StepSkullStrip` "Running skull strip…", `BidsFilterDialog` / `DicomImportDialog` "Converting series…". `HeuristicDesigner` already used "Saving heuristic…" and the wizard footer surfaces `runningLabel` per step.
 - **COPY-7 (P2)** ~~`BidsSidecarFixAdapter` empty state exposes `bids_dir`.~~ DONE — the empty-state Callout reads "This step needs a BIDS dataset to fix, but no earlier step has produced one yet. Ask whoever built this workflow to add a 'Write BIDS Dataset' step before this one." (no internal field names).
 - **COPY-8 (P2)** ~~Required-fields panel exposes internal names.~~ DONE — `WorkflowDialog` renders `m.description || humanizeFieldName(m.inputName)`; raw identifiers only appear in the React `key` prop, not in the visible label.

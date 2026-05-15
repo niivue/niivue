@@ -624,7 +624,7 @@ export function StepSkullStrip({
               onClick={() => void handleRun()}
               disabled={running || selectedIndices.size === 0 || (engine === 'brainchop' && !nv)}
             >
-              {running ? 'Running…' : `Run Skull Strip (${selectedIndices.size} series)`}
+              {running ? 'Running skull strip…' : `Run Skull Strip (${selectedIndices.size} series)`}
             </Button>
             <label className="flex items-center gap-1.5 text-xs text-[var(--gray-10)] cursor-pointer">
               <input

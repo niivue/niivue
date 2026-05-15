@@ -138,7 +138,7 @@ export function NiimathToolbar({ modeMap, indexMap }: NiimathToolbarProps): JSX.
               disabled={busy || operations.length === 0 || !currentVolume}
               onClick={handleApply}
             >
-              {busy ? 'Running…' : 'Run'}
+              {busy ? 'Running niimath…' : 'Run'}
             </Button>
 
             {error && (
