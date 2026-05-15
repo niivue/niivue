@@ -1141,8 +1141,8 @@ export function BidsViewEditor({ context }: AdapterProps): React.ReactElement {
           <InfoCircledIcon />
         </Callout.Icon>
         <Callout.Text>
-          No BIDS directory in context yet — the Write BIDS step may have failed or been skipped. Go
-          back to the previous section and run it.
+          This step needs a BIDS dataset to edit, but no earlier step has produced one yet. Go back
+          and run the Write BIDS step first.
         </Callout.Text>
       </Callout.Root>
     )
