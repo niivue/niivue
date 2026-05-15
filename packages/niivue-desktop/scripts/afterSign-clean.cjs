@@ -19,7 +19,7 @@ module.exports = async function (context) {
     console.log('skip afterSign-clean (not mac):', process.platform)
     return
   }
-  
+
   const appPath = context.appOutDir
   const appBundle = path.join(appPath, 'niivue-desktop.app')
 
@@ -27,7 +27,7 @@ module.exports = async function (context) {
     'niivue-desktop Helper (GPU).app',
     'niivue-desktop Helper (Plugin).app',
     'niivue-desktop Helper (Renderer).app',
-    'niivue-desktop Helper.app',
+    'niivue-desktop Helper.app'
   ]
 
   for (const helper of helpers) {

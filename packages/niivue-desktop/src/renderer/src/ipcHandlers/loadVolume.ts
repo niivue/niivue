@@ -25,7 +25,13 @@ export const registerLoadVolumeHandler = ({ getTarget }: HandlerProps): void => 
     console.log('[Renderer] loadVolume received for path:', path)
 
     // Pick or create an appropriate document
-    const { nvRef, setVolumes } = await getTarget()
+    let target
+    try {
+      target = await getTarget()
+    } catch {
+      return // user cancelled
+    }
+    const { nvRef, setVolumes } = target
     const nv = nvRef.current!
 
     // Load file data
@@ -34,7 +40,9 @@ export const registerLoadVolumeHandler = ({ getTarget }: HandlerProps): void => 
 
     // Prevent loading meshes as volumes
     if (MESH_EXTENSIONS.some((ext) => pathLower.endsWith(ext.toLowerCase()))) {
-      alert(`File is not a volume that Niivue can parse: ${path}`)
+      alert(
+        `Can't open as a volume — '${path}' looks like a mesh file. Drag it into the Meshes panel instead.`
+      )
       throw new Error('File is not a volume')
     }
 

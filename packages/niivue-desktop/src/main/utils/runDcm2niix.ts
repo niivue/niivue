@@ -1,9 +1,10 @@
 import path from 'path'
 import { app } from 'electron'
-import { spawn } from 'node:child_process'
 import fs from 'node:fs'
 import os from 'node:os'
 import type { DicomSeries, ConvertSeriesOptions } from '../../common/dcm2niixTypes.js'
+import { spawnBinary } from './spawnBinary.js'
+import { DRY_RUN_FORMAT, parseDicomSeriesOutput } from './dcm2niixParser.js'
 
 const isDev = !app.isPackaged
 
@@ -26,106 +27,17 @@ export function getDcm2niixPath(): string {
 export function spawnDcm2niix(
   args: string[]
 ): Promise<{ stdout: string; stderr: string; code: number }> {
-  return new Promise((resolve, reject) => {
-    const bin = getDcm2niixPath()
-    if (!fs.existsSync(bin)) {
-      return reject(
-        new Error(`dcm2niix not found at ${bin}. Did you run "npm run ensure-dcm2niix"?`)
-      )
-    }
-    const child = spawn(bin, args, { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] })
-    let out = ''
-    let err = ''
-    child.stdout.on('data', (d) => {
-      out += String(d)
-    })
-    child.stderr.on('data', (d) => {
-      err += String(d)
-    })
-    child.on('error', reject)
-    child.on('close', (code) => resolve({ stdout: out, stderr: err, code: code ?? -1 }))
-  })
+  const bin = getDcm2niixPath()
+  return spawnBinary(bin, args)
 }
 
 export async function listDicomSeries(dicomDir: string): Promise<DicomSeries[]> {
-  const { stdout, stderr, code } = await spawnDcm2niix(['-n', '-1', '-f', '%f_%p_%t_%s', dicomDir])
+  const { stdout, stderr, code } = await spawnDcm2niix(['-n', '-1', '-f', DRY_RUN_FORMAT, dicomDir])
   const text = [stdout, stderr].filter(Boolean).join('\n')
   if (code !== 0 && !text) throw new Error(`dcm2niix exited with code ${code}`)
 
-  // keep only lines that start with a digit (CRC prefix)
-  const lines = text
-    .split(/\r?\n/)
-    .map((l) => l.trim())
-    .filter(Boolean)
-    .filter((l) => /^\d/.test(l))
-
-  // group by CRC number; dcm2niix's -n flag expects the CRC, not the DICOM series number
-  type Group = { baseLabel: string; images?: number; count: number; crc: number; sn?: number }
-  const groups = new Map<string, Group>()
-
-  for (const line of lines) {
-    // "CRC  rest-of-label"
-    const m = /^(\d+)\s+(.+)$/.exec(line)
-    if (!m) continue
-    const crc = Number(m[1])
-    const raw = m[2]
-
-    // strip any directory pieces (usually not present, but safe)
-    const labelFull = raw.replace(/^.*[\\/]/, '')
-
-    // %s may come out like "15", or "15a"/"15b" when disambiguating.
-    // capture digits + optional single trailing letter
-    const snm = /_(\d+)([a-z])?$/i.exec(labelFull)
-    const displaySeriesNumber = snm ? Number(snm[1]) : undefined
-
-    // display label WITHOUT the trailing letter so we show one row per series
-    const baseLabel = snm ? labelFull.replace(/_(\d+)[a-z]?$/i, '_$1') : labelFull
-
-    // optionally parse image count from the line if present
-    const imgMatch = /Images:\s*(\d+)/i.exec(line)
-    const images = imgMatch ? Number(imgMatch[1]) : undefined
-
-    // grouping key: CRC number
-    const key = String(crc)
-    const g = groups.get(key)
-
-    if (!g) {
-      groups.set(key, {
-        baseLabel,
-        images,
-        count: 1,
-        crc,
-        sn: displaySeriesNumber
-      })
-    } else {
-      // track max image count across variants
-      if (typeof images === 'number') {
-        const prev = g.images ?? 0
-        if (images > prev) g.images = images
-      }
-      g.count++
-    }
-  }
-
-  // build final list; seriesNumber is the CRC (used by -n flag for conversion)
-  const series: DicomSeries[] = Array.from(groups.values()).map((g) => {
-    const text = g.count > 1 ? `${g.baseLabel} ×${g.count}` : g.baseLabel
-    return {
-      text, // shown to the user
-      seriesNumber: g.crc, // CRC number used by dcm2niix -n flag
-      seriesDescription: g.baseLabel,
-      images: g.images
-    }
-  })
-
-  // sort by numeric series number (unknowns at end)
-  series.sort((a, b) => {
-    const an = a.seriesNumber ?? Number.MAX_SAFE_INTEGER
-    const bn = b.seriesNumber ?? Number.MAX_SAFE_INTEGER
-    return an - bn
-  })
-
-  return series
+  const folderName = path.basename(dicomDir)
+  return parseDicomSeriesOutput(text, folderName)
 }
 
 export async function convertSeriesByNumber(

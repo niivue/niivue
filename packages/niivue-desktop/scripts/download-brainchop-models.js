@@ -14,7 +14,13 @@ const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/niivue/brainchop-mode
 
 // Every file to download per model
 const MODEL_FILES = {
-  'brain-extract-full': ['model.json', 'group1-shard1of1.bin', 'labels.json', 'preview.png', 'settings.json'],
+  'brain-extract-full': [
+    'model.json',
+    'group1-shard1of1.bin',
+    'labels.json',
+    'preview.png',
+    'settings.json'
+  ],
   'brain-extract-light': [
     'model.json',
     'group1-shard1of1.bin',
@@ -31,8 +37,22 @@ const MODEL_FILES = {
     'settings.json',
     'colormap.json'
   ],
-  'parcellation-50': ['model.json', 'model.bin', 'labels.json', 'preview.png', 'settings.json', 'colormap.json'],
-  'tissue-seg-full': ['model.json', 'model.bin', 'labels.json', 'preview.png', 'settings.json', 'colormap.json'],
+  'parcellation-50': [
+    'model.json',
+    'model.bin',
+    'labels.json',
+    'preview.png',
+    'settings.json',
+    'colormap.json'
+  ],
+  'tissue-seg-full': [
+    'model.json',
+    'model.bin',
+    'labels.json',
+    'preview.png',
+    'settings.json',
+    'colormap.json'
+  ],
   'tissue-seg-light': [
     'model.json',
     'group1-shard1of1.bin',

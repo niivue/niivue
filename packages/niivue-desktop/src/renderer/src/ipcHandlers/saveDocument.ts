@@ -34,7 +34,9 @@ export function registerSaveCompressedDocumentHandler(
       }
     } catch (e) {
       console.error('Failed to compress and save:', e)
-      alert('Could not save compressed document.')
+      alert(
+        "Couldn't save the compressed document. Check the destination folder is writable and try again."
+      )
     }
   })
 }

@@ -7,12 +7,19 @@ import {
   decompressGzipBase64ToJson,
   isProbablyGzip
 } from '@renderer/utils/base64ToJSON.js'
+import type { BidsWizardState } from '../../../common/bidsTypes.js'
+import { deserializeBidsState } from '../../../common/bidsState.js'
 
 const electron = window.electron
 
 export interface HandlerProps {
-  /** returns the proper Niivue instance or creates a new doc if it’s non-empty */
-  getTarget: () => Promise<{
+  /**
+   * Returns the proper Niivue instance or creates a new doc if it's non-empty.
+   * `destructive` indicates the upcoming load will replace the target's
+   * contents (e.g. nv.loadDocument), letting the caller prompt to save dirty
+   * work before clobbering it.
+   */
+  getTarget: (opts?: { destructive?: boolean }) => Promise<{
     nvRef: React.RefObject<Niivue>
     setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>>
     setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>>
@@ -20,25 +27,35 @@ export interface HandlerProps {
   }>
   /** Called when an .nvd document is successfully loaded */
   onDocumentLoaded?: (title: string, targetId: string) => void
+  onBidsStateRestored?: (state: BidsWizardState) => void
 }
 
 console.log('[Renderer] registering loadRecentFile handler')
 
 export const registerLoadRecentFileHandler = ({
   getTarget,
-  onDocumentLoaded
+  onDocumentLoaded,
+  onBidsStateRestored
 }: HandlerProps): void => {
   electron.ipcRenderer.removeAllListeners('loadRecentFile')
   electron.ipcRenderer.on('loadRecentFile', async (_, filePath: string) => {
     console.log('[Renderer] loadRecentFile received for path:', filePath)
 
+    const pathLower = filePath.toLowerCase()
+    const isDestructive = pathLower.endsWith('.nvd')
+
     // Determine the target Niivue instance (create new doc if needed)
-    const { nvRef, setVolumes, setMeshes, id } = await getTarget()
+    let target
+    try {
+      target = await getTarget({ destructive: isDestructive })
+    } catch {
+      return // user cancelled
+    }
+    const { nvRef, setVolumes, setMeshes, id } = target
     const nv = nvRef.current!
 
     // Load file data
     const base64 = await electron.ipcRenderer.invoke('loadFromFile', filePath)
-    const pathLower = filePath.toLowerCase()
 
     if (pathLower.endsWith('.nvd')) {
       // Document case
@@ -57,6 +74,14 @@ export const registerLoadRecentFileHandler = ({
         const fileName = filePath.split('/').pop()!
         const friendly = fileName.replace(/\.nvd(\.gz)?$/i, '')
         onDocumentLoaded(friendly, id)
+      }
+
+      // Restore BIDS state from customData if present
+      if (onBidsStateRestored && nv.document.customData) {
+        const bidsState = deserializeBidsState(nv.document.customData)
+        if (bidsState) {
+          onBidsStateRestored(bidsState)
+        }
       }
     } else if (MESH_EXTENSIONS.some((ext) => pathLower.endsWith(ext.toLowerCase()))) {
       // Mesh case

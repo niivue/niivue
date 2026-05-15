@@ -26,7 +26,16 @@ const panels = [
     id: 'layers',
     title: 'Layers',
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <polygon points="12 2 2 7 12 12 22 7 12 2" />
         <polyline points="2 17 12 22 22 17" />
         <polyline points="2 12 12 17 22 12" />
@@ -37,7 +46,16 @@ const panels = [
     id: 'models',
     title: 'Models',
     icon: (
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      >
         <rect x="4" y="4" width="16" height="16" rx="2" ry="2" />
         <rect x="9" y="9" width="6" height="6" />
         <line x1="9" y1="1" x2="9" y2="4" />
@@ -111,7 +129,11 @@ export function Sidebar({
   return (
     <div data-testid="sidebar" className="flex h-full">
       {/* Activity Bar */}
-      <div data-testid="activity-bar" className="flex flex-col items-center w-12 bg-gray-800 py-2 gap-1 flex-shrink-0">
+      <div
+        data-testid="activity-bar"
+        className="flex flex-col items-center w-12 bg-[var(--gray-12)] py-2 gap-1 flex-shrink-0"
+      >
+
         {panels.map((panel) => (
           <Tooltip key={panel.id} content={panel.title} side="right">
             <button
@@ -119,8 +141,8 @@ export function Sidebar({
               className={
                 'p-2 rounded transition-colors ' +
                 (activePanel === panel.id
-                  ? 'bg-gray-600 text-white'
-                  : 'text-gray-400 hover:text-white hover:bg-gray-700')
+                  ? 'bg-[var(--gray-10)] text-white'
+                  : 'text-[var(--gray-8)] hover:text-white hover:bg-[var(--gray-11)]')
               }
             >
               {panel.icon}
@@ -131,7 +153,7 @@ export function Sidebar({
 
       {/* Panel area */}
       {isExpanded && (
-        <aside className="flex flex-col bg-gray-100 px-2 h-full w-80 min-w-[300px] transition-all duration-200">
+        <aside className="flex flex-col bg-[var(--gray-3)] px-2 h-full w-80 min-w-[300px] transition-all duration-200">
           {activePanel === 'layers' && instance && (
             <DragDropContext onDragEnd={handleDragEnd}>
               <ScrollArea style={{ height: '100%', paddingRight: '10px' }}>

@@ -1,0 +1,60 @@
+{
+  "$schema": "../schemas/workflow.schema.json",
+  "name": "dicom-skull-strip",
+  "version": "1.0.0",
+  "description": "Convert DICOM folder to NIfTI, skull-strip anatomical images, and write to output folder",
+  "menu": "Processing",
+
+  "inputs": {
+    "dicom_dir": {
+      "type": "dicom-folder",
+      "description": "DICOM source directory"
+    }
+  },
+
+  "context": {
+    "description": "Skull stripping options",
+    "fields": {
+      "output_dir": {
+        "type": "directory",
+        "description": "Destination folder for skull-stripped NIfTI files"
+      },
+      "cost": {
+        "type": "string",
+        "description": "Allineate cost function (ls for T1, hel for other contrasts)",
+        "default": "ls",
+        "enum": ["ls", "hel", "mi", "nmi", "cr", "ncc"]
+      }
+    }
+  },
+
+  "steps": {
+    "convert": {
+      "tool": "dcm2niix",
+      "inputs": {
+        "dicom_dir": { "ref": "inputs.dicom_dir" },
+        "compress": { "constant": "y" },
+        "bids": { "constant": "y" }
+      }
+    },
+    "skull_strip": {
+      "tool": "allineate",
+      "inputs": {
+        "nifti_paths": { "ref": "steps.convert.outputs.volumes" },
+        "cost": { "ref": "context.cost" },
+        "output_dir": { "ref": "context.output_dir" }
+      }
+    }
+  },
+
+  "outputs": {
+    "stripped_volumes": {
+      "type": "volume[]",
+      "ref": "steps.skull_strip.outputs.output_paths"
+    },
+    "output_dir": {
+      "type": "string",
+      "ref": "steps.skull_strip.outputs.output_dir"
+    }
+  }
+}

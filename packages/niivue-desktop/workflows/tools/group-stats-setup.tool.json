@@ -1,0 +1,35 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "group-stats-setup",
+  "version": "1.0.0",
+  "description": "Generate group-level analysis configuration from a BIDS dataset",
+  "inputs": {
+    "bids_dir": {
+      "type": "bids-dir",
+      "description": "Path to BIDS dataset"
+    },
+    "analysis_type": {
+      "type": "string",
+      "description": "Type of group analysis",
+      "enum": ["vbm", "tbss", "group-fmri"]
+    }
+  },
+  "outputs": {
+    "config_path": {
+      "type": "string",
+      "description": "Generated analysis configuration JSON"
+    },
+    "subject_list": {
+      "type": "json[]",
+      "description": "Subjects included in analysis"
+    }
+  },
+  "block": {
+    "id": "group-stats-setup",
+    "label": "Group Statistics Setup",
+    "description": "Generate group-level analysis configuration from a BIDS dataset",
+    "category": "Output",
+    "icon": "BarChartIcon",
+    "exposedFields": ["bids_dir", "analysis_type"]
+  }
+}

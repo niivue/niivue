@@ -1,0 +1,44 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "bids-postpass",
+  "version": "1.0.0",
+  "description": "Aggregate scans.tsv and wire B0FieldIdentifier/B0FieldSource across a written BIDS dataset",
+  "inputs": {
+    "bids_dir": {
+      "type": "string",
+      "description": "Root of the BIDS dataset to post-process"
+    }
+  },
+  "outputs": {
+    "bids_dir": {
+      "type": "string",
+      "description": "Same root, unchanged on disk apart from the post-pass writes"
+    },
+    "session_count": {
+      "type": "number",
+      "description": "Number of session-equivalent directories processed"
+    },
+    "scans_tsv_writes": {
+      "type": "number",
+      "description": "Number of <sub>[_<ses>]_scans.tsv files written"
+    },
+    "b0_field_edits": {
+      "type": "number",
+      "description": "Number of fmap/target sidecars rewritten with B0Field*"
+    },
+    "failures": {
+      "type": "json[]",
+      "description": "Per-session failures (does not abort the post-pass)"
+    }
+  },
+  "block": [
+    {
+      "id": "bids-postpass",
+      "label": "BIDS Post-Pass",
+      "description": "Generate scans.tsv files and wire B0Field identifiers across fmap/target sidecars",
+      "category": "Processing",
+      "icon": "MagicWandIcon",
+      "exposedFields": ["bids_dir"]
+    }
+  ]
+}

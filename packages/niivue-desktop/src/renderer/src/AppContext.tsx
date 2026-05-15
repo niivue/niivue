@@ -3,6 +3,7 @@ import React, { createContext, useContext, useState, ReactNode } from 'react'
 import { NVImage, NVMesh, Niivue, SLICE_TYPE } from '@niivue/niivue'
 import { layouts } from '../../common/layouts.js'
 import { fmriEvents, getColorForTrialType } from './types/events.js'
+import type { BidsSeriesMapping } from '../../common/bidsTypes.js'
 
 function overrideDrawGraph(nv: Niivue): void {
   const originalDrawGraph = nv.drawGraph.bind(nv)
@@ -48,6 +49,8 @@ export type NiivueInstanceContext = {
   title: string
   filePath: string | null // ✅ NEW: Full path to .nvd file or null if unsaved
   isDirty: boolean // ✅ NEW: True if unsaved changes exist
+  bidsMappings: BidsSeriesMapping[]
+  setBidsMappings: React.Dispatch<React.SetStateAction<BidsSeriesMapping[]>>
 }
 
 export type AppContextType = {
@@ -143,6 +146,7 @@ export const AppProvider = ({ children }: { children: ReactNode }): JSX.Element 
       title: 'Untitled',
       filePath: null,
       isDirty: false,
+      bidsMappings: [],
 
       setVolumes: makeSetter('volumes'),
       setMeshes: makeSetter('meshes'),
@@ -151,7 +155,8 @@ export const AppProvider = ({ children }: { children: ReactNode }): JSX.Element 
       setSliceMosaicString: makeSetter('sliceMosaicString', (v) => nv.setSliceMosaicString(v)),
       setOpts: makeSetter('opts', (v) => Object.assign(nv.opts, v)),
       setLayout: makeSetter('layout', (layoutKey) => nv.setMultiplanarLayout(layouts[layoutKey])),
-      setMosaicOrientation: makeSetter('mosaicOrientation')
+      setMosaicOrientation: makeSetter('mosaicOrientation'),
+      setBidsMappings: makeSetter('bidsMappings')
     }
 
     addDocument(doc)

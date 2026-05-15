@@ -1,0 +1,18 @@
+{
+  "$schema": "../schemas/heuristic.schema.json",
+  "name": "filter-high-confidence",
+  "version": "1.0.0",
+  "description": "Filter series list to only include high-confidence classifications",
+  "preserveExisting": true,
+  "source": "context.series_list",
+  "operations": [
+    {
+      "op": "filter",
+      "field": "confidence",
+      "operator": "eq",
+      "value": "high",
+      "description": "Keep only series classified with high confidence"
+    }
+  ],
+  "output": "json[]"
+}

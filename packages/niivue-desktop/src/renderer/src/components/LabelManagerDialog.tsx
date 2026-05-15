@@ -124,14 +124,14 @@ export const LabelManagerDialog = ({
         <Dialog.Overlay
           style={{ backgroundColor: 'rgba(0, 0, 0, 0.4)', position: 'fixed', inset: 0 }}
         />
-        <Dialog.Content className="bg-white rounded shadow-lg fixed z-50 top-1/2 left-1/2 max-h-[90vh] w-[800px] max-w-[95vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto p-6">
+        <Dialog.Content className="bg-[var(--color-background)] rounded shadow-lg fixed z-50 top-1/2 left-1/2 max-h-[90vh] w-[800px] max-w-[95vw] -translate-x-1/2 -translate-y-1/2 overflow-y-auto p-6">
           <Theme>
             <div className="flex items-center justify-between mb-4">
               <Dialog.Title className="text-lg font-semibold">
                 {editMode ? 'Edit Label' : 'Add Label'}
               </Dialog.Title>
               <Dialog.Close asChild>
-                <button className="text-gray-500 hover:text-black" aria-label="Close">
+                <button className="text-[var(--gray-9)] hover:text-black" aria-label="Close">
                   <Cross2Icon />
                 </button>
               </Dialog.Close>
@@ -185,7 +185,7 @@ export const LabelManagerDialog = ({
                   </Button>
                 )}
               </Flex>
-              {editMode && <div className="text-sm text-gray-500 mb-2">Editing existing label</div>}
+              {editMode && <div className="text-sm text-[var(--gray-9)] mb-2">Editing existing label</div>}
             </Flex>
           </Theme>
         </Dialog.Content>

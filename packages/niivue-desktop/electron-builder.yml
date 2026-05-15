@@ -115,6 +115,10 @@ extraResources:
     filter:
       - "**/*.nii*"
 
+  # ─── workflow definitions ────────────────────────────────────────────────
+  - from: workflows
+    to: workflows
+
   # ─── brainchop models ───────────────────────────────────────────────────
   - from: resources/brainchop-models
     to: brainchop-models

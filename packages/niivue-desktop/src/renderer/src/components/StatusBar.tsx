@@ -6,7 +6,7 @@ interface StatusBarProps {
 
 export const StatusBar: React.FC<StatusBarProps> = ({ location }) => {
   return (
-    <footer className="w-full bg-gray-200 text-sm text-gray-800 px-4 py-1 border-t border-gray-300">
+    <footer className="w-full bg-[var(--gray-4)] text-sm text-[var(--gray-12)] px-4 py-1 border-t border-[var(--gray-6)]">
       {location ? `${location}` : '\u00A0'}
     </footer>
   )

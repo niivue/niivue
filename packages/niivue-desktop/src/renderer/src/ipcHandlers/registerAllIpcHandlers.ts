@@ -19,6 +19,8 @@ import { registerLoadOverlayHandler } from './loadOverlay.js'
 import { registerDrawHandler } from './draw.js'
 import { registerAddMeshHandler } from './addMesh.js'
 import { registerSegmentationHandlers } from './segmentation.js'
+import { registerWorkflowToolBridge } from './workflowToolBridge.js'
+import type { BidsWizardState } from '../../../common/bidsTypes.js'
 
 const electron = window.electron
 
@@ -40,6 +42,7 @@ export interface IpcHandlerProps {
   setLabelDialogOpen: (v: boolean) => void
   setLabelEditMode: (v: boolean) => void
   onDocumentLoaded: (title: string, targetId: string) => void
+  onBidsStateRestored?: (state: BidsWizardState) => void
   onMosaicStringChange?: (sliceMosaicString: string) => void
   onToggleSegmentationPanel?: () => void
   onOpenRightPanelTab?: (tab: string) => void
@@ -58,6 +61,7 @@ export const registerAllIpcHandlers = ({
   setLabelDialogOpen,
   setLabelEditMode,
   onDocumentLoaded,
+  onBidsStateRestored,
   onMosaicStringChange,
   onToggleSegmentationPanel,
   onOpenRightPanelTab,
@@ -83,11 +87,11 @@ export const registerAllIpcHandlers = ({
   electron.ipcRenderer.removeAllListeners('hide-right-panel')
 
   // 🔌 Register core handlers (now all driven by getTarget)
-  registerLoadStandardHandler({ getTarget, onDocumentLoaded })
-  registerLoadRecentFileHandler({ getTarget, onDocumentLoaded })
+  registerLoadStandardHandler({ getTarget, onDocumentLoaded, onBidsStateRestored })
+  registerLoadRecentFileHandler({ getTarget, onDocumentLoaded, onBidsStateRestored })
   registerLoadMeshHandler({ getTarget })
   registerLoadVolumeHandler({ getTarget })
-  registerLoadDocumentHandler({ getTarget, onDocumentLoaded })
+  registerLoadDocumentHandler({ getTarget, onDocumentLoaded, onBidsStateRestored })
   registerAddMeshHandler({ nv, setMeshes })
 
   // menu & misc
@@ -98,7 +102,6 @@ export const registerAllIpcHandlers = ({
 
   // register the colorbar toggle handler so menu toggles update Niivue + optional UI
   registerToggleColorBarsHandler(nv)
-
 
   // 💾 Save → HTML
   registerSaveHTMLHandler(nv, docId, getTitle)
@@ -116,6 +119,10 @@ export const registerAllIpcHandlers = ({
     setVolumes,
     onTogglePanel: onToggleSegmentationPanel
   })
+
+  // 🌉 Workflow tool bridge: lets main-side executors call brainchop-backed
+  // tools (atlas-parcellate) that have to run in the renderer.
+  registerWorkflowToolBridge({ nv })
 
   // Right panel from menu
   electron.ipcRenderer.on('open-right-panel-tab', (_event: unknown, tab: string) => {

@@ -36,7 +36,7 @@ export function registerSaveHTMLHandler(nv: Niivue, docId: string, getTitle: () 
       }
     } catch (e) {
       console.error('Failed to save HTML export:', e)
-      alert('Could not save HTML export.')
+      alert("Couldn't save HTML export. Check the destination folder is writable and try again.")
     }
   })
 }

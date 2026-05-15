@@ -1,0 +1,1132 @@
+import React, { useState, useMemo, useCallback } from 'react'
+import {
+  Text,
+  Badge,
+  Button,
+  Tooltip,
+  Select,
+  TextField,
+  Card,
+  Popover,
+  Flex,
+  IconButton
+} from '@radix-ui/themes'
+import {
+  TrashIcon,
+  DragHandleDots2Icon,
+  PersonIcon,
+  InfoCircledIcon,
+  MagicWandIcon,
+  RocketIcon,
+  ArrowDownIcon,
+  ArrowRightIcon
+} from '@radix-ui/react-icons'
+import type { ToolDefinition, ToolParameterDef } from '../../../common/workflowTypes.js'
+import type { ValidationResult } from '../../../common/workflowValidator.js'
+import {
+  computeContextSlots,
+  detectBlockForStep,
+  isToolRunnable,
+  TYPE_COLORS,
+  TYPE_LABELS,
+  type WorkflowBlock,
+  type WorkflowDraft,
+  type StepDraft,
+  type ContextSlot
+} from '../../../common/workflowBlocks.js'
+import { getAvailableSources, type SourceSuggestion } from '../../../common/typeCompatibility.js'
+import { generateContextFieldFromParam } from '../../../common/bindingAnalyzer.js'
+import { getBlockIcon } from './BlockPalette.js'
+
+// ── Constants ────────────────────────────────────────────────────────
+
+/** Special value for "ask user at runtime via form" */
+const USER_FORM_VALUE = '__user_form__'
+
+// ── Props ────────────────────────────────────────────────────────────
+
+interface ContextSpineDesignerProps {
+  draft: WorkflowDraft
+  setDraft: React.Dispatch<React.SetStateAction<WorkflowDraft>>
+  tools: Map<string, ToolDefinition>
+  validation: ValidationResult
+  /**
+   * Names of tools that actually have an executor wired (declarative `exec`
+   * block or code-registered). Used to mark "config-only" steps so authors
+   * understand which blocks can run end-to-end in a custom pipeline.
+   */
+  runnableTools?: Set<string>
+  /** Names of registered heuristics (declarative + code), shown in the
+   * heuristic dropdown for user-form context fields. */
+  heuristicNames?: string[]
+  onRemoveStep: (index: number) => void
+  onMoveStep: (index: number, direction: -1 | 1) => void
+  onSave: () => void
+  /** Open the workflow template gallery — used by the empty-state CTA. */
+  onOpenGallery?: () => void
+}
+
+// ── Input source info ────────────────────────────────────────────────
+
+type InputSource = 'context' | 'user-form' | 'constant' | 'unset'
+
+interface InputInfo {
+  name: string
+  paramDef: ToolParameterDef
+  source: InputSource
+  /** For context sources: the friendly label */
+  sourceLabel?: string
+  /** For context sources: the slot color */
+  sourceColor?: string
+  /** Current binding value */
+  value: string
+  mode: 'ref' | 'constant'
+  /** Whether this is in the block's hiddenFields */
+  hidden: boolean
+  /** Available context sources for the dropdown */
+  suggestions: SourceSuggestion[]
+  /** Whether this input is bound to a user-form context field */
+  isUserForm: boolean
+}
+
+function analyzeInputs(
+  step: StepDraft,
+  stepIndex: number,
+  tool: ToolDefinition,
+  block: WorkflowBlock | undefined,
+  slots: ContextSlot[],
+  allSteps: StepDraft[],
+  tools: Map<string, ToolDefinition>,
+  workflowInputs: Record<string, { type: string }>,
+  contextFields: Record<string, { type: string }>
+): InputInfo[] {
+  const results: InputInfo[] = []
+  const hiddenFields = new Set(block?.hiddenFields || [])
+
+  // Build StepInfo array for getAvailableSources
+  const stepInfos = allSteps.map((s) => ({
+    name: s.name,
+    tool: s.tool,
+    inputs: s.inputs as Record<string, { mode: 'ref' | 'constant'; value: string }>
+  }))
+
+  for (const [inputName, paramDef] of Object.entries(tool.inputs)) {
+    const binding = step.inputs[inputName]
+    const mode = binding?.mode || 'ref'
+    const value = binding?.value || ''
+    const hidden = hiddenFields.has(inputName) && mode === 'constant' && !!value
+
+    // Get available sources for the dropdown (workflow inputs, context
+    // fields, and preceding step outputs).
+    const suggestions = getAvailableSources(
+      stepIndex,
+      inputName,
+      paramDef.type,
+      stepInfos,
+      tools,
+      workflowInputs,
+      contextFields
+    )
+
+    // Determine current source type
+    let source: InputSource = 'unset'
+    let sourceLabel: string | undefined
+    let sourceColor: string | undefined
+    let isUserForm = false
+
+    if (mode === 'ref' && value) {
+      // Check if it's a step output ref
+      const stepRefMatch = value.match(/^steps\.(.+)\.outputs\.(.+)$/)
+      if (stepRefMatch) {
+        source = 'context'
+        const [, refStepName, refOutput] = stepRefMatch
+        const sourceStepIdx = allSteps.findIndex((s) => s.name === refStepName)
+        const slot = slots.find(
+          (s) => s.sourceStep === sourceStepIdx && s.sourceOutput === refOutput
+        )
+        const sourceBlock =
+          sourceStepIdx >= 0 ? detectBlockForStep(allSteps[sourceStepIdx], tools) : null
+        sourceLabel = `${sourceBlock?.label || refStepName} → ${refOutput}`
+        sourceColor = slot?.color || 'gray'
+      } else if (value.startsWith('context.')) {
+        const ctxField = value.split('.')[1]
+        // Check if this context field has a heuristic or is auto-generated for user form
+        if (contextFields[ctxField]) {
+          source = 'user-form'
+          sourceLabel = `User provides: ${ctxField}`
+          isUserForm = true
+        } else {
+          source = 'context'
+          sourceLabel = `context.${ctxField}`
+        }
+      } else if (value.startsWith('inputs.')) {
+        source = 'context'
+        sourceLabel = `workflow input: ${value.split('.')[1]}`
+      }
+    } else if (mode === 'constant' && value) {
+      source = 'constant'
+    }
+
+    results.push({
+      name: inputName,
+      paramDef,
+      source,
+      sourceLabel,
+      sourceColor,
+      value,
+      mode,
+      hidden,
+      suggestions,
+      isUserForm
+    })
+  }
+
+  return results
+}
+
+// ── Component ────────────────────────────────────────────────────────
+
+export function ContextSpineDesigner({
+  draft,
+  setDraft,
+  tools,
+  validation,
+  runnableTools,
+  heuristicNames = [],
+  onRemoveStep,
+  onMoveStep,
+  onOpenGallery
+}: ContextSpineDesignerProps): React.ReactElement {
+  const [selectedStep, setSelectedStep] = useState<number | null>(null)
+  const [dragIndex, setDragIndex] = useState<number | null>(null)
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null)
+
+  const slots = useMemo(() => computeContextSlots(draft.steps, tools), [draft.steps, tools])
+
+  const wfInputTypes = useMemo(() => {
+    const m: Record<string, { type: string }> = {}
+    for (const [k, v] of Object.entries(draft.workflowInputs)) {
+      m[k] = { type: v.type }
+    }
+    return m
+  }, [draft.workflowInputs])
+
+  const ctxFieldTypes = useMemo(() => {
+    const m: Record<string, { type: string }> = {}
+    for (const [k, v] of Object.entries(draft.contextFields)) {
+      m[k] = { type: v.type }
+    }
+    return m
+  }, [draft.contextFields])
+
+  // ── Handlers ───────────────────────────────────────────────────────
+
+  const updateStepInput = useCallback(
+    (
+      stepIndex: number,
+      inputName: string,
+      value: string,
+      mode: 'ref' | 'constant' = 'constant'
+    ) => {
+      setDraft((prev) => {
+        const steps = [...prev.steps]
+        const step = { ...steps[stepIndex], inputs: { ...steps[stepIndex].inputs } }
+        step.inputs[inputName] = { mode, value }
+        steps[stepIndex] = step
+        return { ...prev, steps }
+      })
+    },
+    [setDraft]
+  )
+
+  /**
+   * Patch a single context field. Used by the user-form attach popover so
+   * authors can pick a heuristic to pre-fill the value, edit the label
+   * shown to the runtime user, etc., without opening the JSON file.
+   */
+  const updateContextField = useCallback(
+    (
+      fieldName: string,
+      patch: Partial<{ heuristic: string; label: string; description: string }>
+    ) => {
+      setDraft((prev) => {
+        const existing = prev.contextFields[fieldName]
+        if (!existing) return prev
+        return {
+          ...prev,
+          contextFields: {
+            ...prev.contextFields,
+            [fieldName]: { ...existing, ...patch }
+          }
+        }
+      })
+    },
+    [setDraft]
+  )
+
+  /**
+   * Switch an input to "user form" mode. Prefers reusing an existing
+   * context field with a matching name and compatible type; otherwise
+   * creates a new (step-prefixed) field and ensures it appears in a form
+   * section so the user actually gets prompted at runtime.
+   */
+  const setInputToUserForm = useCallback(
+    (stepIndex: number, inputName: string, paramDef: ToolParameterDef) => {
+      setDraft((prev) => {
+        const step = prev.steps[stepIndex]
+
+        // 1. Reuse an existing context field with the plain input name if its
+        //    type is compatible. This is the common case when opening an older
+        //    workflow that already has a context field the user needs to bind.
+        const existing = prev.contextFields[inputName]
+        if (existing) {
+          const steps = [...prev.steps]
+          steps[stepIndex] = {
+            ...step,
+            inputs: {
+              ...step.inputs,
+              [inputName]: { mode: 'ref', value: `context.${inputName}` }
+            }
+          }
+          return { ...prev, steps }
+        }
+
+        // 2. Otherwise create a new step-prefixed context field to avoid
+        //    collisions across steps.
+        const contextFieldName = `${step.name}_${inputName}`
+        const generated = generateContextFieldFromParam(inputName, paramDef)
+
+        const steps = [...prev.steps]
+        steps[stepIndex] = {
+          ...step,
+          inputs: {
+            ...step.inputs,
+            [inputName]: { mode: 'ref', value: `context.${contextFieldName}` }
+          }
+        }
+
+        const contextFields = {
+          ...prev.contextFields,
+          [contextFieldName]: {
+            type: generated.type,
+            label: generated.label,
+            description: generated.description,
+            heuristic: '',
+            default: generated.default !== undefined ? JSON.stringify(generated.default) : ''
+          }
+        }
+
+        // 3. Make sure the new field appears in a form section so the runtime
+        //    UI actually asks for it. Prefer a section whose title matches the
+        //    step's block label; fall back to a new section.
+        const block = detectBlockForStep(step, tools)
+        const targetTitle = block?.label || step.tool
+        const sections = [...prev.sections]
+        const existingIdx = sections.findIndex((s) => s.title === targetTitle)
+        if (existingIdx >= 0) {
+          const current = sections[existingIdx]
+          if (!current.fields.includes(contextFieldName)) {
+            sections[existingIdx] = {
+              ...current,
+              fields: [...current.fields, contextFieldName]
+            }
+          }
+        } else {
+          sections.push({
+            title: targetTitle,
+            description: '',
+            fields: [contextFieldName],
+            component: '',
+            buttonText: ''
+          })
+        }
+
+        return { ...prev, steps, contextFields, sections }
+      })
+    },
+    [setDraft, tools]
+  )
+
+  /** Handle source selection from the dropdown */
+  const handleSourceChange = useCallback(
+    (stepIndex: number, inputName: string, paramDef: ToolParameterDef, selectedValue: string) => {
+      if (selectedValue === USER_FORM_VALUE) {
+        setInputToUserForm(stepIndex, inputName, paramDef)
+      } else {
+        updateStepInput(stepIndex, inputName, selectedValue, 'ref')
+      }
+    },
+    [setInputToUserForm, updateStepInput]
+  )
+
+  // ── Drag-and-drop reordering ───────────────────────────────────────
+
+  const handleCardDragStart = useCallback((e: React.DragEvent, index: number) => {
+    setDragIndex(index)
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', String(index))
+  }, [])
+
+  const handleCardDragOver = useCallback(
+    (e: React.DragEvent, index: number) => {
+      if (dragIndex === null || dragIndex === index) return
+      e.preventDefault()
+      e.dataTransfer.dropEffect = 'move'
+      setDragOverIndex(index)
+    },
+    [dragIndex]
+  )
+
+  const handleCardDrop = useCallback(
+    (e: React.DragEvent, targetIndex: number) => {
+      e.preventDefault()
+      if (dragIndex === null || dragIndex === targetIndex) return
+
+      // Move step one position at a time to reach target
+      let current = dragIndex
+      while (current !== targetIndex) {
+        const direction = targetIndex > current ? 1 : -1
+        onMoveStep(current, direction as -1 | 1)
+        current += direction
+      }
+
+      if (selectedStep === dragIndex) {
+        setSelectedStep(targetIndex)
+      }
+      setDragIndex(null)
+      setDragOverIndex(null)
+    },
+    [dragIndex, selectedStep, onMoveStep]
+  )
+
+  const handleCardDragEnd = useCallback(() => {
+    setDragIndex(null)
+    setDragOverIndex(null)
+  }, [])
+
+  // ── Render ─────────────────────────────────────────────────────────
+
+  return (
+    <div className="flex-1 flex min-h-0 overflow-hidden">
+      {/* Left: Context Spine */}
+      <div className="w-64 border-r border-neutral-5 flex flex-col bg-[var(--gray-2)] shrink-0 overflow-y-auto">
+        <div className="px-4 py-3 border-b border-neutral-5">
+          <Text size="2" weight="bold" className="text-neutral-11 uppercase tracking-wider">
+            Context
+          </Text>
+          <Text size="1" className="text-neutral-8 block mt-1">
+            Shared data between steps
+          </Text>
+        </div>
+
+        <div className="flex flex-col gap-0.5 p-2">
+          {slots.length === 0 ? (
+            <div className="px-3 py-6 text-center">
+              <Text size="1" className="text-neutral-7">
+                Add tools to see their outputs here
+              </Text>
+            </div>
+          ) : (
+            (() => {
+              const stepGroups = new Map<number, ContextSlot[]>()
+              for (const slot of slots) {
+                const group = stepGroups.get(slot.sourceStep) || []
+                group.push(slot)
+                stepGroups.set(slot.sourceStep, group)
+              }
+
+              return Array.from(stepGroups.entries()).map(([stepIdx, groupSlots]) => {
+                const step = draft.steps[stepIdx]
+                const block = detectBlockForStep(step, tools)
+
+                return (
+                  <div key={stepIdx} className="mb-2">
+                    <Text
+                      size="1"
+                      weight="medium"
+                      className="text-neutral-8 px-2 py-1 uppercase tracking-wider block"
+                    >
+                      {block?.label || step.tool}
+                    </Text>
+                    {groupSlots.map((slot) => (
+                      <div
+                        key={slot.id}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded hover:bg-[var(--gray-3)]"
+                        style={{ borderLeft: `3px solid var(--${slot.color}-9, var(--gray-7))` }}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <Text size="1" className="text-neutral-11 truncate block">
+                            {TYPE_LABELS[slot.type] || slot.type}
+                          </Text>
+                        </div>
+                        {slot.consumers.length > 0 && (
+                          <Badge variant="soft" size="1" color="violet">
+                            {slot.consumers.length}×
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )
+              })
+            })()
+          )}
+        </div>
+      </div>
+
+      {/* Right: Tool cards + palette */}
+      <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
+        {/* Workflow metadata */}
+        <div className="px-4 pt-4 pb-2 flex flex-col gap-2 border-b border-neutral-5">
+          <div className="flex items-center gap-2">
+            <Text size="1" className="text-neutral-9 w-20 shrink-0">
+              Workflow
+            </Text>
+            <TextField.Root
+              value={draft.name}
+              onChange={(e) => setDraft((d) => ({ ...d, name: e.target.value }))}
+              placeholder="my-workflow"
+              size="1"
+              className="flex-1"
+              style={!draft.name.trim() ? { borderColor: 'var(--red-7)' } : undefined}
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Text size="1" className="text-neutral-9 w-20 shrink-0">
+              Description
+            </Text>
+            <TextField.Root
+              value={draft.description}
+              onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+              placeholder="What does this workflow do?"
+              size="1"
+              className="flex-1"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <Text size="1" className="text-neutral-9 w-20 shrink-0">
+              Dataset
+            </Text>
+            <TextField.Root
+              value={(draft.contextFields.dataset_name?.default as string) || ''}
+              onChange={(e) =>
+                setDraft((d) => ({
+                  ...d,
+                  contextFields: {
+                    ...d.contextFields,
+                    dataset_name: {
+                      type: 'string',
+                      label: 'Dataset Name',
+                      description: 'Name for the output dataset',
+                      heuristic: '',
+                      default: e.target.value
+                    }
+                  }
+                }))
+              }
+              placeholder="My Dataset"
+              size="1"
+              className="flex-1"
+            />
+          </div>
+        </div>
+
+        <div className="flex-1 p-4 flex flex-col gap-3">
+          {draft.steps.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-4 max-w-md text-center border-2 border-dashed border-[var(--gray-6)] rounded-lg px-8 py-10 bg-[var(--color-background)]">
+                <div className="w-12 h-12 rounded-full bg-[var(--accent-3)] flex items-center justify-center text-[var(--accent-11)]">
+                  <RocketIcon width="24" height="24" />
+                </div>
+                <div className="flex flex-col gap-1">
+                  <Text size="4" weight="bold" className="text-neutral-12">
+                    Build your first pipeline
+                  </Text>
+                  <Text size="2" className="text-neutral-9">
+                    Open the tool palette below to add your first step.
+                  </Text>
+                </div>
+                <div className="flex items-center gap-1 text-[var(--accent-11)]">
+                  <ArrowDownIcon />
+                  <Text size="2" weight="medium">
+                    Palette
+                  </Text>
+                </div>
+                {onOpenGallery && (
+                  <Button variant="soft" size="2" onClick={onOpenGallery}>
+                    Or browse templates <ArrowRightIcon />
+                  </Button>
+                )}
+              </div>
+            </div>
+          ) : (
+            draft.steps.map((step, i) => {
+              const block = detectBlockForStep(step, tools)
+              const tool = tools.get(step.tool)
+              const isSelected = selectedStep === i
+              // Match by stepName, not substring — 'convert' would otherwise
+              // light up errors that mention 'convert_t1' and vice versa.
+              const hasError = validation.errors.some((e) => e.stepName === step.name)
+
+              const inputInfos = tool
+                ? analyzeInputs(
+                    step,
+                    i,
+                    tool,
+                    block,
+                    slots,
+                    draft.steps,
+                    tools,
+                    wfInputTypes,
+                    ctxFieldTypes
+                  )
+                : []
+
+              const visibleInputs = inputInfos.filter((inp) => !inp.hidden)
+              const hiddenInputs = inputInfos.filter((inp) => inp.hidden)
+              const hasMissingRequired = visibleInputs.some(
+                (inp) => inp.source === 'unset' && !inp.paramDef.optional
+              )
+              const runnable = isToolRunnable(tool, runnableTools)
+
+              const outputTypes = tool
+                ? Object.entries(tool.outputs).map(([name, def]) => ({
+                    name,
+                    type: def.type,
+                    color: TYPE_COLORS[def.type] || 'gray',
+                    label: TYPE_LABELS[def.type] || def.type
+                  }))
+                : []
+
+              const isDragging = dragIndex === i
+              const isDragOver = dragOverIndex === i
+
+              return (
+                <Card
+                  key={i}
+                  size="2"
+                  draggable
+                  onDragStart={(e) => handleCardDragStart(e, i)}
+                  onDragOver={(e) => handleCardDragOver(e, i)}
+                  onDrop={(e) => handleCardDrop(e, i)}
+                  onDragEnd={handleCardDragEnd}
+                  className={`transition-all ${
+                    isDragging
+                      ? 'opacity-40'
+                      : isDragOver
+                        ? 'ring-2 ring-[var(--accent-8)] ring-dashed'
+                        : hasMissingRequired
+                          ? 'ring-1 ring-[var(--red-6)]'
+                          : isSelected
+                            ? 'ring-2 ring-[var(--accent-7)]'
+                            : hasError
+                              ? 'ring-1 ring-[var(--red-6)]'
+                              : ''
+                  }`}
+                >
+                  {/* Header */}
+                  <div className="flex items-center gap-2">
+                    <span
+                      className="text-neutral-7 cursor-grab active:cursor-grabbing shrink-0"
+                      onMouseDown={(e) => e.stopPropagation()}
+                    >
+                      <DragHandleDots2Icon />
+                    </span>
+                    <button
+                      type="button"
+                      className="flex-1 flex items-center gap-2 cursor-pointer text-left min-w-0 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
+                      onClick={(): void => setSelectedStep(isSelected ? null : i)}
+                      aria-pressed={isSelected}
+                      aria-label={`${isSelected ? 'Collapse' : 'Expand'} step ${i + 1}: ${block?.label || step.tool}`}
+                    >
+                      <span className={isSelected ? 'text-[var(--accent-9)]' : 'text-neutral-9'}>
+                        {block ? getBlockIcon(block.icon || '') : null}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <Text size="2" weight="bold" className="text-neutral-12 truncate block">
+                          {block?.label || step.tool}
+                        </Text>
+                      </div>
+                    </button>
+                    {!runnable && (
+                      <Tooltip content="No executor — won't run without a custom backend.">
+                        <Badge variant="outline" size="1" color="gray" className="shrink-0">
+                          config-only
+                        </Badge>
+                      </Tooltip>
+                    )}
+                    {tool && (
+                      <Popover.Root>
+                        <Popover.Trigger>
+                          <IconButton
+                            variant="ghost"
+                            color="gray"
+                            size="1"
+                            onClick={(e) => e.stopPropagation()}
+                            aria-label={`About ${tool.name}`}
+                          >
+                            <InfoCircledIcon />
+                          </IconButton>
+                        </Popover.Trigger>
+                        <Popover.Content size="1" maxWidth="420px">
+                          <Flex direction="column" gap="2">
+                            <Flex gap="2" align="center">
+                              <Text size="2" weight="bold">
+                                {tool.name}
+                              </Text>
+                              <Text size="1" color="gray">
+                                v{tool.version}
+                              </Text>
+                            </Flex>
+                            <Text size="1">{tool.description}</Text>
+                            {Object.keys(tool.inputs).length > 0 && (
+                              <Flex direction="column" gap="1">
+                                <Text
+                                  size="1"
+                                  weight="bold"
+                                  className="text-neutral-11 uppercase tracking-wider"
+                                >
+                                  Inputs
+                                </Text>
+                                {Object.entries(tool.inputs).map(([name, def]) => (
+                                  <Flex key={name} gap="2" align="start">
+                                    <Badge
+                                      variant="soft"
+                                      size="1"
+                                      color={(TYPE_COLORS[def.type] || 'gray') as 'gray'}
+                                    >
+                                      {def.type}
+                                    </Badge>
+                                    <Flex direction="column" className="min-w-0 flex-1">
+                                      <Text size="1" weight="medium" className="font-mono">
+                                        {name}
+                                        {def.optional ? '?' : ''}
+                                      </Text>
+                                      <Text size="1" className="text-neutral-10">
+                                        {def.description}
+                                      </Text>
+                                    </Flex>
+                                  </Flex>
+                                ))}
+                              </Flex>
+                            )}
+                            {Object.keys(tool.outputs).length > 0 && (
+                              <Flex direction="column" gap="1">
+                                <Text
+                                  size="1"
+                                  weight="bold"
+                                  className="text-neutral-11 uppercase tracking-wider"
+                                >
+                                  Outputs
+                                </Text>
+                                {Object.entries(tool.outputs).map(([name, def]) => (
+                                  <Flex key={name} gap="2" align="start">
+                                    <Badge
+                                      variant="soft"
+                                      size="1"
+                                      color={(TYPE_COLORS[def.type] || 'gray') as 'gray'}
+                                    >
+                                      {def.type}
+                                    </Badge>
+                                    <Flex direction="column" className="min-w-0 flex-1">
+                                      <Text size="1" weight="medium" className="font-mono">
+                                        {name}
+                                      </Text>
+                                      <Text size="1" className="text-neutral-10">
+                                        {def.description}
+                                      </Text>
+                                    </Flex>
+                                  </Flex>
+                                ))}
+                              </Flex>
+                            )}
+                            {!runnable && (
+                              <Text size="1" color="amber">
+                                No executor registered — this tool needs a backend before it can run
+                                in a workflow.
+                              </Text>
+                            )}
+                          </Flex>
+                        </Popover.Content>
+                      </Popover.Root>
+                    )}
+                    <Badge
+                      variant="soft"
+                      size="1"
+                      color={hasError || hasMissingRequired ? 'red' : 'gray'}
+                    >
+                      {i + 1}
+                    </Badge>
+                    <button
+                      type="button"
+                      className="text-neutral-7 hover:text-[var(--red-9)] transition-colors cursor-pointer p-1 shrink-0 rounded focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
+                      onClick={(e): void => {
+                        e.stopPropagation()
+                        onRemoveStep(i)
+                        if (selectedStep === i) setSelectedStep(null)
+                      }}
+                      aria-label={`Remove step ${i + 1}: ${block?.label || step.tool}`}
+                      title="Remove step"
+                    >
+                      <TrashIcon />
+                    </button>
+                  </div>
+
+                  {/* Inputs section */}
+                  {visibleInputs.length > 0 && (
+                    <div className="mt-2 rounded-md overflow-hidden border border-[var(--violet-5)]">
+                      <div className="bg-[var(--violet-2)] px-3 py-1">
+                        <Text
+                          size="1"
+                          weight="medium"
+                          className="text-[var(--violet-11)] uppercase tracking-wider"
+                        >
+                          Inputs
+                        </Text>
+                      </div>
+                      <div className="px-3 py-2 flex flex-col gap-2 bg-[var(--violet-1)]">
+                        {visibleInputs.map((inp) => {
+                          const hasContextSources = inp.suggestions.length > 0
+                          const isRequired = !inp.paramDef.optional
+
+                          // Per-field validation lookup — surfaces the matching
+                          // error/warning beneath the row and binds it to the
+                          // Select via aria-describedby. Match on (stepName,
+                          // field) so an unbound `T1` doesn't light up a
+                          // sibling input.
+                          const fieldError = validation.errors.find(
+                            (e) => e.stepName === step.name && e.field === inp.name
+                          )
+                          const fieldWarning = !fieldError
+                            ? validation.warnings.find(
+                                (w) => w.stepName === step.name && w.field === inp.name
+                              )
+                            : undefined
+                          const fieldIssue = fieldError ?? fieldWarning
+                          const fieldErrorId = fieldIssue
+                            ? `step-${i}-${inp.name}-issue`
+                            : undefined
+
+                          // For enum fields with a constant, just show the select.
+                          // Draft constants are stored JSON-stringified (e.g. '"y"'), so
+                          // unwrap the quotes before comparing to Select.Item values.
+                          if (inp.paramDef.enum && inp.source === 'constant') {
+                            let displayValue = inp.value
+                            try {
+                              const parsed = JSON.parse(inp.value)
+                              if (parsed !== undefined && parsed !== null)
+                                displayValue = String(parsed)
+                            } catch {
+                              /* not valid JSON — use raw */
+                            }
+                            return (
+                              <div key={inp.name} className="flex flex-col gap-1">
+                                <div className="flex items-center gap-2">
+                                  <Text size="1" className="text-neutral-9 w-28 shrink-0 truncate">
+                                    {inp.name}
+                                  </Text>
+                                  <Select.Root
+                                    value={displayValue}
+                                    onValueChange={(v) =>
+                                      updateStepInput(i, inp.name, JSON.stringify(v))
+                                    }
+                                    size="1"
+                                  >
+                                    <Select.Trigger
+                                      className="flex-1"
+                                      aria-invalid={fieldError ? true : undefined}
+                                      aria-describedby={fieldErrorId}
+                                    />
+                                    <Select.Content>
+                                      {inp.paramDef.enum.map((opt) => {
+                                        const isObj =
+                                          opt && typeof opt === 'object' && 'value' in opt
+                                        const entry = isObj
+                                          ? (opt as { value: unknown; label?: unknown })
+                                          : { value: opt, label: opt }
+                                        return (
+                                          <Select.Item
+                                            key={String(entry.value)}
+                                            value={String(entry.value)}
+                                          >
+                                            {String(entry.label ?? entry.value)}
+                                          </Select.Item>
+                                        )
+                                      })}
+                                    </Select.Content>
+                                  </Select.Root>
+                                </div>
+                                {fieldIssue && (
+                                  <Text
+                                    id={fieldErrorId}
+                                    size="1"
+                                    color={fieldError ? 'red' : 'amber'}
+                                    className="ml-28 pl-2"
+                                    role={fieldError ? 'alert' : 'status'}
+                                  >
+                                    {fieldIssue.message}
+                                  </Text>
+                                )}
+                              </div>
+                            )
+                          }
+
+                          return (
+                            <div key={inp.name} className="flex flex-col gap-1">
+                              <div className="flex items-center gap-2">
+                                <Text size="1" className="text-neutral-9 w-28 shrink-0 truncate">
+                                  {inp.name}
+                                </Text>
+
+                                {/* Source selector dropdown */}
+                                <Select.Root
+                                  value={
+                                    inp.isUserForm
+                                      ? USER_FORM_VALUE
+                                      : inp.source === 'context'
+                                        ? inp.value
+                                        : inp.source === 'unset'
+                                          ? ''
+                                          : inp.value
+                                  }
+                                  onValueChange={(v) => {
+                                    if (v === USER_FORM_VALUE) {
+                                      handleSourceChange(i, inp.name, inp.paramDef, USER_FORM_VALUE)
+                                    } else {
+                                      handleSourceChange(i, inp.name, inp.paramDef, v)
+                                    }
+                                  }}
+                                  size="1"
+                                >
+                                  <Select.Trigger
+                                    className="flex-1"
+                                    placeholder={
+                                      isRequired ? 'Select source…' : 'Select source (optional)'
+                                    }
+                                    style={
+                                      inp.source === 'unset' && isRequired
+                                        ? { borderColor: 'var(--red-7)' }
+                                        : undefined
+                                    }
+                                    aria-invalid={fieldError ? true : undefined}
+                                    aria-describedby={fieldErrorId}
+                                  />
+                                  <Select.Content>
+                                    {/* Context sources */}
+                                    {hasContextSources && (
+                                      <Select.Group>
+                                        <Select.Label>From Context</Select.Label>
+                                        {inp.suggestions.map((s) => (
+                                          <Select.Item key={s.ref} value={s.ref}>
+                                            <div className="flex items-center gap-1.5">
+                                              <span>{s.label}</span>
+                                              {s.exact && (
+                                                <Badge variant="soft" size="1" color="green">
+                                                  exact
+                                                </Badge>
+                                              )}
+                                            </div>
+                                          </Select.Item>
+                                        ))}
+                                      </Select.Group>
+                                    )}
+                                    {/* User form option */}
+                                    <Select.Group>
+                                      <Select.Label>User Provides</Select.Label>
+                                      <Select.Item value={USER_FORM_VALUE}>
+                                        <div className="flex items-center gap-1.5">
+                                          <PersonIcon />
+                                          <span>Ask user at runtime</span>
+                                        </div>
+                                      </Select.Item>
+                                    </Select.Group>
+                                  </Select.Content>
+                                </Select.Root>
+
+                                {/* User-form indicator + attach-heuristic popover.
+                                  Authors can wire a registered heuristic to the
+                                  underlying context field so the runtime form
+                                  comes pre-filled (e.g. list-dicom-series). */}
+                                {inp.isUserForm &&
+                                  (() => {
+                                    const ctxFieldName = inp.value.startsWith('context.')
+                                      ? inp.value.slice('context.'.length)
+                                      : ''
+                                    const ctxField = ctxFieldName
+                                      ? draft.contextFields[ctxFieldName]
+                                      : undefined
+                                    const heuristic = ctxField?.heuristic || ''
+                                    return (
+                                      <Popover.Root>
+                                        <Popover.Trigger>
+                                          <button
+                                            type="button"
+                                            className="cursor-pointer"
+                                            aria-label="Edit form field"
+                                            title="Edit form field"
+                                          >
+                                            <Badge
+                                              variant={heuristic ? 'solid' : 'soft'}
+                                              size="1"
+                                              color={heuristic ? 'violet' : 'orange'}
+                                            >
+                                              {heuristic ? (
+                                                <>
+                                                  <MagicWandIcon /> {heuristic}
+                                                </>
+                                              ) : (
+                                                'form'
+                                              )}
+                                            </Badge>
+                                          </button>
+                                        </Popover.Trigger>
+                                        {ctxFieldName && ctxField && (
+                                          <Popover.Content size="1" maxWidth="380px">
+                                            <Flex direction="column" gap="2">
+                                              <Text size="1" weight="bold">
+                                                User-provided field
+                                              </Text>
+                                              <Text size="1" color="gray" className="font-mono">
+                                                context.{ctxFieldName}
+                                              </Text>
+                                              <Flex direction="column" gap="1">
+                                                <Text size="1" weight="medium">
+                                                  Pre-fill heuristic
+                                                </Text>
+                                                <Select.Root
+                                                  value={heuristic || '__none__'}
+                                                  onValueChange={(v) =>
+                                                    updateContextField(ctxFieldName, {
+                                                      heuristic: v === '__none__' ? '' : v
+                                                    })
+                                                  }
+                                                  size="1"
+                                                >
+                                                  <Select.Trigger />
+                                                  <Select.Content>
+                                                    <Select.Item value="__none__">
+                                                      None — empty until user fills it
+                                                    </Select.Item>
+                                                    {heuristicNames.map((n) => (
+                                                      <Select.Item key={n} value={n}>
+                                                        {n}
+                                                      </Select.Item>
+                                                    ))}
+                                                  </Select.Content>
+                                                </Select.Root>
+                                                <Text size="1" color="gray">
+                                                  Runs before the form opens; the user can edit the
+                                                  result.
+                                                </Text>
+                                              </Flex>
+                                              <Flex direction="column" gap="1">
+                                                <Text size="1" weight="medium">
+                                                  Label
+                                                </Text>
+                                                <TextField.Root
+                                                  size="1"
+                                                  value={ctxField.label}
+                                                  onChange={(e) =>
+                                                    updateContextField(ctxFieldName, {
+                                                      label: e.target.value
+                                                    })
+                                                  }
+                                                  placeholder={ctxFieldName}
+                                                />
+                                              </Flex>
+                                              <Flex direction="column" gap="1">
+                                                <Text size="1" weight="medium">
+                                                  Help text
+                                                </Text>
+                                                <TextField.Root
+                                                  size="1"
+                                                  value={ctxField.description}
+                                                  onChange={(e) =>
+                                                    updateContextField(ctxFieldName, {
+                                                      description: e.target.value
+                                                    })
+                                                  }
+                                                  placeholder="Shown under the field at runtime"
+                                                />
+                                              </Flex>
+                                            </Flex>
+                                          </Popover.Content>
+                                        )}
+                                      </Popover.Root>
+                                    )
+                                  })()}
+                              </div>
+                              {fieldIssue && (
+                                <Text
+                                  id={fieldErrorId}
+                                  size="1"
+                                  color={fieldError ? 'red' : 'amber'}
+                                  className="ml-28 pl-2"
+                                  role={fieldError ? 'alert' : 'status'}
+                                >
+                                  {fieldIssue.message}
+                                </Text>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Outputs → context */}
+                  {outputTypes.length > 0 && (
+                    <div className="mt-2 rounded-md overflow-hidden border border-[var(--teal-5)]">
+                      <div className="bg-[var(--teal-2)] px-3 py-1 flex items-center gap-1.5">
+                        <Text
+                          size="1"
+                          weight="medium"
+                          className="text-[var(--teal-11)] uppercase tracking-wider"
+                        >
+                          → Context
+                        </Text>
+                      </div>
+                      <div className="px-3 py-2 flex flex-wrap gap-1 bg-[var(--teal-1)]">
+                        {outputTypes.map((out) => (
+                          <Tooltip key={out.name} content={`${out.name}: ${out.type}`}>
+                            <Badge
+                              variant="soft"
+                              size="1"
+                              color={
+                                out.color as
+                                  | 'blue'
+                                  | 'purple'
+                                  | 'yellow'
+                                  | 'green'
+                                  | 'gray'
+                                  | 'teal'
+                                  | 'orange'
+                              }
+                            >
+                              {out.label}
+                            </Badge>
+                          </Tooltip>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Hidden defaults (collapsed) */}
+                  {isSelected && hiddenInputs.length > 0 && (
+                    <div className="mt-2 flex flex-wrap gap-1">
+                      {hiddenInputs.map((inp) => (
+                        <Badge key={inp.name} variant="outline" size="1" color="gray">
+                          {inp.name}={inp.value}
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
+                </Card>
+              )
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}

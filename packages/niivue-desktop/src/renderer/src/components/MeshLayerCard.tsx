@@ -472,7 +472,7 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
   const negSliderMax = Math.min(0, Math.max(meshRange.max, negRange[1], 0))
 
   return (
-    <Card className="flex flex-col p-2 my-1 ml-8 gap-2 bg-white">
+    <Card className="flex flex-col p-2 my-1 ml-8 gap-2 bg-[var(--color-background)]">
       <div className="flex flex-row gap-2 items-center">
         <ContextMenu.Root>
           <ContextMenu.Trigger className="mr-auto">
@@ -572,7 +572,7 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
               </div>
 
               {/* === Grouped negative mapping section === */}
-              <div className="p-2 rounded border bg-gray-50">
+              <div className="p-2 rounded border bg-[var(--gray-2)]">
                 <div className="flex items-center justify-between mb-2">
                   <Text size="1">Enable negative mapping</Text>
                   <label className="flex items-center gap-2">
@@ -581,7 +581,7 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
                       checked={enableNegativeMapping}
                       onChange={(e) => setEnableNegativeMappingAndCommit(e.target.checked)}
                     />
-                    <span className="text-xs text-gray-600">
+                    <span className="text-xs text-[var(--gray-10)]">
                       sets cal_min = 0 & useNegativeCmap
                     </span>
                   </label>
@@ -618,7 +618,7 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
                         disabled={!enableNegativeMapping}
                         title="If checked, cal_minNeg/cal_maxNeg will be applied to Niivue"
                       />
-                      <span className="text-xs text-gray-600">Use negative cal range</span>
+                      <span className="text-xs text-[var(--gray-10)]">Use negative cal range</span>
                     </label>
                     <Button
                       size="1"
@@ -711,7 +711,7 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
           </button>
         </Dialog.Trigger>
         <Dialog.Content
-          className="p-4 bg-white rounded shadow"
+          className="p-4 bg-[var(--color-background)] rounded shadow"
           // reduce width to avoid horizontal overflow; dialog will expand vertically as needed
           style={{
             width: 680,

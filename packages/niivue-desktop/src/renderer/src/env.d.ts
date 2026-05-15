@@ -2,6 +2,20 @@
 
 import { ElectronAPI } from '@electron-toolkit/preload'
 import type { CLIOptions, ResolvedInput } from '../../common/cliTypes.js'
+import type {
+  BidsConvertAndClassifyPayload,
+  BidsConvertAndClassifyResult,
+  BidsWritePayload,
+  BidsWriteResult,
+  BidsValidationResult,
+  BidsValidatePayload,
+  BidsSeriesMapping,
+  BidsFixAnalysisResult,
+  BidsAutoFixResult,
+  SidecarUpdateResult,
+  FieldmapIntendedFor,
+  ParseEventFileResult
+} from '../../common/bidsTypes.js'
 
 declare global {
   interface Window {
@@ -28,8 +42,14 @@ declare global {
       // Headless mode - Subcommand architecture
       headlessGetOptions: () => Promise<CLIOptions>
       headlessResolveInput: (input: string) => Promise<ResolvedInput>
-      headlessSaveOutput: (data: string, outputPath: string) => Promise<{ success: boolean; error?: string }>
-      headlessSaveNifti: (base64Data: string, outputPath: string) => Promise<{ success: boolean; error?: string }>
+      headlessSaveOutput: (
+        data: string,
+        outputPath: string
+      ) => Promise<{ success: boolean; error?: string }>
+      headlessSaveNifti: (
+        base64Data: string,
+        outputPath: string
+      ) => Promise<{ success: boolean; error?: string }>
       headlessWriteStdout: (base64Data: string) => Promise<void>
       headlessLoadLabelJson: (labelJsonPath: string) => Promise<unknown>
       headlessComplete: () => void
@@ -49,7 +69,77 @@ declare global {
         outputDir?: string
         compress?: 'y' | 'n'
         bids?: 'y' | 'n'
-      }) => Promise<{ code: number; stdout: string; stderr: string; outDir: string; files: string[] }[]>
+      }) => Promise<
+        { code: number; stdout: string; stderr: string; outDir: string; files: string[] }[]
+      >
+      // Workflow headless execution
+      headlessWorkflow: (
+        workflowName: string,
+        inputs: Record<string, unknown>,
+        contextOverrides?: Record<string, unknown>
+      ) => Promise<{ outputs: Record<string, unknown>; context: Record<string, unknown> }>
+      // BIDS wizard
+      bidsConvertAndClassify: (
+        payload: BidsConvertAndClassifyPayload
+      ) => Promise<BidsConvertAndClassifyResult>
+      bidsImportNiftiDir: (dirPath: string) => Promise<BidsConvertAndClassifyResult>
+      bidsValidate: (payload: BidsValidatePayload) => Promise<BidsValidationResult>
+      bidsValidateWritten: (
+        dirPath: string,
+        mappings: BidsSeriesMapping[]
+      ) => Promise<BidsValidationResult>
+      bidsAnalyzeFixes: (
+        dirPath: string,
+        result: BidsValidationResult
+      ) => Promise<BidsFixAnalysisResult>
+      bidsReadSidecar: (sidecarPath: string) => Promise<Record<string, unknown> | null>
+      bidsUpdateSidecar: (
+        sidecarPath: string,
+        updates: Record<string, unknown>
+      ) => Promise<SidecarUpdateResult>
+      bidsAutoFixSidecars: (
+        dirPath: string,
+        mappings?: BidsSeriesMapping[]
+      ) => Promise<BidsAutoFixResult>
+      bidsWrite: (payload: BidsWritePayload) => Promise<BidsWriteResult>
+      bidsSelectOutputDir: () => Promise<string | null>
+      bidsSuggestFieldmapMappings: (mappings: BidsSeriesMapping[]) => Promise<FieldmapIntendedFor[]>
+      bidsSelectEventFile: () => Promise<string | null>
+      bidsParseEventFile: (filePath: string) => Promise<ParseEventFileResult>
+      // allineate headless
+      headlessAllineate: (
+        movingPath: string,
+        stationaryPath: string,
+        outputPath: string,
+        opts: string[]
+      ) => Promise<{
+        success: boolean
+        stdout: string
+        stderr: string
+        code: number
+        outputPath: string
+      }>
+      // allineate registration
+      allineateRun: (args: string[]) => Promise<{
+        success: boolean
+        stdout: string
+        stderr: string
+        code: number
+        error?: string
+      }>
+      allineateRegister: (
+        movingPath: string,
+        stationaryPath: string,
+        outputPath: string,
+        opts?: string[]
+      ) => Promise<{
+        success: boolean
+        stdout: string
+        stderr: string
+        code: number
+        outputPath: string
+        error?: string
+      }>
     }
   }
 }

@@ -25,7 +25,13 @@ export const registerLoadMeshHandler = ({ getTarget }: HandlerProps): void => {
     console.log('[Renderer] loadMesh received for path:', path)
 
     // pick or create an appropriate document
-    const { nvRef, setMeshes } = await getTarget()
+    let target
+    try {
+      target = await getTarget()
+    } catch {
+      return // user cancelled
+    }
+    const { nvRef, setMeshes } = target
     const nv = nvRef.current!
 
     // fetch and parse the mesh file
@@ -33,7 +39,9 @@ export const registerLoadMeshHandler = ({ getTarget }: HandlerProps): void => {
     const pathLower = path.toLowerCase()
 
     if (!MESH_EXTENSIONS.some((ext) => pathLower.endsWith(ext.toLowerCase()))) {
-      alert(`File is not a mesh that Niivue can parse: ${path}`)
+      alert(
+        `Can't open as a mesh — '${path}' isn't a recognised mesh format. Drag it into the Volumes panel instead.`
+      )
       throw new Error('File is not a mesh')
     }
 

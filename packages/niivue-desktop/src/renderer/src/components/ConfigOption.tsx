@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { Switch, Slider } from '@radix-ui/themes'
+import { Switch, Slider, TextField } from '@radix-ui/themes'
 import { hexToRgba10 } from '@renderer/utils/colors.js'
 import { filterEnum } from '@renderer/utils/config.js'
 import { ColorPicker } from './ColorPicker.js'
@@ -23,7 +23,7 @@ interface ConfigOptionProps {
 export function ConfigOption({ keyName, value, meta, onChange }: ConfigOptionProps): JSX.Element {
   switch (meta.type) {
     case 'boolean':
-      return <Switch checked={value} onCheckedChange={onChange} />
+      return <Switch checked={value} onCheckedChange={onChange} aria-label={keyName} />
     case 'slider':
       return (
         <Slider
@@ -32,6 +32,7 @@ export function ConfigOption({ keyName, value, meta, onChange }: ConfigOptionPro
           step={meta.step}
           value={[value]}
           onValueChange={(v) => onChange(v[0])}
+          aria-label={keyName}
         />
       )
     case 'color':
@@ -48,15 +49,16 @@ export function ConfigOption({ keyName, value, meta, onChange }: ConfigOptionPro
           value={value.toString()}
           onChange={(v) => onChange(parseInt(v))}
           options={filterEnum(meta.enum)}
+          label={keyName}
         />
       )
     case 'text':
       return (
-        <input className="input-class" value={value} onChange={(e) => onChange(e.target.value)} />
+        <TextField.Root value={value} onChange={(e) => onChange(e.target.value)} aria-label={keyName} />
       )
     case 'number':
       return (
-        <input type="number" value={value} onChange={(e) => onChange(parseFloat(e.target.value))} />
+        <TextField.Root type="number" value={value} onChange={(e) => onChange(parseFloat(e.target.value))} aria-label={keyName} />
       )
     default:
       return <span>Unsupported: {keyName}</span>

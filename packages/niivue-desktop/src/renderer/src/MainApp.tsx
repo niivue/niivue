@@ -1,5 +1,5 @@
 // src/MainApp.tsx
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { NVImage, NVMesh, NiiVueLocation, Niivue, NVDocument } from '@niivue/niivue'
 import { Sidebar } from './components/Sidebar.js'
 import { Viewer } from './components/Viewer.js'
@@ -7,17 +7,25 @@ import { PreferencesDialog } from './components/PreferencesDialog.js'
 import { LabelManagerDialog } from './components/LabelManagerDialog.js'
 import { NiivueInstanceContext, useSelectedInstance, useAppContext } from './AppContext.js'
 import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
-// import { fmriEvents, getColorForTrialType } from './types/events.js'
-// import { loadDroppedFiles } from './utils/dragAndDrop.js'
-// import { layouts } from '../../common/layouts.js'
 import { StatusBar } from './components/StatusBar.js'
 import { DicomImportDialog } from './components/DicomImportDialog.js'
+import { BidsWizard } from './components/BidsWizard/BidsWizard.js'
+import { BidsFilterDialog } from './components/BidsFilterDialog.js'
 import { RightPanel } from './components/RightPanel.js'
 import { SegmentationDialog } from './components/SegmentationDialog.js'
 import { brainchopService } from './services/brainchop/index.js'
 import type { ModelInfo } from './services/brainchop/types.js'
 import { parseLabelJson, resolveLabels } from '../../common/labelResolver.js'
 import { extractSubvolume as extractSubvolumeUtil } from './utils/extractSubvolume.js'
+import { WorkflowDialog } from './components/WorkflowDialog.js'
+import { WorkflowDesignerDialog } from './components/WorkflowDesignerDialog.js'
+import {
+  WorkflowTemplateGallery,
+  type TemplateChoice
+} from './components/WorkflowTemplateGallery.js'
+import { HeuristicDesigner } from './components/HeuristicDesigner.js'
+import { OpenTargetDialog } from './components/OpenTargetDialog.js'
+import { UnsavedChangesDialog } from './components/UnsavedChangesDialog.js'
 
 const electron = window.electron
 
@@ -27,33 +35,10 @@ interface LabelCacheEntry {
   modelInfo: ModelInfo
 }
 
-// function overrideDrawGraph(nv: Niivue): void {
-//   const originalDrawGraph = nv.drawGraph.bind(nv)
-//   nv.drawGraph = (): void => {
-//     originalDrawGraph()
-//     if (!nv.graph.plotLTWH || !fmriEvents.length) return
-//     const [plotX, plotY, plotW, plotH] = nv.graph.plotLTWH
-//     const numFrames = nv.graph.lines?.[0]?.length || 0
-//     if (numFrames === 0) return
-//     const hdr = nv.volumes[0]?.hdr
-//     const TR = hdr?.pixDims?.[4] ?? 1
-//     const scaleW = plotW / numFrames
-//     for (const ev of fmriEvents) {
-//       const startFrame = ev.onset / TR
-//       const endFrame = (ev.onset + ev.duration) / TR
-//       const x0 = plotX + startFrame * scaleW
-//       const x1 = plotX + endFrame * scaleW
-//       const color = getColorForTrialType(ev.trial_type)
-//       nv.drawRect([x0, plotY, x1 - x0, plotH], color)
-//     }
-//   }
-// }
-
 function MainApp(): JSX.Element {
   const {
     documents,
     selectedDocId,
-    // addDocument,
     selectDocument,
     updateDocument,
     removeDocument,
@@ -84,10 +69,189 @@ function MainApp(): JSX.Element {
   const [extractSubvolumeEnabled, setExtractSubvolumeEnabled] = useState(false)
   const [selectedExtractLabels, setSelectedExtractLabels] = useState<Set<number>>(new Set())
   const availableModels = brainchopService.getAvailableModels()
+
+  // BIDS panel state — per-document
+  const bidsMappings = selected?.bidsMappings ?? []
+  const setBidsMappings = selected?.setBidsMappings
+
+  // Workspace mode — collapses the old workflowOpen / templateGalleryOpen /
+  // workflowDesignerOpen booleans into a single tagged union so subsequent
+  // PRs can move each panel from a Dialog overlay into the center pane
+  // without retouching every call site. The designer's `parent` field lets
+  // it stack over a wizard (the "Edit Workflow" flow) and pop back when
+  // closed.
+  type WorkspaceMode =
+    | { kind: 'viewer' }
+    | { kind: 'gallery' }
+    | { kind: 'wizard'; workflowName: string; inputs: Record<string, unknown> }
+    | {
+        kind: 'designer'
+        initialDefinition: Record<string, unknown> | null
+        parent: WorkspaceMode
+      }
+  const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>({ kind: 'viewer' })
+
+  const openGalleryMode = useCallback(() => setWorkspaceMode({ kind: 'gallery' }), [])
+  const openWizardMode = useCallback(
+    (workflowName: string, inputs: Record<string, unknown>) =>
+      setWorkspaceMode({ kind: 'wizard', workflowName, inputs }),
+    []
+  )
+  // `fromWizard: true` stacks the designer over the wizard the author is
+  // running so closing returns to it. Otherwise, if entered from the
+  // template gallery we keep that as the parent so the back button drops
+  // the author back at template selection rather than the viewer. Direct
+  // entry from menus falls through to viewer.
+  const openDesignerMode = useCallback(
+    (initialDefinition: Record<string, unknown> | null, options?: { fromWizard?: boolean }) =>
+      setWorkspaceMode((prev) => {
+        let parent: WorkspaceMode = { kind: 'viewer' }
+        if (options?.fromWizard && prev.kind === 'wizard') parent = prev
+        else if (prev.kind === 'gallery') parent = prev
+        return { kind: 'designer', initialDefinition, parent }
+      }),
+    []
+  )
+  const closeWorkspaceMode = useCallback(() => setWorkspaceMode({ kind: 'viewer' }), [])
+  const closeDesignerMode = useCallback(
+    () => setWorkspaceMode((prev) => (prev.kind === 'designer' ? prev.parent : prev)),
+    []
+  )
+
+  // Render predicates — the dialogs stay mounted by current behavior, so
+  // wizard remains open underneath a designer opened via "Edit Workflow".
+  const wizardParams =
+    workspaceMode.kind === 'wizard'
+      ? workspaceMode
+      : workspaceMode.kind === 'designer' && workspaceMode.parent.kind === 'wizard'
+        ? workspaceMode.parent
+        : null
+  const designerActive = workspaceMode.kind === 'designer'
+  const designerInitialDefinition = designerActive ? workspaceMode.initialDefinition : null
+  const galleryOpen = workspaceMode.kind === 'gallery'
+  const wizardActive = !!wizardParams
+  const designerOverWizard =
+    workspaceMode.kind === 'designer' && workspaceMode.parent.kind === 'wizard'
+  const designerOverGallery =
+    workspaceMode.kind === 'designer' && workspaceMode.parent.kind === 'gallery'
+  const workflowShellActive = galleryOpen || wizardActive || designerActive
+
+  // Heuristic designer state
+  const [heuristicDesignerOpen, setHeuristicDesignerOpen] = useState(false)
+  const [heuristicInitialDefinition, setHeuristicInitialDefinition] = useState<
+    import('../../common/workflowTypes.js').HeuristicDefinition | null
+  >(null)
+
+  // Listen for workflow:open from menu
+  useEffect(() => {
+    const handleWorkflowOpen = (
+      _evt: unknown,
+      payload: { workflowName: string; inputs: Record<string, unknown> }
+    ): void => {
+      openWizardMode(payload.workflowName, payload.inputs)
+    }
+    electron.ipcRenderer.on('workflow:open', handleWorkflowOpen)
+
+    const handleOpenDesigner = (): void => {
+      openGalleryMode()
+    }
+    electron.ipcRenderer.on('workflow:open-designer', handleOpenDesigner)
+
+    const handleOpenDesignerTutorial = (): void => {
+      openDesignerMode(null)
+    }
+    electron.ipcRenderer.on('workflow:open-designer-tutorial', handleOpenDesignerTutorial)
+
+    const handleEditDesigner = (_evt: unknown, workflowName: string): void => {
+      electron.ipcRenderer
+        .invoke('workflow:get-definition', workflowName)
+        .then((definition: Record<string, unknown>) => {
+          openDesignerMode(definition)
+        })
+    }
+    electron.ipcRenderer.on('workflow:edit-designer', handleEditDesigner)
+
+    const handleOpenHeuristicDesigner = (): void => {
+      setHeuristicInitialDefinition(null)
+      setHeuristicDesignerOpen(true)
+    }
+    electron.ipcRenderer.on('heuristic:open-designer', handleOpenHeuristicDesigner)
+
+    const handleEditHeuristicDesigner = (_evt: unknown, heuristicName: string): void => {
+      electron.ipcRenderer
+        .invoke('workflow:get-heuristic-definition', heuristicName)
+        .then((definition: import('../../common/workflowTypes.js').HeuristicDefinition | null) => {
+          if (definition) {
+            setHeuristicInitialDefinition(definition)
+            setHeuristicDesignerOpen(true)
+          }
+        })
+    }
+    electron.ipcRenderer.on('heuristic:edit-designer', handleEditHeuristicDesigner)
+
+    return (): void => {
+      electron.ipcRenderer.removeAllListeners('workflow:open')
+      electron.ipcRenderer.removeAllListeners('workflow:open-designer')
+      electron.ipcRenderer.removeAllListeners('workflow:open-designer-tutorial')
+      electron.ipcRenderer.removeAllListeners('workflow:edit-designer')
+      electron.ipcRenderer.removeAllListeners('heuristic:open-designer')
+      electron.ipcRenderer.removeAllListeners('heuristic:edit-designer')
+    }
+  }, [])
   // modelsVersion is used to trigger re-render when user adds models via wizard
   void modelsVersion
 
-  const getTarget = async (): Promise<NiivueInstanceContext> => {
+  // Open target dialog state (new doc vs add to current)
+  const [openTargetDialogOpen, setOpenTargetDialogOpen] = useState(false)
+  const openTargetResolverRef = useRef<((choice: 'new' | 'current' | 'cancel') => void) | null>(
+    null
+  )
+
+  // Unsaved-changes dialog (Save / Don't Save / Cancel) for close-tab and
+  // any operation about to clobber dirty work.
+  const [unsavedChangesTitle, setUnsavedChangesTitle] = useState<string | null>(null)
+  const unsavedChangesResolverRef = useRef<
+    ((choice: 'save' | 'discard' | 'cancel') => void) | null
+  >(null)
+
+  const promptUnsavedChanges = (title: string): Promise<'save' | 'discard' | 'cancel'> =>
+    new Promise((resolve) => {
+      unsavedChangesResolverRef.current = resolve
+      setUnsavedChangesTitle(title)
+    })
+
+  const resolveUnsavedChanges = (choice: 'save' | 'discard' | 'cancel'): void => {
+    setUnsavedChangesTitle(null)
+    unsavedChangesResolverRef.current?.(choice)
+    unsavedChangesResolverRef.current = null
+  }
+
+  // Save a document via the native save dialog. Returns true if persisted,
+  // false if the user cancelled the save dialog.
+  const saveDocument = async (doc: NiivueInstanceContext): Promise<boolean> => {
+    const { id, nvRef, title } = doc
+    const nv = nvRef.current
+    const jsonStr = JSON.stringify(nv.document.json())
+    const base = (title || id).replace(/\.nvd(\.gz)?$/, '')
+    const suggestedName = `${base}.nvd`
+    const savedPath = await window.electron.ipcRenderer.invoke(
+      'saveCompressedNVD',
+      jsonStr,
+      suggestedName
+    )
+    if (!savedPath) return false
+    const raw = savedPath.split('/').pop() || suggestedName
+    const newTitle = raw.replace(/\.nvd(\.gz)?$/, '') || suggestedName
+    updateDocument(id, { title: newTitle, filePath: savedPath, isDirty: false })
+    return true
+  }
+
+  // `destructive` indicates the upcoming load will replace the target's
+  // contents (e.g. nv.loadDocument). When set, dirty work in the chosen
+  // target is preserved via the unsaved-changes prompt before clobbering.
+  const getTarget = async (
+    opts: { destructive?: boolean } = {}
+  ): Promise<NiivueInstanceContext> => {
     // Use ref to get latest selected, avoiding stale closures
     const current = selectedRef.current
     if (!current) throw new Error('no document!')
@@ -95,7 +259,37 @@ function MainApp(): JSX.Element {
     const nv = current.nvRef.current
     const hasContent = nv.volumes.length > 0 || nv.meshes.length > 0
     if (!hasContent) return current
-    return createDocument()
+
+    // Ask user whether to open in new document or add to current
+    const choice = await new Promise<'new' | 'current' | 'cancel'>((resolve) => {
+      openTargetResolverRef.current = resolve
+      setOpenTargetDialogOpen(true)
+    })
+
+    setOpenTargetDialogOpen(false)
+    openTargetResolverRef.current = null
+
+    if (choice === 'cancel') throw new Error('open cancelled by user')
+
+    if (choice === 'current') {
+      // Destructive load over a dirty doc would silently lose work. Ask first.
+      if (opts.destructive && current.isDirty) {
+        const saveChoice = await promptUnsavedChanges(current.title || current.id)
+        if (saveChoice === 'cancel') throw new Error('open cancelled by user')
+        if (saveChoice === 'save') {
+          const ok = await saveDocument(current)
+          if (!ok) throw new Error('open cancelled by user')
+        }
+      }
+      return current
+    }
+
+    // Create new document and copy BIDS data from current
+    const newDoc = await createDocument()
+    if (current.bidsMappings.length > 0) {
+      newDoc.setBidsMappings([...current.bidsMappings])
+    }
+    return newDoc
   }
 
   // Create the first document on mount
@@ -144,13 +338,6 @@ function MainApp(): JSX.Element {
       }
     }
 
-    // Restore viewer prefs
-    // Object.assign(nv.opts, selected.opts)
-    // if (selected.sliceType) nv.setSliceType(selected.sliceType)
-    // const layoutVal = layouts[selected.layout]
-    // if (layoutVal) nv.setMultiplanarLayout(layoutVal)
-    // nv.setSliceMosaicString(selected.opts.sliceMosaicString ?? '')
-
     // Re-draw everything
     nv.updateGLVolume()
     nv.drawScene()
@@ -180,6 +367,11 @@ function MainApp(): JSX.Element {
       setLabelEditMode,
       onDocumentLoaded: (newTitle: string, targetId: string) =>
         updateDocument(targetId, { title: newTitle, isDirty: true }),
+      onBidsStateRestored: (state) => {
+        setBidsMappings?.(state.mappings)
+        setRightPanelTab('bids')
+        setRightPanelOpen(true)
+      },
       onMosaicStringChange: selected.setSliceMosaicString,
       onToggleSegmentationPanel: () => {
         setRightPanelTab('segmentation')
@@ -196,7 +388,7 @@ function MainApp(): JSX.Element {
   // Segmentation handlers
   const handleRunSegmentation = async (modelId: string): Promise<void> => {
     if (!selected || selected.volumes.length === 0) {
-      alert('Please load a volume first')
+      alert("Can't run segmentation — no volume loaded. Open a NIfTI or DICOM volume first.")
       return
     }
 
@@ -205,7 +397,9 @@ function MainApp(): JSX.Element {
     const modelInfo = brainchopService.getModelInfo(modelId)
 
     if (!modelInfo) {
-      alert(`Model not found: ${modelId}`)
+      alert(
+        `Can't run segmentation — model '${modelId}' isn't installed. Pick a different model from the panel.`
+      )
       return
     }
 
@@ -229,7 +423,7 @@ function MainApp(): JSX.Element {
       } else {
         // Cache miss: run full segmentation
         if (!brainchopService.isReady()) {
-          setSegmentationStatus('Initializing TensorFlow.js...')
+          setSegmentationStatus('Initializing TensorFlow.js…')
           setSegmentationProgress(0)
           setSegmentationRunning(true)
           setSegmentationModelName(modelInfo.name)
@@ -238,7 +432,7 @@ function MainApp(): JSX.Element {
 
         setSegmentationRunning(true)
         setSegmentationProgress(0)
-        setSegmentationStatus('Starting segmentation...')
+        setSegmentationStatus('Starting segmentation…')
         setSegmentationModelName(modelInfo.name)
 
         // Conform to 256³ @ 1mm Uint8 — matches brainchop.org: nv.conform(volume, false)
@@ -273,15 +467,27 @@ function MainApp(): JSX.Element {
       if (extractSubvolumeEnabled && selectedExtractLabels.size > 0) {
         // Extract subvolume: create masked intensity volume
         // Always use rawFloat32 conform so extraction gets original-range intensities (not Uint8)
-        const sourceVolume = await nv.conform(baseVolume, false, true, false, false, [256, 256, 256], 1.0, true)
-        const extractedVolume = extractSubvolumeUtil(sourceVolume, labelVolume, selectedExtractLabels)
+        const sourceVolume = await nv.conform(
+          baseVolume,
+          false,
+          true,
+          false,
+          false,
+          [256, 256, 256],
+          1.0,
+          true
+        )
+        const extractedVolume = extractSubvolumeUtil(
+          sourceVolume,
+          labelVolume,
+          selectedExtractLabels
+        )
 
         // Build descriptive name
         const baseName = baseVolume.name?.replace(/\.(nii|nii\.gz)$/i, '') || 'volume'
         const labelCount = selectedExtractLabels.size
-        const labelSummary = labelCount <= 3
-          ? [...selectedExtractLabels].join('-')
-          : `${labelCount}labels`
+        const labelSummary =
+          labelCount <= 3 ? [...selectedExtractLabels].join('-') : `${labelCount}labels`
         extractedVolume.name = `${baseName}_extract_${labelSummary}.nii.gz`
 
         nv.addVolume(extractedVolume)
@@ -295,7 +501,9 @@ function MainApp(): JSX.Element {
         // Apply colormap labels from model-specific colormap.json (matches brainchop.org)
         if (resultModelInfo.colormapPath) {
           try {
-            const colormapJson = await window.electron.loadBrainchopLabels(resultModelInfo.colormapPath)
+            const colormapJson = await window.electron.loadBrainchopLabels(
+              resultModelInfo.colormapPath
+            )
             overlayVolume.setColormapLabel(colormapJson)
             if (overlayVolume.colormapLabel?.lut) {
               overlayVolume.colormapLabel.lut = overlayVolume.colormapLabel.lut.map((v, i) =>
@@ -366,7 +574,10 @@ function MainApp(): JSX.Element {
       input: string
     ): Promise<NVImage> => {
       const resolved = await window.electron.headlessResolveInput(input)
-      const volume = await NVImage.loadFromBase64({ base64: resolved.base64, name: resolved.filename })
+      const volume = await NVImage.loadFromBase64({
+        base64: resolved.base64,
+        name: resolved.filename
+      })
       nv.addVolume(volume)
       doc.setVolumes([...nv.volumes])
       nv.updateGLVolume()
@@ -632,9 +843,14 @@ function MainApp(): JSX.Element {
         let seriesNumbers: number[] = []
         if (options.series === 'all') {
           const series = await window.electron.headlessDcm2niixList(options.input)
-          seriesNumbers = series.map((s: { seriesNumber: number }) => s.seriesNumber).filter((n: number) => n != null)
+          seriesNumbers = series
+            .map((s: { seriesNumber: number }) => s.seriesNumber)
+            .filter((n: number) => n != null)
         } else {
-          seriesNumbers = options.series.split(',').map((s) => parseInt(s.trim(), 10)).filter((n) => !isNaN(n))
+          seriesNumbers = options.series
+            .split(',')
+            .map((s) => parseInt(s.trim(), 10))
+            .filter((n) => !isNaN(n))
         }
 
         console.error(`[niivue] Converting DICOM series: ${seriesNumbers.join(', ')}`)
@@ -678,7 +894,11 @@ function MainApp(): JSX.Element {
       console.error(`[niivue] Running niimath: ${options.ops}`)
 
       // Run niimath
-      const result = await window.electron.headlessNiimath(resolved.base64, resolved.filename, options.ops)
+      const result = await window.electron.headlessNiimath(
+        resolved.base64,
+        resolved.filename,
+        options.ops
+      )
 
       // Output result
       const isStdout = options.output === '-' || options.output.toLowerCase() === 'stdout'
@@ -690,6 +910,81 @@ function MainApp(): JSX.Element {
           throw new Error(`Failed to save niimath result: ${saveResult.error}`)
         }
       }
+    }
+
+    // ALLINEATE command: Run affine registration
+    const runAllineateCommand = async (
+      options: Awaited<ReturnType<typeof window.electron.headlessGetOptions>>
+    ): Promise<void> => {
+      if (!options.input) {
+        throw new Error('allineate command requires --input (moving image)')
+      }
+      if (!options.stationary) {
+        throw new Error('allineate command requires --stationary (target image)')
+      }
+      if (!options.output) {
+        throw new Error('allineate command requires --output')
+      }
+
+      // Resolve input paths — allineate works with file paths, not base64
+      const resolvedMoving = await window.electron.headlessResolveInput(options.input)
+      const resolvedStationary = await window.electron.headlessResolveInput(options.stationary)
+
+      // Write resolved inputs to temp files if they came from stdin/URL/standard
+      const movingPath = await ensureFilePath(resolvedMoving)
+      const stationaryPath = await ensureFilePath(resolvedStationary)
+
+      // Build allineate options
+      const opts: string[] = []
+      if (options.cost) opts.push('-cost', options.cost)
+      if (options.cmass) opts.push('-cmass')
+      if (options.sourceAutomask) opts.push('-source_automask')
+      if (options.final) opts.push('-final', options.final)
+
+      const isStdout = options.output === '-' || options.output.toLowerCase() === 'stdout'
+      const outputPath = isStdout ? `/tmp/allineate-out-${Date.now()}.nii.gz` : options.output
+
+      const cmdLine = `allineate ${movingPath} ${stationaryPath} ${opts.join(' ')} ${outputPath}`
+      console.error(`[niivue] ${cmdLine}`)
+
+      const result = await window.electron.headlessAllineate(
+        movingPath,
+        stationaryPath,
+        outputPath,
+        opts
+      )
+
+      if (!result.success) {
+        throw new Error(`allineate failed: ${result.stderr}`)
+      }
+
+      if (isStdout) {
+        // Read the output file and write to stdout
+        const base64 = (await window.electron.ipcRenderer.invoke(
+          'read-file-as-base64',
+          outputPath
+        )) as string
+        await window.electron.headlessWriteStdout(base64)
+      }
+    }
+
+    // Helper: ensure a resolved input is available as a file path on disk
+    const ensureFilePath = async (resolved: {
+      type: string
+      base64: string
+      filename: string
+      originalPath: string
+    }): Promise<string> => {
+      if (resolved.type === 'local-file') {
+        return resolved.originalPath
+      }
+      // For stdin, URL, or standard images, write to a temp file
+      const tmpPath = `/tmp/niivue-${Date.now()}-${resolved.filename}`
+      const saveResult = await window.electron.headlessSaveNifti(resolved.base64, tmpPath)
+      if (!saveResult.success) {
+        throw new Error(`Failed to write temp file: ${saveResult.error}`)
+      }
+      return tmpPath
     }
 
     // Main headless workflow dispatcher
@@ -718,6 +1013,57 @@ function MainApp(): JSX.Element {
           case 'niimath':
             await runNiimathCommand(options)
             break
+          case 'allineate':
+            await runAllineateCommand(options)
+            break
+          case 'workflow': {
+            const workflowName = options.subcommandMode
+            if (!workflowName)
+              throw new Error(
+                'workflow subcommand requires a workflow name. Usage: workflow <name> --inputs <json>'
+              )
+
+            let wfInputs: Record<string, unknown> = {}
+            if (options.workflowInputs) {
+              try {
+                wfInputs = JSON.parse(options.workflowInputs) as Record<string, unknown>
+              } catch (e) {
+                throw new Error(
+                  `Invalid JSON in --inputs: ${e instanceof Error ? e.message : String(e)}`
+                )
+              }
+            }
+
+            let wfContext: Record<string, unknown> | undefined
+            if (options.workflowContext) {
+              // Could be inline JSON or a file path — try parsing as JSON first
+              try {
+                wfContext = JSON.parse(options.workflowContext) as Record<string, unknown>
+              } catch {
+                // Not valid JSON — treat as a file path
+                try {
+                  const resolved = await window.electron.headlessResolveInput(
+                    options.workflowContext
+                  )
+                  wfContext = JSON.parse(atob(resolved.base64)) as Record<string, unknown>
+                } catch (e) {
+                  throw new Error(
+                    `Failed to load --context from '${options.workflowContext}': ${e instanceof Error ? e.message : String(e)}`
+                  )
+                }
+              }
+            }
+
+            // --output flag overrides output_dir in context
+            if (options.output) {
+              wfContext = wfContext || {}
+              wfContext.output_dir = options.output
+            }
+
+            const result = await window.electron.headlessWorkflow(workflowName, wfInputs, wfContext)
+            console.error(`[workflow] outputs: ${JSON.stringify(result.outputs)}`)
+            break
+          }
           default:
             throw new Error(`Unknown subcommand: ${options.subcommand}`)
         }
@@ -769,6 +1115,7 @@ function MainApp(): JSX.Element {
       current.setVolumes([])
       current.setMeshes([])
       current.setSelectedImage(null)
+      current.setBidsMappings([])
 
       updateDocument(current.id, {
         volumes: [],
@@ -814,168 +1161,6 @@ function MainApp(): JSX.Element {
       window.electron.ipcRenderer.removeListener('saveCompressedDocument', onSave)
     }
   }, [selected, updateDocument])
-
-  // /**
-  //  * Create a brand‐new Niivue document instance,
-  //  * wire up its IPC & state setters, then add to context.
-  //  */
-  // async function createNewDocument(): Promise<void> {
-  //   const nv = new Niivue({ dragAndDropEnabled: false })
-  //   // const nvRef = { current: nv }
-  //   const docId = `doc-${documents.length + 1}`
-
-  //   function getCurrent<T extends keyof NiivueInstanceContext>(
-  //     field: T
-  //   ): NiivueInstanceContext[T] | undefined {
-  //     const d = documents.find((d) => d.id === docId)
-  //     return d?.[field]
-  //   }
-
-  //   const setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>> = (action) => {
-  //     const prev = (getCurrent('volumes') as NVImage[]) ?? []
-  //     const next =
-  //       typeof action === 'function' ? (action as (prev: NVImage[]) => NVImage[])(prev) : action
-  //     updateDocument(docId, { volumes: next, isDirty: true })
-  //   }
-
-  //   const setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>> = (action) => {
-  //     const prev = (getCurrent('meshes') as NVMesh[]) ?? []
-  //     const next =
-  //       typeof action === 'function' ? (action as (prev: NVMesh[]) => NVMesh[])(prev) : action
-  //     updateDocument(docId, { meshes: next, isDirty: true })
-  //   }
-
-  //   const setSelectedImage: React.Dispatch<React.SetStateAction<NVImage | null>> = (action) => {
-  //     const prev = getCurrent('selectedImage') as NVImage | null
-  //     const next =
-  //       typeof action === 'function'
-  //         ? (action as (prev: NVImage | null) => NVImage | null)(prev)
-  //         : action
-  //     updateDocument(docId, { selectedImage: next, isDirty: true })
-  //   }
-
-  //   const setSliceType: React.Dispatch<React.SetStateAction<SLICE_TYPE | null>> = (action) => {
-  //     const prev = getCurrent('sliceType') as SLICE_TYPE | null
-  //     const next =
-  //       typeof action === 'function'
-  //         ? (action as (prev: SLICE_TYPE | null) => SLICE_TYPE | null)(prev)
-  //         : action
-  //     if (next !== null) nv.setSliceType(next)
-  //     updateDocument(docId, { sliceType: next, isDirty: true })
-  //   }
-
-  //   const setSliceMosaicString: React.Dispatch<React.SetStateAction<string>> = (action) => {
-  //     const prev = getCurrent('sliceMosaicString')
-  //     const next =
-  //       typeof action === 'function' ? (action as (prev: string) => string)(prev!) : action
-  //     nv.setSliceMosaicString(next)
-
-  //     updateDocument(docId, { sliceMosaicString: next, isDirty: true })
-  //   }
-
-  //   const setOpts: React.Dispatch<React.SetStateAction<Partial<Niivue['opts']>>> = (action) => {
-  //     // 1. Grab the previous opts from your context
-  //     const prevOpts = getCurrent('opts') as Partial<Niivue['opts']>
-
-  //     // 2. Compute the “next” opts, whether action is a value or updater fn
-  //     const nextOpts =
-  //       typeof action === 'function'
-  //         ? (action as (prev: Partial<Niivue['opts']>) => Partial<Niivue['opts']>)(prevOpts)
-  //         : action
-
-  //     // 3. Apply to Niivue instance and push into your document state
-  //     Object.assign(nv.opts, nextOpts)
-  //     updateDocument(docId, { opts: { ...nv.opts }, isDirty: true })
-  //   }
-
-  //   const setLayout: React.Dispatch<React.SetStateAction<keyof typeof layouts>> = (action) => {
-  //     const prevLayout = getCurrent('layout') as keyof typeof layouts
-  //     const nextLayout =
-  //       typeof action === 'function'
-  //         ? (action as (prev: keyof typeof layouts) => keyof typeof layouts)(prevLayout)
-  //         : action
-
-  //     const layoutValue = layouts[nextLayout]
-  //     if (layoutValue) nv.setMultiplanarLayout(layoutValue)
-  //     updateDocument(docId, { layout: nextLayout, isDirty: true })
-  //   }
-
-  //   // 2) Mosaic orientation setter
-  //   type Ori = 'A' | 'C' | 'S'
-  //   const setMosaicOrientation: React.Dispatch<React.SetStateAction<Ori>> = (action) => {
-  //     const prevOri = getCurrent('mosaicOrientation') as Ori
-  //     const nextOri =
-  //       typeof action === 'function' ? (action as (prev: Ori) => Ori)(prevOri) : action
-
-  //     // if you need to drive Niivue itself:
-  //     // nv.setSliceMosaicOrientation?.(nextOri)
-
-  //     updateDocument(docId, { mosaicOrientation: nextOri, isDirty: true })
-  //   }
-
-  //   const doc: NiivueInstanceContext = {
-  //     id: docId,
-  //     nvRef: { current: nv },
-
-  //     volumes: [],
-  //     setVolumes,
-
-  //     meshes: [],
-  //     setMeshes,
-
-  //     selectedImage: null,
-  //     setSelectedImage,
-
-  //     sliceType: null,
-  //     setSliceType,
-
-  //     opts: { ...nv.opts },
-  //     setOpts,
-
-  //     layout: 'Row',
-  //     setLayout,
-
-  //     mosaicOrientation: 'A',
-  //     setMosaicOrientation,
-
-  //     sliceMosaicString: '',
-  //     setSliceMosaicString,
-
-  //     title: 'Untitled',
-
-  //     filePath: null,
-  //     isDirty: false
-  //   }
-
-  //   addDocument(doc)
-
-  //   // load persisted prefs
-  //   const prefs = await electron.ipcRenderer.invoke('getPreferences')
-  //   Object.entries(prefs ?? {}).forEach(([key, value]) => {
-  //     if (key in nv.opts) {
-  //       nv.opts[key] = value
-  //     }
-  //   })
-
-  //   nv.setSliceType(nv.sliceTypeMultiplanar)
-  //   overrideDrawGraph(nv)
-  //   await niimathRef.current.init()
-
-  //   nv.drawScene()
-  // }
-
-  // // Sidebar drag/drop handlers
-  // function handleDragOver(e: React.DragEvent<HTMLDivElement>): void {
-  //   e.preventDefault()
-  // }
-  // function handleDrop(e: React.DragEvent<HTMLDivElement>): void {
-  //   if (!selected) return
-  //   const nv = selected.nvRef.current
-  //   nv.volumes = []
-  //   nv.meshes = []
-  //   nv.updateGLVolume()
-  //   loadDroppedFiles(e, selected.setVolumes, selected.setMeshes, nv.gl)
-  // }
 
   // Sidebar remove/move
   function handleRemoveMesh(mesh: NVMesh): void {
@@ -1025,7 +1210,9 @@ function MainApp(): JSX.Element {
           updateDocument(selected.id, { isDirty: true })
         } catch (err) {
           console.error('Failed to replace volume:', err)
-          window.alert('Failed to load replacement volume.')
+          window.alert(
+            "Couldn't load the replacement volume. Check the file is a readable NIfTI/DICOM and try again."
+          )
         }
       }
     )
@@ -1065,31 +1252,13 @@ function MainApp(): JSX.Element {
   const handleCloseTab = async (e: React.MouseEvent, doc: NiivueInstanceContext): Promise<void> => {
     e.stopPropagation()
     if (doc.isDirty) {
-      const save = window.confirm(`Save changes to “${doc.title}”?`)
-      if (save) {
-        const { id, nvRef, title } = doc
-        const nv = nvRef.current
-        const jsonStr = JSON.stringify(nv.document.json())
-        const base = (title || id).replace(/\.nvd(\.gz)?$/, '')
-        const suggestedName = `${base}.nvd`
-        const savedPath = await window.electron.ipcRenderer.invoke(
-          'saveCompressedNVD',
-          jsonStr,
-          suggestedName
-        )
-        if (savedPath) {
-          const raw = savedPath.split('/').pop() || suggestedName
-          const newTitle = raw.replace(/\.nvd(\.gz)?$/, '') || suggestedName
-          updateDocument(id, {
-            title: newTitle,
-            filePath: savedPath,
-            isDirty: false
-          })
-        }
-      } else {
-        const discard = window.confirm(`Discard changes to “${doc.title}”?`)
-        if (!discard) return
+      const choice = await promptUnsavedChanges(doc.title || doc.id)
+      if (choice === 'cancel') return
+      if (choice === 'save') {
+        const saved = await saveDocument(doc)
+        if (!saved) return
       }
+      // 'discard' falls through to remove
     }
     removeDocument(doc.id)
   }
@@ -1179,22 +1348,31 @@ function MainApp(): JSX.Element {
 
       {/* 2) Main content: sidebar & viewer & right panel */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar (left) */}
-        <div className="flex-shrink-0 overflow-auto">
-          <Sidebar
-            onRemoveMesh={handleRemoveMesh}
-            onRemoveVolume={handleRemoveVolume}
-            onMoveVolumeUp={handleMoveVolumeUp}
-            onMoveVolumeDown={handleMoveVolumeDown}
-            onReplaceVolume={handleReplaceVolume}
-            activePanel={activeLeftPanel}
-            onSetActivePanel={setActiveLeftPanel}
-            availableModels={availableModels}
-            onRunSegmentation={handleRunSegmentation}
-            onModelsChanged={() => setModelsVersion((v) => v + 1)}
-          />
-        </div>
-        {/* Viewer (center) */}
+        {/* Sidebar (left) — hidden while any workflow shell (gallery,
+            wizard, or designer) occupies the center pane; the shells
+            either have their own navigation or don't need the
+            viewer-oriented sidebar. */}
+        {!workflowShellActive && (
+          <div className="flex-shrink-0 overflow-auto">
+            <Sidebar
+              onRemoveMesh={handleRemoveMesh}
+              onRemoveVolume={handleRemoveVolume}
+              onMoveVolumeUp={handleMoveVolumeUp}
+              onMoveVolumeDown={handleMoveVolumeDown}
+              onReplaceVolume={handleReplaceVolume}
+              activePanel={activeLeftPanel}
+              onSetActivePanel={setActiveLeftPanel}
+              availableModels={availableModels}
+              onRunSegmentation={handleRunSegmentation}
+              onModelsChanged={() => setModelsVersion((v) => v + 1)}
+            />
+          </div>
+        )}
+        {/* Viewer (center) — workflow shells overlay the viewer in-place
+            rather than mounting as modal dialogs, so they get the full
+            available pane and resize with the window. The viewer DOM
+            stays mounted underneath so its WebGL context survives a
+            round-trip through a workflow. */}
         <div className="flex-1 relative overflow-hidden">
           {documents.map((doc) => (
             <div
@@ -1210,9 +1388,141 @@ function MainApp(): JSX.Element {
               />
             </div>
           ))}
+          {galleryOpen && (
+            <div className="absolute inset-0 z-10">
+              <WorkflowTemplateGallery
+                onClose={closeWorkspaceMode}
+                onSelect={(choice: TemplateChoice) => {
+                  if (choice.kind === 'run-workflow') {
+                    openWizardMode(choice.workflowName, choice.inputs)
+                  } else if (
+                    choice.kind === 'customize' ||
+                    choice.kind === 'use-as-template' ||
+                    choice.kind === 'edit-user'
+                  ) {
+                    openDesignerMode(choice.definition)
+                  } else if (choice.kind === 'blank') {
+                    openDesignerMode(null)
+                  }
+                }}
+              />
+            </div>
+          )}
+          {wizardActive && (
+            <div className="absolute inset-0 z-10">
+              <WorkflowDialog
+                open={true}
+                onClose={closeWorkspaceMode}
+                onLoadFile={async (niftiPath: string, options?: { append?: boolean }) => {
+                  try {
+                    // Append mode skips the new/current prompt — the user clicked Open
+                    // after already loading something here, so they want it stacked on
+                    // the current doc, not deflected into a fresh tab.
+                    const target =
+                      options?.append && selectedRef.current
+                        ? selectedRef.current
+                        : await getTarget()
+                    const nv = target.nvRef.current
+                    const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+                    if (!base64) return
+                    const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+                    // Default: replace the document's volumes — otherwise an earlier
+                    // loaded volume (e.g. the original from the SkullStrip step) sits
+                    // underneath the new one. With `append: true` (used by repeated
+                    // per-row clicks on the completion screen) we stack instead.
+                    if (!options?.append) {
+                      while (nv.volumes.length > 0) nv.removeVolumeByIndex(0)
+                    } else if (nv.volumes.length > 0) {
+                      vol.opacity = 0.5
+                    }
+                    nv.addVolume(vol)
+                    target.setVolumes([...nv.volumes])
+                    nv.drawScene()
+                    if (!options?.append) {
+                      const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
+                      const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
+                      updateDocument(target.id, { title })
+                    }
+                  } catch (err) {
+                    if (err instanceof Error && err.message.includes('cancelled')) return
+                    console.error('Failed to load volume from workflow:', err)
+                  }
+                }}
+                onLoadFiles={async (niftiPaths: string[]) => {
+                  if (niftiPaths.length === 0) return
+                  try {
+                    // "Load All" is an explicit batch — replace whatever's in the
+                    // current doc with the stack rather than prompting.
+                    const target = selectedRef.current ?? (await getTarget())
+                    const nv = target.nvRef.current
+                    // Stack multiple files in one document — first as base, rest as overlays.
+                    while (nv.volumes.length > 0) nv.removeVolumeByIndex(0)
+                    for (let i = 0; i < niftiPaths.length; i++) {
+                      const p = niftiPaths[i]
+                      const base64 = await electron.ipcRenderer.invoke('loadFromFile', p)
+                      if (!base64) continue
+                      const vol = await NVImage.loadFromBase64({ base64, name: p })
+                      if (i > 0) {
+                        vol.opacity = 0.5
+                      }
+                      nv.addVolume(vol)
+                    }
+                    target.setVolumes([...nv.volumes])
+                    nv.drawScene()
+                    const fname = niftiPaths[0].split(/[\\/]/).pop() ?? niftiPaths[0]
+                    const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
+                    updateDocument(target.id, { title })
+                  } catch (err) {
+                    if (err instanceof Error && err.message.includes('cancelled')) return
+                    console.error('Failed to load volumes from workflow:', err)
+                  }
+                }}
+                onBidsInit={(mappings) => {
+                  setBidsMappings?.(mappings)
+                  setRightPanelTab('bids')
+                  setRightPanelOpen(true)
+                }}
+                workflowName={wizardParams?.workflowName ?? ''}
+                inputs={wizardParams?.inputs ?? {}}
+                disableEscape={designerOverWizard}
+                onEditWorkflow={(name) => {
+                  electron.ipcRenderer
+                    .invoke('workflow:get-definition', name)
+                    .then((definition: Record<string, unknown>) => {
+                      openDesignerMode(definition, { fromWizard: true })
+                    })
+                }}
+              />
+            </div>
+          )}
+          {designerActive && (
+            <div className="absolute inset-0 z-20">
+              <WorkflowDesignerDialog
+                open={true}
+                onClose={closeDesignerMode}
+                onSave={(schema) => {
+                  electron.ipcRenderer
+                    .invoke('workflow:save', schema)
+                    .then(() => {
+                      console.log('Workflow saved:', schema)
+                      closeDesignerMode()
+                    })
+                    .catch((err: Error) => {
+                      console.error('Failed to save workflow:', err)
+                    })
+                }}
+                initialDefinition={designerInitialDefinition}
+                backTarget={
+                  designerOverWizard ? 'wizard' : designerOverGallery ? 'templates' : 'viewer'
+                }
+                onOpenGallery={openGalleryMode}
+              />
+            </div>
+          )}
         </div>
-        {/* Right Panel (controls, volume, mesh, atlas, segmentation) */}
-        {rightPanelOpen && (
+        {/* Right Panel (controls, volume, mesh, atlas, segmentation) —
+            hidden while a workflow shell occupies the center pane. */}
+        {rightPanelOpen && !workflowShellActive && (
           <div className="flex-shrink-0 w-80 bg-white border-l border-gray-300 overflow-auto">
             <RightPanel
               activeTab={rightPanelTab}
@@ -1229,6 +1539,7 @@ function MainApp(): JSX.Element {
               onExtractSubvolumeChange={setExtractSubvolumeEnabled}
               selectedExtractLabels={selectedExtractLabels}
               onSelectedExtractLabelsChange={setSelectedExtractLabels}
+              bidsMappings={bidsMappings}
             />
           </div>
         )}
@@ -1243,7 +1554,83 @@ function MainApp(): JSX.Element {
         editMode={labelEditMode}
         setEditMode={setLabelEditMode}
       />
-      <DicomImportDialog />
+      <DicomImportDialog
+        onLoadVolume={async (niftiPath) => {
+          try {
+            const current = selectedRef.current
+            if (!current) {
+              console.error('[onLoadVolume] no selected document')
+              return
+            }
+            const nv = current.nvRef.current
+            const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+            if (!base64) {
+              console.error('[onLoadVolume] empty base64')
+              return
+            }
+            const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+            nv.addVolume(vol)
+            current.setVolumes([...nv.volumes])
+            nv.drawScene()
+            const fname = niftiPath.split(/[\\/]/).pop() ?? niftiPath
+            const title = fname.replace(/\.(nii\.gz|nii)$/i, '')
+            updateDocument(current.id, { title })
+          } catch (err) {
+            console.error('[onLoadVolume] error:', err)
+          }
+        }}
+      />
+      <BidsWizard
+        nv={selected?.nvRef.current ?? null}
+        onConversionComplete={async (mappings) => {
+          setBidsMappings?.(mappings)
+          setRightPanelTab('bids')
+          setRightPanelOpen(true)
+        }}
+        onLoadVolume={async (niftiPath) => {
+          try {
+            const target = await getTarget()
+            const nv = target.nvRef.current
+            const base64 = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+            if (!base64) {
+              console.error('[onLoadVolume] empty base64')
+              return
+            }
+            const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+            nv.addVolume(vol)
+            target.setVolumes([...nv.volumes])
+            nv.drawScene()
+          } catch (err) {
+            if (err instanceof Error && err.message.includes('cancelled')) return
+            console.error('[onLoadVolume] error:', err)
+          }
+        }}
+        onLoadWithOverlay={async (basePath, overlayPath) => {
+          try {
+            const target = await getTarget()
+            const nv = target.nvRef.current
+            const [baseB64, overlayB64] = await Promise.all([
+              electron.ipcRenderer.invoke('loadFromFile', basePath) as Promise<string>,
+              electron.ipcRenderer.invoke('loadFromFile', overlayPath) as Promise<string>
+            ])
+            const baseVol = await NVImage.loadFromBase64({ base64: baseB64, name: basePath })
+            const overlayVol = await NVImage.loadFromBase64({
+              base64: overlayB64,
+              name: overlayPath
+            })
+            overlayVol.colormap = 'red'
+            overlayVol.opacity = 0.5
+            nv.addVolume(baseVol)
+            nv.addVolume(overlayVol)
+            target.setVolumes([...nv.volumes])
+            nv.drawScene()
+          } catch (err) {
+            if (err instanceof Error && err.message.includes('cancelled')) return
+            console.error('[onLoadWithOverlay] error:', err)
+          }
+        }}
+      />
+      <BidsFilterDialog />
       <SegmentationDialog
         open={segmentationRunning}
         progress={segmentationProgress}
@@ -1251,6 +1638,30 @@ function MainApp(): JSX.Element {
         modelName={segmentationModelName}
         onCancel={handleCancelSegmentation}
         canCancel={true}
+      />
+      <HeuristicDesigner
+        open={heuristicDesignerOpen}
+        onClose={() => {
+          setHeuristicDesignerOpen(false)
+          setHeuristicInitialDefinition(null)
+        }}
+        onSave={() => {
+          // Keep designer open after save so user can continue editing
+        }}
+        initialDefinition={heuristicInitialDefinition}
+      />
+      <OpenTargetDialog
+        open={openTargetDialogOpen}
+        onNewDocument={() => openTargetResolverRef.current?.('new')}
+        onAddToCurrent={() => openTargetResolverRef.current?.('current')}
+        onCancel={() => openTargetResolverRef.current?.('cancel')}
+      />
+      <UnsavedChangesDialog
+        open={unsavedChangesTitle !== null}
+        documentTitle={unsavedChangesTitle ?? ''}
+        onSave={() => resolveUnsavedChanges('save')}
+        onDiscard={() => resolveUnsavedChanges('discard')}
+        onCancel={() => resolveUnsavedChanges('cancel')}
       />
     </div>
   )

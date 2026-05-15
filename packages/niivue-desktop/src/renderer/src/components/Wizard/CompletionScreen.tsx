@@ -1,0 +1,469 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Button, Heading, Text, Badge } from '@radix-ui/themes'
+import { CheckCircledIcon, CheckIcon } from '@radix-ui/react-icons'
+import { Niivue, NVImage, SLICE_TYPE } from '@niivue/niivue'
+import type { BidsSeriesMapping } from '../../../../common/bidsTypes.js'
+import { generateBidsPath } from '../BidsWizard/bidsTreeUtil.js'
+import { runWithConcurrency } from '../../utils/concurrency.js'
+import { Spinner } from '../Spinner.js'
+
+/** Concurrent preview renders. Each preview spins up its own Niivue
+ *  WebGL context — browsers cap simultaneous contexts (~16), and the
+ *  context-creation cost dominates the per-preview wall time. 3 keeps
+ *  us well under the cap and parallelizes the disk-read + decode + draw
+ *  pipeline so a 50-file BIDS conversion finishes in ~10s instead of
+ *  the prior ~30s serial loop. */
+const PREVIEW_CONCURRENCY = 3
+
+const electron = window.electron
+
+interface WrittenFile {
+  key: string
+  label: string
+  tag?: string
+  bidsPath: string
+  sourcePath: string
+}
+
+function buildWrittenFileList(
+  mappings: BidsSeriesMapping[],
+  bidsDir: string,
+  originalPaths: Record<number, string> = {}
+): WrittenFile[] {
+  const included = mappings.filter((m) => !m.excluded)
+  const files: WrittenFile[] = []
+
+  for (const m of included) {
+    const bidsRelPath = generateBidsPath(m)
+    const ext = m.niftiPath.endsWith('.nii.gz') ? '.nii.gz' : '.nii'
+    const bidsPath = bidsDir ? `${bidsDir}/${bidsRelPath}${ext}` : m.niftiPath
+    const origPath = originalPaths[m.index]
+
+    if (origPath) {
+      const strippedSourcePath = origPath.replace(/\.nii(\.gz)?$/, '.brain.nii.gz')
+      const stripBidsRelPath = generateBidsPath(m, 'brain')
+      const stripBidsPath = bidsDir ? `${bidsDir}/${stripBidsRelPath}${ext}` : strippedSourcePath
+      files.push({
+        key: `${m.index}-stripped`,
+        label: `${stripBidsRelPath}${ext}`,
+        tag: 'skull stripped',
+        bidsPath: stripBidsPath,
+        sourcePath: strippedSourcePath
+      })
+      files.push({
+        key: `${m.index}-original`,
+        label: `${bidsRelPath}${ext}`,
+        tag: 'original',
+        bidsPath,
+        sourcePath: origPath
+      })
+    } else {
+      files.push({
+        key: `${m.index}`,
+        label: `${bidsRelPath}${ext}`,
+        bidsPath,
+        sourcePath: m.niftiPath
+      })
+    }
+  }
+
+  return files
+}
+
+async function renderPreviewImage(niftiPath: string): Promise<string | null> {
+  const canvas = document.createElement('canvas')
+  canvas.width = 120
+  canvas.height = 120
+  canvas.style.position = 'absolute'
+  canvas.style.left = '-9999px'
+  document.body.appendChild(canvas)
+
+  const nv = new Niivue({
+    isResizeCanvas: false,
+    show3Dcrosshair: false,
+    backColor: [0, 0, 0, 1],
+    crosshairWidth: 0
+  })
+
+  try {
+    await nv.attachToCanvas(canvas)
+    const base64: string = await electron.ipcRenderer.invoke('loadFromFile', niftiPath)
+    if (!base64) return null
+    const vol = await NVImage.loadFromBase64({ base64, name: niftiPath })
+    nv.addVolume(vol)
+    nv.setSliceType(SLICE_TYPE.RENDER)
+    nv.updateGLVolume()
+    nv.drawScene()
+    return canvas.toDataURL('image/png')
+  } catch {
+    return null
+  } finally {
+    nv.volumes = []
+    const ext = nv.gl?.getExtension('WEBGL_lose_context')
+    if (ext) ext.loseContext()
+    document.body.removeChild(canvas)
+  }
+}
+
+function useSeriesPreviews(paths: string[]): Map<string, string> {
+  const [images, setImages] = useState<Map<string, string>>(new Map())
+
+  useEffect(() => {
+    let cancelled = false
+    const tasks = paths.map((path) => async () => {
+      if (cancelled) return { path, url: null }
+      const url = await renderPreviewImage(path)
+      return { path, url }
+    })
+    void runWithConcurrency(tasks, PREVIEW_CONCURRENCY, ({ path, url }) => {
+      if (cancelled || !url) return
+      setImages((prev) => new Map(prev).set(path, url))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [paths.join('\n')])
+
+  return images
+}
+
+interface CompletionScreenProps {
+  context: Record<string, unknown>
+  outputs: Record<string, unknown> | null
+  stepOutputs?: Record<string, Record<string, unknown>> | null
+  onClose: () => void
+  /** Load a single file. With `append: true`, adds to the current document
+   *  instead of replacing — used so successive per-row clicks accumulate. */
+  onLoadFile?: (niftiPath: string, options?: { append?: boolean }) => Promise<void>
+  /** Optional batch loader — when provided, "Load All in Viewer" stacks
+   *  every file into a single document instead of opening them serially
+   *  (which clears each previous load). */
+  onLoadFiles?: (niftiPaths: string[]) => Promise<void>
+  onEditWorkflow?: () => void
+}
+
+interface ParcellationOutput {
+  key: string
+  label: string
+  tag: string
+  bidsPath: string
+  sourcePath: string
+}
+
+function collectParcellationOutputs(
+  stepOutputs: Record<string, Record<string, unknown>> | null | undefined
+): ParcellationOutput[] {
+  if (!stepOutputs) return []
+  const out: ParcellationOutput[] = []
+  for (const [stepName, stepOut] of Object.entries(stepOutputs)) {
+    const paths = stepOut.parcellation_paths
+    if (!Array.isArray(paths)) continue
+    for (let i = 0; i < paths.length; i++) {
+      const p = String(paths[i])
+      out.push({
+        key: `${stepName}-parc-${i}`,
+        label: p.split(/[\\/]/).pop() ?? p,
+        tag: 'parcellation',
+        bidsPath: p,
+        sourcePath: p
+      })
+    }
+  }
+  return out
+}
+
+export function CompletionScreen({
+  context,
+  outputs,
+  stepOutputs,
+  onClose,
+  onLoadFile,
+  onLoadFiles,
+  onEditWorkflow
+}: CompletionScreenProps): React.ReactElement {
+  const mappings = (context.series_list as BidsSeriesMapping[]) || []
+  const bidsDir = (outputs?.bids_dir as string) || ''
+  const outDir = (outputs?.outDir as string) || ''
+  const originalPaths = (context._originalPaths as Record<number, string>) || {}
+  const plainVolumes = (outputs?.volumes as string[]) || []
+  const parcellationOutputs = useMemo(() => collectParcellationOutputs(stepOutputs), [stepOutputs])
+  const isBidsWorkflow = mappings.length > 0
+
+  const previewPaths = useMemo(() => {
+    const base = isBidsWorkflow
+      ? buildWrittenFileList(mappings, bidsDir, originalPaths).map((f) => f.sourcePath)
+      : plainVolumes
+    return [...base, ...parcellationOutputs.map((p) => p.sourcePath)]
+  }, [mappings, bidsDir, originalPaths, isBidsWorkflow, plainVolumes, parcellationOutputs])
+  const previewImages = useSeriesPreviews(previewPaths)
+
+  const writtenFiles = useMemo(() => {
+    const base = isBidsWorkflow ? buildWrittenFileList(mappings, bidsDir, originalPaths) : []
+    return [...base, ...parcellationOutputs]
+  }, [mappings, bidsDir, originalPaths, isBidsWorkflow, parcellationOutputs])
+
+  const [loadedKeys, setLoadedKeys] = useState<Set<string>>(new Set())
+  const loadedKeysRef = useRef(loadedKeys)
+  loadedKeysRef.current = loadedKeys
+  const markLoaded = useCallback((keys: string[]) => {
+    setLoadedKeys((prev) => {
+      const next = new Set(prev)
+      for (const k of keys) next.add(k)
+      return next
+    })
+  }, [])
+
+  const handleOpenBidsFile = useCallback(
+    async (file: WrittenFile) => {
+      let filePath: string
+      if (file.tag === 'original') {
+        filePath = file.sourcePath
+      } else {
+        const exists = await electron.ipcRenderer
+          .invoke('file-exists', file.bidsPath)
+          .catch(() => false)
+        filePath = exists ? file.bidsPath : file.sourcePath
+      }
+      if (onLoadFile) {
+        const append = loadedKeysRef.current.size > 0
+        await onLoadFile(filePath, { append })
+        markLoaded([file.key])
+      }
+    },
+    [onLoadFile, markLoaded]
+  )
+
+  const handleLoadAll = useCallback(async () => {
+    const items: { key: string; path: string }[] = isBidsWorkflow
+      ? writtenFiles.map((f) => ({ key: f.key, path: f.sourcePath }))
+      : plainVolumes.map((vol, i) => ({ key: String(i), path: vol }))
+    if (items.length === 0) return
+    if (onLoadFiles) {
+      await onLoadFiles(items.map((i) => i.path))
+      markLoaded(items.map((i) => i.key))
+      return
+    }
+    if (!onLoadFile) return
+    for (const item of items) {
+      await onLoadFile(item.path)
+      markLoaded([item.key])
+    }
+  }, [onLoadFile, onLoadFiles, isBidsWorkflow, writtenFiles, plainVolumes, markLoaded])
+
+  const displayDir = bidsDir || outDir
+  const fileList = isBidsWorkflow
+    ? writtenFiles
+    : [
+        ...plainVolumes.map((vol, i) => ({
+          key: String(i),
+          label: vol.split(/[\\/]/).pop() ?? vol,
+          sourcePath: vol,
+          bidsPath: vol
+        })),
+        ...parcellationOutputs
+      ]
+
+  // Surface a quick summary of what got produced so the user has tangible
+  // confirmation beyond a generic "succeeded" line. Numbers are best-effort:
+  // when we can't count files we still render the celebratory hero, just
+  // without the stats row.
+  const totalFileCount = fileList.length
+  const summaryStats: { label: string; value: string }[] = []
+  if (totalFileCount > 0) {
+    summaryStats.push({
+      label: totalFileCount === 1 ? 'file written' : 'files written',
+      value: String(totalFileCount)
+    })
+  }
+  if (isBidsWorkflow) {
+    const subjectCount = new Set(mappings.filter((m) => !m.excluded).map((m) => m.subject)).size
+    if (subjectCount > 0) {
+      summaryStats.push({
+        label: subjectCount === 1 ? 'subject' : 'subjects',
+        value: String(subjectCount)
+      })
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div
+        className="flex flex-col items-center text-center gap-3 px-6 py-8 rounded-xl bg-[var(--green-2)] border border-[var(--green-5)]"
+        role="status"
+        aria-live="polite"
+      >
+        <div className="w-14 h-14 rounded-full bg-[var(--green-9)] text-white flex items-center justify-center shrink-0">
+          <CheckCircledIcon width={32} height={32} />
+        </div>
+        <Heading size="5" className="text-neutral-12">
+          {isBidsWorkflow ? 'BIDS dataset ready' : 'Conversion complete'}
+        </Heading>
+        {displayDir && (
+          <Text size="2" className="text-neutral-10 break-all max-w-xl">
+            Saved to {displayDir}
+          </Text>
+        )}
+        {summaryStats.length > 0 && (
+          <div className="flex gap-6 mt-1">
+            {summaryStats.map((s) => (
+              <div key={s.label} className="flex flex-col items-center">
+                <Text size="6" weight="bold" className="text-[var(--green-11)] leading-none">
+                  {s.value}
+                </Text>
+                <Text size="1" className="text-neutral-10 mt-0.5">
+                  {s.label}
+                </Text>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {fileList.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <div className="flex items-center justify-between">
+            <Heading size="3" className="text-neutral-12">
+              {isBidsWorkflow
+                ? 'Open in viewer'
+                : `${plainVolumes.length} NIfTI file${plainVolumes.length !== 1 ? 's' : ''} created`}
+            </Heading>
+            {(onLoadFile || onLoadFiles) && fileList.length > 1 && (
+              <Button variant="soft" size="2" onClick={handleLoadAll}>
+                Load All in Viewer
+              </Button>
+            )}
+          </div>
+
+          <div className="flex flex-col gap-2">
+            {fileList.map((f) => {
+              const file = f as WrittenFile
+              const loadFile = (): void => {
+                if (isBidsWorkflow) {
+                  void handleOpenBidsFile(file)
+                } else if (onLoadFile) {
+                  void (async () => {
+                    const append = loadedKeysRef.current.size > 0
+                    await onLoadFile(file.sourcePath, { append })
+                    markLoaded([file.key])
+                  })()
+                }
+              }
+              const rowClickable = !!onLoadFile && !loadedKeys.has(file.key)
+              return (
+                <div
+                  key={file.key}
+                  role={rowClickable ? 'button' : undefined}
+                  tabIndex={rowClickable ? 0 : undefined}
+                  onClick={rowClickable ? loadFile : undefined}
+                  onKeyDown={
+                    rowClickable
+                      ? (e): void => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault()
+                            loadFile()
+                          }
+                        }
+                      : undefined
+                  }
+                  className={
+                    'flex items-center gap-4 px-4 py-3 rounded-lg bg-neutral-2 transition-colors ' +
+                    (rowClickable
+                      ? 'hover:bg-neutral-3 cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent-9)]'
+                      : '')
+                  }
+                >
+                  {previewImages.has(file.sourcePath) ? (
+                    <img
+                      src={previewImages.get(file.sourcePath)}
+                      width={56}
+                      height={56}
+                      className="rounded-md shrink-0"
+                    />
+                  ) : (
+                    <div
+                      className="rounded-md bg-neutral-3 shrink-0 flex items-center justify-center"
+                      style={{ width: 56, height: 56 }}
+                    >
+                      <Spinner size="sm" tone="neutral" />
+                    </div>
+                  )}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <Text size="2" className="truncate text-neutral-12">
+                      {file.label}
+                    </Text>
+                    {file.tag && (
+                      <Badge
+                        size="1"
+                        color={
+                          file.tag === 'skull stripped'
+                            ? 'blue'
+                            : file.tag === 'parcellation'
+                              ? 'violet'
+                              : 'gray'
+                        }
+                        variant="soft"
+                        className="mt-1 w-fit"
+                      >
+                        {file.tag}
+                      </Badge>
+                    )}
+                  </div>
+                  {onLoadFile && (
+                    <Button
+                      size="1"
+                      variant={loadedKeys.has(file.key) ? 'outline' : 'soft'}
+                      color={loadedKeys.has(file.key) ? 'green' : undefined}
+                      className="shrink-0"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        loadFile()
+                      }}
+                    >
+                      {loadedKeys.has(file.key) ? (
+                        <>
+                          <CheckIcon /> Loaded
+                        </>
+                      ) : isBidsWorkflow ? (
+                        'Open'
+                      ) : (
+                        'Load in Viewer'
+                      )}
+                    </Button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      <div className="flex justify-end gap-2 pt-4 border-t border-neutral-5">
+        {onEditWorkflow && (
+          <Button variant="soft" size="2" onClick={onEditWorkflow}>
+            Edit Workflow
+          </Button>
+        )}
+        {/* Loading the result back into the viewer is the natural next
+            action after a successful run, so it's the primary CTA. Done
+            is demoted to secondary whenever a load action is available —
+            even for a single-file run, where "Open in Viewer" replaces
+            "Load All in Viewer". When there's nothing loadable, Done is
+            the only option and stays primary. */}
+        {(onLoadFile || onLoadFiles) && fileList.length > 0 ? (
+          <>
+            <Button variant="soft" size="2" onClick={onClose}>
+              Done
+            </Button>
+            <Button variant="solid" size="2" onClick={handleLoadAll}>
+              {fileList.length > 1 ? 'Load All in Viewer' : 'Open in Viewer'}
+            </Button>
+          </>
+        ) : (
+          <Button variant="solid" size="2" onClick={onClose}>
+            Done
+          </Button>
+        )}
+      </div>
+    </div>
+  )
+}

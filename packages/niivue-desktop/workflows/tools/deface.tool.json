@@ -1,0 +1,46 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "deface",
+  "version": "1.0.0",
+  "description": "Remove facial features from anatomical NIfTI volumes for anonymization",
+  "inputs": {
+    "nifti_paths": {
+      "type": "volume[]",
+      "description": "Anatomical volumes to deface"
+    },
+    "nifti_path": {
+      "type": "volume",
+      "description": "Per-iteration anatomical volume (set by forEach)",
+      "optional": true
+    },
+    "method": {
+      "type": "string",
+      "description": "Defacing method",
+      "default": "mask",
+      "enum": ["mask", "blur"]
+    },
+    "output_path": {
+      "type": "string",
+      "description": "Output path for defaced volume",
+      "optional": true
+    }
+  },
+  "outputs": {
+    "output_paths": {
+      "type": "volume[]",
+      "description": "Paths to defaced volumes"
+    }
+  },
+  "block": {
+    "id": "deface",
+    "label": "Deface",
+    "description": "Remove facial features from anatomical scans for anonymization",
+    "category": "Processing",
+    "icon": "EyeNoneIcon",
+    "defaults": {
+      "method": "mask"
+    },
+    "exposedFields": [],
+    "hiddenFields": ["nifti_paths", "nifti_path", "method", "output_path"]
+  }
+}

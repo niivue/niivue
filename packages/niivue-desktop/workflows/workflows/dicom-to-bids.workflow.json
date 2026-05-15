@@ -1,0 +1,166 @@
+{
+  "$schema": "../schemas/workflow.schema.json",
+  "name": "dicom-to-bids",
+  "version": "2.0.0",
+  "description": "Convert DICOM to a BIDS-compliant dataset",
+  "menu": "Import",
+
+  "inputs": {
+    "dicom_dir": {
+      "type": "dicom-folder",
+      "description": "DICOM source directory"
+    }
+  },
+
+  "context": {
+    "description": "BIDS dataset configuration accumulated during the workflow run",
+    "fields": {
+      "dicom_series": {
+        "type": "dicom-series[]",
+        "description": "All DICOM series discovered in the source directory (dry-run listing)",
+        "heuristic": "list-dicom-series",
+        "dependsOn": ["dicom_dir"]
+      },
+      "selected_series": {
+        "type": "dicom-series[]",
+        "description": "Subset of dicom_series chosen for conversion",
+        "default": []
+      },
+      "series_list": {
+        "type": "series-mapping[]",
+        "description": "Classified series with BIDS datatype, suffix, and metadata",
+        "heuristic": "bids-classify"
+      },
+      "subjects": {
+        "type": "subject[]",
+        "description": "Detected subjects and sessions grouped by PatientID and AcquisitionDate",
+        "heuristic": "detect-subjects"
+      },
+      "skull_strip_config": {
+        "type": "object",
+        "description": "Skull stripping configuration (engine, scope, selections)",
+        "default": {}
+      },
+      "dataset_name": {
+        "type": "string",
+        "description": "BIDS dataset name",
+        "default": "My Dataset"
+      },
+      "dataset_version": {
+        "type": "string",
+        "description": "BIDS version for dataset_description.json",
+        "default": "1.9.0"
+      },
+      "license": {
+        "type": "string",
+        "description": "Dataset license",
+        "default": "CC0",
+        "enum": ["CC0", "CC-BY-4.0", "PDDL", "custom"]
+      },
+      "authors": {
+        "type": "string",
+        "description": "Dataset authors (comma-separated)",
+        "default": ""
+      },
+      "readme": {
+        "type": "string",
+        "description": "Dataset README content",
+        "default": ""
+      },
+      "output_dir": {
+        "type": "directory",
+        "description": "Output directory for the BIDS dataset"
+      },
+      "bids_dir": {
+        "type": "string",
+        "description": "Path to the written BIDS dataset directory"
+      }
+    }
+  },
+
+  "form": {
+    "sections": [
+      {
+        "title": "Filter",
+        "description": "Filter the detected DICOM series by modality, subject, and session, then choose which to convert",
+        "fields": ["dicom_series", "selected_series"],
+        "component": "bids-series-filter"
+      },
+      {
+        "title": "BIDS Prep",
+        "description": "Review the proposed BIDS layout and edit subject labels, session labels, and sidecar fields before writing to disk",
+        "fields": ["series_list", "subjects"],
+        "component": "bids-prep-editor"
+      },
+      {
+        "title": "Skull Strip",
+        "description": "Optionally remove non-brain tissue before writing the dataset",
+        "fields": ["skull_strip_config", "series_list"],
+        "component": "skull-strip-editor"
+      },
+      {
+        "title": "Write BIDS",
+        "description": "Configure dataset metadata and write to disk",
+        "fields": ["dataset_name", "dataset_version", "license", "authors", "readme", "output_dir"],
+        "buttonText": "Write BIDS"
+      },
+      {
+        "title": "BIDS View",
+        "description": "Browse the written dataset and stage edits to filenames or sidecars; apply to commit changes to disk",
+        "fields": ["bids_dir"],
+        "component": "bids-view-editor",
+        "buttonText": "Finish",
+        "postCompletion": true
+      }
+    ]
+  },
+
+  "steps": {
+    "convert": {
+      "tool": "dcm2niix",
+      "inputs": {
+        "dicom_dir": { "ref": "inputs.dicom_dir" },
+        "series": { "ref": "context.selected_series" },
+        "bids": { "constant": "y" },
+        "compress": { "constant": "y" },
+        "bids_anon": { "constant": "n" }
+      }
+    },
+    "classify": {
+      "tool": "bids-classify",
+      "inputs": {
+        "sidecars": { "ref": "steps.convert.outputs.sidecars" },
+        "overrides": { "ref": "context.series_list" }
+      },
+      "outputMappings": {
+        "mappings": "series_list",
+        "subjects": "subjects"
+      }
+    },
+    "write": {
+      "tool": "bids-write",
+      "inputs": {
+        "volumes": { "ref": "steps.convert.outputs.volumes" },
+        "mappings": { "ref": "context.series_list" },
+        "config": { "ref": "context" },
+        "output_dir": { "ref": "context.output_dir" }
+      },
+      "outputMappings": {
+        "bids_dir": "bids_dir"
+      }
+    },
+    "postpass": {
+      "tool": "bids-postpass",
+      "inputs": {
+        "bids_dir": { "ref": "steps.write.outputs.bids_dir" }
+      }
+    }
+  },
+
+  "outputs": {
+    "bids_dir": {
+      "type": "bids-dir",
+      "ref": "steps.postpass.outputs.bids_dir"
+    }
+  }
+}

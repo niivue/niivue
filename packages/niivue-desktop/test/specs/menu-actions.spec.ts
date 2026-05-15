@@ -1,13 +1,10 @@
 describe('Menu Actions', () => {
   // Helper to load a volume and wait for render
   async function loadStandard(filename: string): Promise<void> {
-    await browser.electron.execute(
-      (electron, file) => {
-        const win = electron.BrowserWindow.getAllWindows()[0]
-        win.webContents.send('loadStandard', file)
-      },
-      filename
-    )
+    await browser.electron.execute((electron, file) => {
+      const win = electron.BrowserWindow.getAllWindows()[0]
+      win.webContents.send('loadStandard', file)
+    }, filename)
     await browser.pause(3000)
 
     // Wait for canvas to be ready

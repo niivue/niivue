@@ -43,16 +43,10 @@ function parseLabelDisplayEntries(json: unknown): LabelDisplayEntry[] {
   const entries: LabelDisplayEntry[] = []
 
   const rawLabels =
-    typeof json === 'object' && json !== null
-      ? (json as Record<string, unknown>).labels
-      : undefined
+    typeof json === 'object' && json !== null ? (json as Record<string, unknown>).labels : undefined
 
   // Object format: { labels: [{value, name, color}, ...] }
-  if (
-    Array.isArray(rawLabels) &&
-    rawLabels.length > 0 &&
-    typeof rawLabels[0] === 'object'
-  ) {
+  if (Array.isArray(rawLabels) && rawLabels.length > 0 && typeof rawLabels[0] === 'object') {
     const objLabels = rawLabels as Array<{ value: number; name: string; color?: number[] }>
     for (const entry of objLabels) {
       entries.push({
@@ -317,7 +311,7 @@ export function SegmentationPanel({
                 {showSearch && (
                   <TextField.Root
                     size="1"
-                    placeholder="Filter labels..."
+                    placeholder="Filter labels…"
                     value={labelFilter}
                     onChange={(e) => setLabelFilter(e.target.value)}
                   />
@@ -373,7 +367,7 @@ export function SegmentationPanel({
             </Flex>
             <Progress value={progress} max={100} size="3" />
             <Text size="1" color="gray">
-              {status || 'Starting...'}
+              {status || 'Starting…'}
             </Text>
           </Flex>
         </Card>

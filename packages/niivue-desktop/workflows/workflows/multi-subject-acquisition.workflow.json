@@ -1,0 +1,155 @@
+{
+  "$schema": "../schemas/workflow.schema.json",
+  "name": "multi-subject-acquisition",
+  "version": "1.0.0",
+  "description": "Multi-subject image acquisition pipeline with QC, preprocessing, and BIDS organization",
+  "menu": "Import",
+
+  "inputs": {
+    "dicom_dir": {
+      "type": "dicom-folder",
+      "description": "DICOM source directory"
+    }
+  },
+
+  "context": {
+    "description": "Accumulated state for multi-subject pipeline",
+    "fields": {
+      "subjects": {
+        "type": "subject[]",
+        "description": "Detected subjects and sessions",
+        "heuristic": "detect-subjects"
+      },
+      "series_list": {
+        "type": "series-mapping[]",
+        "description": "Classified series with BIDS datatype, suffix, and metadata",
+        "heuristic": "bids-classify"
+      },
+      "skull_strip_config": {
+        "type": "object",
+        "description": "Skull stripping configuration (engine, scope, selections)",
+        "default": {}
+      },
+      "deface_enabled": {
+        "type": "boolean",
+        "description": "Whether to deface anatomical volumes",
+        "default": false
+      },
+      "tissue_segment_enabled": {
+        "type": "boolean",
+        "description": "Whether to run tissue segmentation",
+        "default": false
+      },
+      "atlas_parcellate_enabled": {
+        "type": "boolean",
+        "description": "Whether to run atlas parcellation",
+        "default": false
+      },
+      "dataset_name": {
+        "type": "string",
+        "description": "BIDS dataset name",
+        "default": "My Dataset"
+      },
+      "dataset_version": {
+        "type": "string",
+        "description": "BIDS version",
+        "default": "1.9.0"
+      },
+      "license": {
+        "type": "string",
+        "description": "Dataset license",
+        "default": "CC0",
+        "enum": ["CC0", "CC-BY-4.0", "PDDL", "custom"]
+      },
+      "authors": {
+        "type": "string",
+        "description": "Dataset authors (comma-separated)",
+        "default": ""
+      },
+      "output_dir": {
+        "type": "string",
+        "description": "Output directory for the BIDS dataset"
+      }
+    }
+  },
+
+  "form": {
+    "sections": [
+      {
+        "title": "Classification",
+        "description": "Review auto-detected BIDS classification for each series",
+        "fields": ["series_list"],
+        "component": "bids-classification-table"
+      },
+      {
+        "title": "Preprocessing",
+        "description": "Configure optional preprocessing steps",
+        "fields": ["skull_strip_config", "deface_enabled", "tissue_segment_enabled", "atlas_parcellate_enabled"],
+        "component": "preprocessing-config"
+      },
+      {
+        "title": "Dataset Metadata",
+        "fields": ["dataset_name", "dataset_version", "license", "authors", "output_dir"]
+      },
+      {
+        "title": "Review & Write",
+        "description": "Review the proposed BIDS dataset before writing to disk",
+        "fields": ["series_list", "subjects"],
+        "component": "bids-preview",
+        "buttonText": "Process & Write"
+      }
+    ]
+  },
+
+  "steps": {
+    "convert": {
+      "tool": "dcm2niix",
+      "inputs": {
+        "dicom_dir": { "ref": "inputs.dicom_dir" },
+        "bids": { "constant": "y" },
+        "compress": { "constant": "y" },
+        "bids_anon": { "constant": "n" }
+      }
+    },
+    "classify": {
+      "tool": "bids-classify",
+      "inputs": {
+        "sidecars": { "ref": "steps.convert.outputs.sidecars" },
+        "overrides": { "ref": "context.series_list" }
+      },
+      "outputMappings": {
+        "mappings": "series_list",
+        "subjects": "subjects"
+      }
+    },
+    "validate": {
+      "tool": "bids-validate",
+      "inputs": {
+        "mappings": { "ref": "context.series_list" },
+        "config": { "ref": "context" }
+      }
+    },
+    "write": {
+      "tool": "bids-write",
+      "inputs": {
+        "volumes": { "ref": "steps.convert.outputs.volumes" },
+        "mappings": { "ref": "context.series_list" },
+        "config": { "ref": "context" },
+        "output_dir": { "ref": "context.output_dir" }
+      }
+    },
+    "postpass": {
+      "tool": "bids-postpass",
+      "inputs": {
+        "bids_dir": { "ref": "steps.write.outputs.bids_dir" }
+      }
+    }
+  },
+
+  "outputs": {
+    "bids_dir": {
+      "type": "bids-dir",
+      "ref": "steps.postpass.outputs.bids_dir"
+    }
+  }
+}

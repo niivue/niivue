@@ -1,0 +1,49 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "atlas-parcellate",
+  "version": "1.0.0",
+  "description": "Apply atlas parcellation via Brainchop model",
+  "inputs": {
+    "nifti_paths": {
+      "type": "volume[]",
+      "description": "Skull-stripped anatomical volumes to parcellate"
+    },
+    "nifti_path": {
+      "type": "volume",
+      "description": "Per-iteration anatomical volume (set by forEach)",
+      "optional": true
+    },
+    "atlas": {
+      "type": "string",
+      "description": "Brainchop parcellation model used to label cortical regions",
+      "default": "parcellation-104",
+      "enum": [
+        { "value": "parcellation-50", "label": "Parcellation (50 regions)" },
+        { "value": "parcellation-104", "label": "Parcellation (104 regions)" }
+      ]
+    }
+  },
+  "outputs": {
+    "parcellation_paths": {
+      "type": "volume[]",
+      "description": "Paths to parcellation volumes"
+    },
+    "label_json": {
+      "type": "string",
+      "description": "Path to label definitions JSON"
+    }
+  },
+  "block": {
+    "id": "atlas-parcellate",
+    "label": "Atlas Parcellation",
+    "description": "Apply atlas parcellation to skull-stripped anatomical volumes",
+    "category": "Processing",
+    "icon": "LayoutIcon",
+    "defaults": {
+      "atlas": "parcellation-104"
+    },
+    "exposedFields": ["nifti_paths", "atlas"],
+    "hiddenFields": ["nifti_path"],
+    "formComponent": "volume-picker"
+  }
+}

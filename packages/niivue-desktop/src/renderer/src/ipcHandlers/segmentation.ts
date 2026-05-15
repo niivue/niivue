@@ -47,7 +47,7 @@ export const registerSegmentationHandlers = ({
     try {
       // Check if there's a volume loaded
       if (!nv || nv.volumes.length === 0) {
-        alert('Please load a volume first')
+        alert("Can't run segmentation — no volume loaded. Open a NIfTI or DICOM volume first.")
         return
       }
 
@@ -57,7 +57,7 @@ export const registerSegmentationHandlers = ({
       // Initialize brainchop service if needed
       if (!brainchopService.isReady()) {
         console.log('[Renderer] Initializing brainchop service...')
-        onSegmentationProgress?.(0, 'Initializing TensorFlow.js...')
+        onSegmentationProgress?.(0, 'Initializing TensorFlow.js…')
         await brainchopService.initialize()
       }
 
@@ -101,7 +101,9 @@ export const registerSegmentationHandlers = ({
       if (result.modelInfo.colormapPath) {
         console.log('[Renderer] Loading colormap labels from:', result.modelInfo.colormapPath)
         try {
-          const colormapJson = await window.electron.loadBrainchopLabels(result.modelInfo.colormapPath)
+          const colormapJson = await window.electron.loadBrainchopLabels(
+            result.modelInfo.colormapPath
+          )
           result.volume.setColormapLabel(colormapJson)
           if (result.volume.colormapLabel?.lut) {
             result.volume.colormapLabel.lut = result.volume.colormapLabel.lut.map((v, i) =>

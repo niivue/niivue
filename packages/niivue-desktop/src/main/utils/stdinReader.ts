@@ -6,7 +6,9 @@ export async function readStdin(timeout = 120000): Promise<string> {
   return new Promise((resolve, reject) => {
     // Check if stdin is a TTY (interactive terminal)
     if (process.stdin.isTTY) {
-      reject(new Error('No data piped to stdin. Use --input with a file path or URL, or pipe data.'))
+      reject(
+        new Error('No data piped to stdin. Use --input with a file path or URL, or pipe data.')
+      )
       return
     }
 

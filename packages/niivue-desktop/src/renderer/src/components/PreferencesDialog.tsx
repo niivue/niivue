@@ -28,7 +28,7 @@ export const PreferencesDialog: React.FC = () => {
           <Draggable nodeRef={nodeRef} handle=".drag-handle" cancel=".no-drag">
             <div
               ref={nodeRef}
-              className="bg-white rounded shadow-lg max-h-[90vh] w-[800px] max-w-[95vw] overflow-y-auto p-6"
+              className="bg-[var(--color-background)] rounded shadow-lg max-h-[90vh] w-[800px] max-w-[95vw] overflow-y-auto p-6"
             >
               <Theme>
                 {/* Header is the drag handle */}
@@ -36,7 +36,7 @@ export const PreferencesDialog: React.FC = () => {
                   <Dialog.Title className="text-lg font-semibold">Preferences</Dialog.Title>
                   <Dialog.Close asChild>
                     <button
-                      className="no-drag text-gray-500 hover:text-black"
+                      className="no-drag text-[var(--gray-9)] hover:text-black"
                       aria-label="Close"
                       onClick={() => setOpen(false)}
                     >

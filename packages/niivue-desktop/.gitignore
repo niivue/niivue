@@ -20,3 +20,6 @@ resources/brainchop-models/
 # e2e test screenshots - actual/diff images (uploaded as CI artifacts)
 # Note: test/baselines/ is tracked in git (baseline images for visual regression)
 test/screenshots/
+
+# BIDS output from workflow runs
+My_Demo_Dataset/

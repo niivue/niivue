@@ -67,17 +67,7 @@ describe('CLI Pipeline Tests (stdin/stdout)', () => {
       // Step 3: Pipe mask as labels to extract
       const outputPath = path.join(tempDir, 'piped-extracted.nii.gz')
       const extractResult = await runCLI(
-        [
-          'extract',
-          '--input',
-          'mni152',
-          '--labels',
-          '-',
-          '--values',
-          '1',
-          '--output',
-          outputPath
-        ],
+        ['extract', '--input', 'mni152', '--labels', '-', '--values', '1', '--output', outputPath],
         { stdin: viewResult.stdout }
       )
 

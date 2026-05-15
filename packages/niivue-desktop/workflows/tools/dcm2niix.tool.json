@@ -1,0 +1,173 @@
+{
+  "$schema": "../schemas/tool.schema.json",
+  "name": "dcm2niix",
+  "version": "1.0.0",
+  "description": "Convert DICOM images to NIfTI format using dcm2niix CLI",
+  "inputs": {
+    "dicom_dir": {
+      "type": "dicom-folder",
+      "description": "Directory containing DICOM files"
+    },
+    "compress": {
+      "type": "string",
+      "description": "Compression method for output NIfTI",
+      "optional": true,
+      "default": "y",
+      "enum": ["y", "n"]
+    },
+    "bids": {
+      "type": "string",
+      "description": "Generate BIDS sidecar JSON files",
+      "optional": true,
+      "default": "y",
+      "enum": ["y", "n"]
+    },
+    "series": {
+      "type": "number",
+      "description": "Only convert series matching this CRC number (dcm2niix -n flag)",
+      "optional": true
+    },
+    "pattern": {
+      "type": "string",
+      "description": "Output filename format string (dcm2niix -f flag)",
+      "optional": true,
+      "default": "%f_%p_%t_%s"
+    },
+    "merge": {
+      "type": "number",
+      "description": "Merge 2D slices from same series (dcm2niix -m flag)",
+      "optional": true
+    },
+    "out_dir": {
+      "type": "string",
+      "description": "Output directory for converted files",
+      "optional": true
+    },
+    "verbose": {
+      "type": "number",
+      "description": "Verbosity level",
+      "optional": true,
+      "default": 0,
+      "min": 0,
+      "max": 2
+    },
+    "bids_anon": {
+      "type": "string",
+      "description": "Anonymize BIDS sidecar (y=strip patient fields, n=keep them)",
+      "optional": true,
+      "default": "y",
+      "enum": ["y", "n"]
+    }
+  },
+  "outputs": {
+    "volumes": {
+      "type": "volume[]",
+      "description": "Converted NIfTI volume files"
+    },
+    "sidecars": {
+      "type": "json[]",
+      "description": "BIDS sidecar JSON files (when bids=y)"
+    },
+    "outDir": {
+      "type": "string",
+      "description": "Output directory"
+    },
+    "detectedSubjects": {
+      "type": "subject[]",
+      "description": "Detected subjects extracted from DICOM headers"
+    }
+  },
+  "block": [
+    {
+      "id": "import-dicoms",
+      "label": "Import DICOMs",
+      "description": "Convert DICOM images to NIfTI format with BIDS sidecars",
+      "category": "Import",
+      "icon": "UploadIcon",
+      "defaults": {
+        "bids": "y",
+        "compress": "y",
+        "bids_anon": "n"
+      },
+      "exposedFields": ["dicom_dir"],
+      "hiddenFields": ["bids", "compress", "bids_anon", "pattern", "merge", "verbose", "series"]
+    },
+    {
+      "id": "filter-import-dicoms",
+      "label": "Filter & Import DICOMs",
+      "description": "Browse all DICOM series, filter by modality/subject/session, then convert the selection",
+      "category": "Import",
+      "icon": "MagnifyingGlassIcon",
+      "defaults": {
+        "bids": "y",
+        "compress": "y",
+        "bids_anon": "n",
+        "series": { "ref": "context.selected_series" }
+      },
+      "exposedFields": ["dicom_dir", "dicom_series", "selected_series"],
+      "hiddenFields": ["bids", "compress", "bids_anon", "pattern", "merge", "verbose", "series"],
+      "formComponent": "bids-series-filter",
+      "contextFields": {
+        "dicom_series": {
+          "type": "dicom-series[]",
+          "label": "DICOM Series",
+          "description": "All DICOM series discovered in the source directory",
+          "heuristic": "list-dicom-series",
+          "dependsOn": ["dicom_dir"]
+        },
+        "selected_series": {
+          "type": "dicom-series[]",
+          "label": "Selected Series",
+          "description": "Subset of DICOM series chosen for conversion",
+          "default": []
+        }
+      },
+      "heuristics": {
+        "dicom_series": "list-dicom-series"
+      }
+    }
+  ],
+  "exec": {
+    "binary": {
+      "name": "dcm2niix",
+      "paths": {
+        "darwin": "native-binaries/darwin/dcm2niix",
+        "linux": "native-binaries/linux/dcm2niix",
+        "win32": "native-binaries/win32/dcm2niix.exe"
+      },
+      "packagedPaths": {
+        "darwin": "native-binaries/dcm2niix/darwin/dcm2niix",
+        "linux": "native-binaries/dcm2niix/linux/dcm2niix",
+        "win32": "native-binaries/dcm2niix/win32/dcm2niix.exe"
+      }
+    },
+    "outputDir": {
+      "input": "out_dir",
+      "tempPrefix": "wf-dcm2niix-"
+    },
+    "forEach": "series",
+    "forEachExtract": "seriesNumber",
+    "iterationVar": "_series_item",
+    "parallel": false,
+    "args": [
+      { "flag": "-f", "input": "pattern" },
+      { "flag": "-z", "input": "compress" },
+      { "flag": "-b", "input": "bids" },
+      { "flag": "-ba", "input": "bids_anon" },
+      { "flag": "-m", "input": "merge" },
+      { "flag": "-v", "input": "verbose" },
+      { "flag": "-n", "input": "_series_item" },
+      { "flag": "-o", "value": "{{outputDir}}" },
+      { "input": "dicom_dir" }
+    ],
+    "exitCodes": [0, 1],
+    "outputs": {
+      "volumes": { "collect": "glob", "pattern": "*.nii*" },
+      "sidecars": { "collect": "glob", "pattern": "*.json" },
+      "stdout": { "fromStdout": true },
+      "stderr": { "fromStderr": true },
+      "outDir": { "value": "{{outputDir}}" }
+    },
+    "postProcess": "dcm2niix-extract-subjects"
+  }
+}

@@ -1,4 +1,4 @@
-import { NVLabel3D } from "@niivue/niivue"
+import { NVLabel3D } from '@niivue/niivue'
 
 type AnyNumberArray =
   | number[]
@@ -34,5 +34,5 @@ export type NVMeshLayer = {
   alphaThreshold?: boolean
   base64?: string
   colorbarVisible?: boolean
-  labels? : NVLabel3D[]
+  labels?: NVLabel3D[]
 }
