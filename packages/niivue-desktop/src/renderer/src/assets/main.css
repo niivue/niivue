@@ -64,6 +64,20 @@ body {
   outline-offset: 2px;
 }
 
+/* ── Disabled bare buttons ───────────────────────────────────────────
+   Many hand-rolled <button> elements throughout the wizard pass
+   `disabled` but otherwise share the enabled style, leaving them
+   indistinguishable to sighted users. The :where() selector has zero
+   specificity so any Radix Themes button (.rt-Button[disabled]) or
+   Tailwind utility (e.g. disabled:opacity-50) still wins — this only
+   kicks in on bare <button disabled> without explicit disabled
+   styling. */
+:where(button):disabled,
+:where(button)[aria-disabled='true'] {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 /* Respect the OS-level reduced-motion preference. Strip the wizard slide
    to a plain crossfade and stop spinner/transition animations so users who
    request reduced motion don't get vestibular triggers from our defaults. */
