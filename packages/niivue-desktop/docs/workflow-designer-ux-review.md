@@ -261,7 +261,7 @@ Once shipped, Visual #14 collapses (one metaphor remains: "the center pane is wh
 17. (P1) ~~No resumability.~~ DONE — `wizardRunStorage` + `workflow:get-state` probe + Resume / Start fresh AlertDialog.
 18. (P0) ~~`WizardShell` doesn't render `engine.error`.~~ DONE — `WorkflowDialog.tsx:824-830` renders a red Callout for fatal errors and `engine.updateError` as an amber dismissable callout below it.
 19. (P0) ~~`AutoField` has no field-level error display.~~ DONE — `error` prop with `aria-invalid` + `aria-describedby`.
-20. (P1) Failed conversions don't tell user which series failed.
+20. (P1) ~~Failed conversions don't tell user which series failed.~~ DONE — two paths now name names. The legacy per-series IPC (`dcm2niix:convert-series` in `ipcHandlers.ts:282-308`) wraps each series's call so failures throw `series N failed: …`. The BIDS wizard's single-shot IPC (`bids:convert-and-classify` in `bidsIpcHandlers.ts`) now appends a "Requested series: 3, 7, 12, …" tail to every error path and, on a partial-but-successful run, returns a `warning` naming the requested series that produced no output. `StepConversion` surfaces the warning as an amber Callout next to the completion bar.
 21. (P1) ~~`console.error` swallows heuristic and update failures.~~ DONE — heuristic errors flow through `heuristicErrors` → `fieldErrors` → `AutoField`'s `error` prop; update failures surface as the amber `engine.updateError` callout in `WorkflowDialog`.
 22. (P2) ~~Completion screen understated.~~ DONE — hero CheckCircled state + summary stats.
 23. (P2) "Load All in Viewer" gated on `>1 file`; entire row should be clickable.

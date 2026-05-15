@@ -262,6 +262,8 @@ export interface BidsConvertAndClassifyResult {
   demographics?: ParticipantDemographics
   detectedSubjects?: DetectedSubject[]
   error?: string
+  /** Non-fatal note (e.g. some requested series produced no output) shown alongside successful results. */
+  warning?: string
 }
 
 export interface BidsWritePayload {

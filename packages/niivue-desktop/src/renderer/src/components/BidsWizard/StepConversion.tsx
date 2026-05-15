@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Text } from '@radix-ui/themes'
+import { Text, Callout } from '@radix-ui/themes'
+import { ExclamationTriangleIcon } from '@radix-ui/react-icons'
 import type { BidsSeriesMapping, ParticipantDemographics, DetectedSubject } from '../../../../common/bidsTypes.js'
 
 const electron = window.electron
@@ -21,6 +22,7 @@ export function StepConversion({
 }: StepConversionProps): JSX.Element {
   const [status, setStatus] = useState(alreadyConverted ? 'complete' : 'converting')
   const [progress, setProgress] = useState(alreadyConverted ? 100 : 0)
+  const [warning, setWarning] = useState<string | null>(null)
 
   useEffect(() => {
     if (alreadyConverted) return
@@ -47,6 +49,7 @@ export function StepConversion({
           return
         }
 
+        if (result.warning) setWarning(result.warning)
         setStatus('complete')
         onComplete(result.mappings, result.demographics, result.detectedSubjects)
       } catch (err) {
@@ -85,6 +88,15 @@ export function StepConversion({
         {status === 'complete' && 'Series converted and classified. Click Next to review.'}
         {status === 'error' && 'An error occurred during conversion.'}
       </Text>
+
+      {warning && status === 'complete' && (
+        <Callout.Root color="amber" variant="soft" className="max-w-md">
+          <Callout.Icon>
+            <ExclamationTriangleIcon />
+          </Callout.Icon>
+          <Callout.Text>{warning}</Callout.Text>
+        </Callout.Root>
+      )}
     </div>
   )
 }

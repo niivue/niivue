@@ -47,6 +47,15 @@ export function registerBidsIpcHandlers(): void {
   ipcMain.handle(
     'bids:convert-and-classify',
     async (_evt, payload: BidsConvertAndClassifyPayload) => {
+      // Compact summary of which series the user asked for — surfaced in any
+      // failure message so they aren't left wondering which selection blew up.
+      const requested = payload.seriesNumbers ?? []
+      const requestedSummary = (): string => {
+        if (requested.length === 0) return ''
+        const head = requested.slice(0, 5).join(', ')
+        const tail = requested.length > 5 ? `, … (${requested.length} total)` : ''
+        return ` Requested series: ${head}${tail}.`
+      }
       try {
         const outDir = fs.mkdtempSync(path.join(os.tmpdir(), 'bids-convert-'))
 
@@ -67,22 +76,59 @@ export function registerBidsIpcHandlers(): void {
 
         const { code, stderr } = await spawnDcm2niix(args)
         if (code !== 0 && code !== 1) {
-          return { success: false, error: `dcm2niix exited with code ${code}: ${stderr}` }
+          const tail = stderr ? stderr.trim().split('\n').slice(-3).join(' | ') : ''
+          return {
+            success: false,
+            error: `dcm2niix exited with code ${code}.${requestedSummary()}${tail ? ` Details: ${tail}` : ''}`
+          }
         }
 
         // Collect JSON sidecars from output
         const files = fs.readdirSync(outDir).filter((f) => f.endsWith('.json'))
         if (files.length === 0) {
-          return { success: false, error: 'No NIfTI files produced by dcm2niix' }
+          return {
+            success: false,
+            error: `No NIfTI files produced by dcm2niix.${requestedSummary()}`
+          }
         }
 
         const sidecarPaths = files.map((f) => path.join(outDir, f))
+
+        // Cross-reference produced sidecars against requested series numbers so
+        // a "successful" partial run still tells the user what's missing.
+        let missingNote = ''
+        if (requested.length > 0) {
+          const produced = new Set<number>()
+          for (const p of sidecarPaths) {
+            try {
+              const raw = fs.readFileSync(p, 'utf-8')
+              const json = JSON.parse(raw)
+              const n = typeof json.SeriesNumber === 'number' ? json.SeriesNumber : undefined
+              if (typeof n === 'number') produced.add(n)
+            } catch {
+              /* ignore unreadable sidecars; we just won't credit them here */
+            }
+          }
+          const missing = requested.filter((n) => !produced.has(n))
+          if (missing.length > 0) {
+            const head = missing.slice(0, 5).join(', ')
+            const tail = missing.length > 5 ? `, … (${missing.length} total)` : ''
+            missingNote = `${missing.length} requested series produced no output: ${head}${tail}.`
+          }
+        }
+
         const { mappings, detectedSubjects } = classifyAll(sidecarPaths)
         const demographics = extractDemographics(sidecarPaths[0])
-        return { success: true, mappings, demographics, detectedSubjects }
+        return {
+          success: true,
+          mappings,
+          demographics,
+          detectedSubjects,
+          ...(missingNote ? { warning: missingNote } : {})
+        }
       } catch (err) {
         const msg = err instanceof Error ? err.message : String(err)
-        return { success: false, error: msg }
+        return { success: false, error: `${msg}${requestedSummary()}` }
       }
     }
   )
