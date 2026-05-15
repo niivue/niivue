@@ -202,8 +202,15 @@ export const SeriesRow = forwardRef<HTMLTableRowElement, SeriesRowProps>(functio
         {/* Expand toggle */}
         <td className="py-1 px-1">
           <button
+            type="button"
             onClick={() => setExpanded(!expanded)}
-            className="p-0.5 rounded hover:bg-[var(--gray-4)]"
+            aria-expanded={expanded}
+            aria-label={
+              expanded
+                ? 'Collapse additional entities and metadata'
+                : 'Show additional entities and metadata'
+            }
+            className="p-0.5 rounded hover:bg-[var(--gray-4)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)]"
             title="Show additional entities and metadata"
           >
             {expanded ? <ChevronDownIcon /> : <ChevronRightIcon />}
