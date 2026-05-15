@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback } from 'react'
 import {
   Text,
   Badge,
+  Button,
   Tooltip,
   Select,
   TextField,
@@ -17,7 +18,8 @@ import {
   InfoCircledIcon,
   MagicWandIcon,
   RocketIcon,
-  ArrowDownIcon
+  ArrowDownIcon,
+  ArrowRightIcon
 } from '@radix-ui/react-icons'
 import type { ToolDefinition, ToolParameterDef } from '../../../common/workflowTypes.js'
 import type { ValidationResult } from '../../../common/workflowValidator.js'
@@ -551,12 +553,9 @@ export function ContextSpineDesigner({
                   </Text>
                 </div>
                 {onOpenGallery && (
-                  <button
-                    className="text-sm text-[var(--accent-11)] hover:underline"
-                    onClick={onOpenGallery}
-                  >
-                    Or browse templates →
-                  </button>
+                  <Button variant="soft" size="2" onClick={onOpenGallery}>
+                    Or browse templates <ArrowRightIcon />
+                  </Button>
                 )}
               </div>
             </div>
