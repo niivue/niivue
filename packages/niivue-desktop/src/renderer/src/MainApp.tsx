@@ -7,9 +7,6 @@ import { PreferencesDialog } from './components/PreferencesDialog.js'
 import { LabelManagerDialog } from './components/LabelManagerDialog.js'
 import { NiivueInstanceContext, useSelectedInstance, useAppContext } from './AppContext.js'
 import { registerAllIpcHandlers } from './ipcHandlers/registerAllIpcHandlers.js'
-// import { fmriEvents, getColorForTrialType } from './types/events.js'
-// import { loadDroppedFiles } from './utils/dragAndDrop.js'
-// import { layouts } from '../../common/layouts.js'
 import { StatusBar } from './components/StatusBar.js'
 import { DicomImportDialog } from './components/DicomImportDialog.js'
 import { BidsWizard } from './components/BidsWizard/BidsWizard.js'
@@ -38,33 +35,10 @@ interface LabelCacheEntry {
   modelInfo: ModelInfo
 }
 
-// function overrideDrawGraph(nv: Niivue): void {
-//   const originalDrawGraph = nv.drawGraph.bind(nv)
-//   nv.drawGraph = (): void => {
-//     originalDrawGraph()
-//     if (!nv.graph.plotLTWH || !fmriEvents.length) return
-//     const [plotX, plotY, plotW, plotH] = nv.graph.plotLTWH
-//     const numFrames = nv.graph.lines?.[0]?.length || 0
-//     if (numFrames === 0) return
-//     const hdr = nv.volumes[0]?.hdr
-//     const TR = hdr?.pixDims?.[4] ?? 1
-//     const scaleW = plotW / numFrames
-//     for (const ev of fmriEvents) {
-//       const startFrame = ev.onset / TR
-//       const endFrame = (ev.onset + ev.duration) / TR
-//       const x0 = plotX + startFrame * scaleW
-//       const x1 = plotX + endFrame * scaleW
-//       const color = getColorForTrialType(ev.trial_type)
-//       nv.drawRect([x0, plotY, x1 - x0, plotH], color)
-//     }
-//   }
-// }
-
 function MainApp(): JSX.Element {
   const {
     documents,
     selectedDocId,
-    // addDocument,
     selectDocument,
     updateDocument,
     removeDocument,
@@ -363,13 +337,6 @@ function MainApp(): JSX.Element {
         setCursorLocation('')
       }
     }
-
-    // Restore viewer prefs
-    // Object.assign(nv.opts, selected.opts)
-    // if (selected.sliceType) nv.setSliceType(selected.sliceType)
-    // const layoutVal = layouts[selected.layout]
-    // if (layoutVal) nv.setMultiplanarLayout(layoutVal)
-    // nv.setSliceMosaicString(selected.opts.sliceMosaicString ?? '')
 
     // Re-draw everything
     nv.updateGLVolume()
@@ -1194,168 +1161,6 @@ function MainApp(): JSX.Element {
       window.electron.ipcRenderer.removeListener('saveCompressedDocument', onSave)
     }
   }, [selected, updateDocument])
-
-  // /**
-  //  * Create a brand‐new Niivue document instance,
-  //  * wire up its IPC & state setters, then add to context.
-  //  */
-  // async function createNewDocument(): Promise<void> {
-  //   const nv = new Niivue({ dragAndDropEnabled: false })
-  //   // const nvRef = { current: nv }
-  //   const docId = `doc-${documents.length + 1}`
-
-  //   function getCurrent<T extends keyof NiivueInstanceContext>(
-  //     field: T
-  //   ): NiivueInstanceContext[T] | undefined {
-  //     const d = documents.find((d) => d.id === docId)
-  //     return d?.[field]
-  //   }
-
-  //   const setVolumes: React.Dispatch<React.SetStateAction<NVImage[]>> = (action) => {
-  //     const prev = (getCurrent('volumes') as NVImage[]) ?? []
-  //     const next =
-  //       typeof action === 'function' ? (action as (prev: NVImage[]) => NVImage[])(prev) : action
-  //     updateDocument(docId, { volumes: next, isDirty: true })
-  //   }
-
-  //   const setMeshes: React.Dispatch<React.SetStateAction<NVMesh[]>> = (action) => {
-  //     const prev = (getCurrent('meshes') as NVMesh[]) ?? []
-  //     const next =
-  //       typeof action === 'function' ? (action as (prev: NVMesh[]) => NVMesh[])(prev) : action
-  //     updateDocument(docId, { meshes: next, isDirty: true })
-  //   }
-
-  //   const setSelectedImage: React.Dispatch<React.SetStateAction<NVImage | null>> = (action) => {
-  //     const prev = getCurrent('selectedImage') as NVImage | null
-  //     const next =
-  //       typeof action === 'function'
-  //         ? (action as (prev: NVImage | null) => NVImage | null)(prev)
-  //         : action
-  //     updateDocument(docId, { selectedImage: next, isDirty: true })
-  //   }
-
-  //   const setSliceType: React.Dispatch<React.SetStateAction<SLICE_TYPE | null>> = (action) => {
-  //     const prev = getCurrent('sliceType') as SLICE_TYPE | null
-  //     const next =
-  //       typeof action === 'function'
-  //         ? (action as (prev: SLICE_TYPE | null) => SLICE_TYPE | null)(prev)
-  //         : action
-  //     if (next !== null) nv.setSliceType(next)
-  //     updateDocument(docId, { sliceType: next, isDirty: true })
-  //   }
-
-  //   const setSliceMosaicString: React.Dispatch<React.SetStateAction<string>> = (action) => {
-  //     const prev = getCurrent('sliceMosaicString')
-  //     const next =
-  //       typeof action === 'function' ? (action as (prev: string) => string)(prev!) : action
-  //     nv.setSliceMosaicString(next)
-
-  //     updateDocument(docId, { sliceMosaicString: next, isDirty: true })
-  //   }
-
-  //   const setOpts: React.Dispatch<React.SetStateAction<Partial<Niivue['opts']>>> = (action) => {
-  //     // 1. Grab the previous opts from your context
-  //     const prevOpts = getCurrent('opts') as Partial<Niivue['opts']>
-
-  //     // 2. Compute the “next” opts, whether action is a value or updater fn
-  //     const nextOpts =
-  //       typeof action === 'function'
-  //         ? (action as (prev: Partial<Niivue['opts']>) => Partial<Niivue['opts']>)(prevOpts)
-  //         : action
-
-  //     // 3. Apply to Niivue instance and push into your document state
-  //     Object.assign(nv.opts, nextOpts)
-  //     updateDocument(docId, { opts: { ...nv.opts }, isDirty: true })
-  //   }
-
-  //   const setLayout: React.Dispatch<React.SetStateAction<keyof typeof layouts>> = (action) => {
-  //     const prevLayout = getCurrent('layout') as keyof typeof layouts
-  //     const nextLayout =
-  //       typeof action === 'function'
-  //         ? (action as (prev: keyof typeof layouts) => keyof typeof layouts)(prevLayout)
-  //         : action
-
-  //     const layoutValue = layouts[nextLayout]
-  //     if (layoutValue) nv.setMultiplanarLayout(layoutValue)
-  //     updateDocument(docId, { layout: nextLayout, isDirty: true })
-  //   }
-
-  //   // 2) Mosaic orientation setter
-  //   type Ori = 'A' | 'C' | 'S'
-  //   const setMosaicOrientation: React.Dispatch<React.SetStateAction<Ori>> = (action) => {
-  //     const prevOri = getCurrent('mosaicOrientation') as Ori
-  //     const nextOri =
-  //       typeof action === 'function' ? (action as (prev: Ori) => Ori)(prevOri) : action
-
-  //     // if you need to drive Niivue itself:
-  //     // nv.setSliceMosaicOrientation?.(nextOri)
-
-  //     updateDocument(docId, { mosaicOrientation: nextOri, isDirty: true })
-  //   }
-
-  //   const doc: NiivueInstanceContext = {
-  //     id: docId,
-  //     nvRef: { current: nv },
-
-  //     volumes: [],
-  //     setVolumes,
-
-  //     meshes: [],
-  //     setMeshes,
-
-  //     selectedImage: null,
-  //     setSelectedImage,
-
-  //     sliceType: null,
-  //     setSliceType,
-
-  //     opts: { ...nv.opts },
-  //     setOpts,
-
-  //     layout: 'Row',
-  //     setLayout,
-
-  //     mosaicOrientation: 'A',
-  //     setMosaicOrientation,
-
-  //     sliceMosaicString: '',
-  //     setSliceMosaicString,
-
-  //     title: 'Untitled',
-
-  //     filePath: null,
-  //     isDirty: false
-  //   }
-
-  //   addDocument(doc)
-
-  //   // load persisted prefs
-  //   const prefs = await electron.ipcRenderer.invoke('getPreferences')
-  //   Object.entries(prefs ?? {}).forEach(([key, value]) => {
-  //     if (key in nv.opts) {
-  //       nv.opts[key] = value
-  //     }
-  //   })
-
-  //   nv.setSliceType(nv.sliceTypeMultiplanar)
-  //   overrideDrawGraph(nv)
-  //   await niimathRef.current.init()
-
-  //   nv.drawScene()
-  // }
-
-  // // Sidebar drag/drop handlers
-  // function handleDragOver(e: React.DragEvent<HTMLDivElement>): void {
-  //   e.preventDefault()
-  // }
-  // function handleDrop(e: React.DragEvent<HTMLDivElement>): void {
-  //   if (!selected) return
-  //   const nv = selected.nvRef.current
-  //   nv.volumes = []
-  //   nv.meshes = []
-  //   nv.updateGLVolume()
-  //   loadDroppedFiles(e, selected.setVolumes, selected.setMeshes, nv.gl)
-  // }
 
   // Sidebar remove/move
   function handleRemoveMesh(mesh: NVMesh): void {
