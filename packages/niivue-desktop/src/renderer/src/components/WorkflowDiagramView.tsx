@@ -1391,6 +1391,30 @@ export function WorkflowDiagramView({
           {/* Inspector body */}
           <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: 12 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {((): React.ReactElement | null => {
+                const issue = stepIssueByIndex?.get(selectedStep)
+                if (!issue) return null
+                return (
+                  <div
+                    role={issue.kind === 'error' ? 'alert' : 'status'}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'flex-start',
+                      gap: 8,
+                      padding: '8px 10px',
+                      borderRadius: 6,
+                      background: issue.kind === 'error' ? 'var(--red-3)' : 'var(--amber-3)',
+                      color: issue.kind === 'error' ? 'var(--red-11)' : 'var(--amber-11)',
+                      border: `1px solid ${issue.kind === 'error' ? 'var(--red-6)' : 'var(--amber-6)'}`
+                    }}
+                  >
+                    <ExclamationTriangleIcon style={{ marginTop: 2, flexShrink: 0 }} />
+                    <Text size="1" style={{ lineHeight: 1.3, minWidth: 0 }}>
+                      {issue.message}
+                    </Text>
+                  </div>
+                )
+              })()}
               <label style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                 <Text size="1" weight="medium" style={{ color: 'var(--gray-11)' }}>
                   Step name
