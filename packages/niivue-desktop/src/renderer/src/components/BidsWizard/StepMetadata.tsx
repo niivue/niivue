@@ -116,15 +116,25 @@ This dataset was converted to BIDS format using NiiVue Desktop.
       <div className="flex flex-col gap-1">
         <div className="flex items-center justify-between">
           <Text size="1" weight="medium">README.md</Text>
-          <div className="flex border border-[var(--gray-6)] rounded overflow-hidden">
+          <div
+            role="tablist"
+            aria-label="README view"
+            className="flex border border-[var(--gray-6)] rounded overflow-hidden"
+          >
             <button
-              className={`px-3 py-0.5 text-xs ${readmeTab === 'edit' ? 'bg-[var(--accent-9)] text-white' : 'bg-[var(--color-background)] text-[var(--gray-10)] hover:bg-[var(--gray-3)]'}`}
+              type="button"
+              role="tab"
+              aria-selected={readmeTab === 'edit'}
+              className={`px-3 py-0.5 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)] ${readmeTab === 'edit' ? 'bg-[var(--accent-9)] text-white' : 'bg-[var(--color-background)] text-[var(--gray-10)] hover:bg-[var(--gray-3)]'}`}
               onClick={() => setReadmeTab('edit')}
             >
               Edit
             </button>
             <button
-              className={`px-3 py-0.5 text-xs ${readmeTab === 'preview' ? 'bg-[var(--accent-9)] text-white' : 'bg-[var(--color-background)] text-[var(--gray-10)] hover:bg-[var(--gray-3)]'}`}
+              type="button"
+              role="tab"
+              aria-selected={readmeTab === 'preview'}
+              className={`px-3 py-0.5 text-xs focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)] ${readmeTab === 'preview' ? 'bg-[var(--accent-9)] text-white' : 'bg-[var(--color-background)] text-[var(--gray-10)] hover:bg-[var(--gray-3)]'}`}
               onClick={() => setReadmeTab('preview')}
             >
               Preview
