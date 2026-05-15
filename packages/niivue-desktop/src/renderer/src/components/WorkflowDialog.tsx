@@ -1,5 +1,14 @@
 import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
-import { Button, Text, Callout, Heading, TextField, Progress } from '@radix-ui/themes'
+import {
+  AlertDialog,
+  Button,
+  Flex,
+  Text,
+  Callout,
+  Heading,
+  TextField,
+  Progress
+} from '@radix-ui/themes'
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons'
 import type {
   BidsSeriesMapping,
@@ -623,92 +632,174 @@ export function WorkflowDialog({
     return `Provide ${labels.slice(0, 2).join(', ')} and ${labels.length - 2} more to continue`
   }, [engine.missingInputs, fieldDefs])
 
-  return (
-    <WizardShell
-      open={open}
-      onClose={engine.handleClose}
-      title={engine.definition?.description || workflowName}
-      steps={wizardSteps.length > 0 ? wizardSteps : [{ label: 'Loading workflow…' }]}
-      currentStep={engine.currentSection}
-      onStepChange={engine.goToSection}
-      onNext={engine.handleNext}
-      canProceed={!isPreparing && !isRunning && engine.missingInputs.length === 0}
-      disabledReason={disabledReason}
-      loading={isRunning}
-      runningLabel={`Running ${sections[engine.currentSection]?.title || 'workflow'}…`}
-      lastStepLabel={sections[engine.currentSection]?.buttonText || 'Run workflow'}
-      onComplete={inPostCompletionSection ? engine.handleClose : handleComplete}
-      hideFooter={isCompleted && !inPostCompletionSection}
-      requireConfirmOnClose={isRunning}
-      disableEscape={disableEscape}
-    >
-      {/* Preparing state */}
-      {isPreparing && (
-        <div className="flex items-center justify-center py-16">
-          <div className="text-center">
-            <Spinner size="lg" tone="accent" className="mx-auto mb-3 block" />
-            <Text size="2" className="text-neutral-9">
-              Preparing workflow…
-            </Text>
-          </div>
-        </div>
-      )}
+  // The resumed run's section index may exceed the current `currentSection`
+  // (e.g. the user closed mid-form on section 2 and is reopening); the
+  // resume prompt sits over the shell while the user decides.
+  const resumeOffer = engine.resumeOffer
+  const resumeSectionLabel =
+    resumeOffer?.definition.form?.sections?.[resumeOffer.currentSection]?.title
 
-      {/* Form content — also rendered while in a postCompletion section so
-          its custom component (e.g. BIDS View) gets the just-populated
-          context (bids_dir from the write step's outputMappings). */}
-      {!isPreparing &&
-        engine.definition &&
-        sections[engine.currentSection] &&
-        (!isCompleted || inPostCompletionSection) && (
-          <FormSection
-            section={sections[engine.currentSection]}
-            definition={engine.definition}
-            context={engine.context}
-            stepOutputs={engine.stepOutputs}
-            onFieldChange={engine.handleFieldChange}
-            heuristicLoading={engine.heuristicLoading}
-            onLoadFile={handleLoadFile}
-            componentRegistry={COMPONENT_REGISTRY}
-            fieldErrors={fieldErrors}
-          />
+  return (
+    <>
+      <AlertDialog.Root
+        open={!!resumeOffer}
+        onOpenChange={(o): void => {
+          // The dialog has no inert close path — both buttons explicitly call
+          // the accept/decline actions. Block the outside-click / Escape close
+          // to avoid leaving the wizard in a half-initialized state.
+          if (!o && resumeOffer) {
+            // no-op: force the user to pick
+          }
+        }}
+      >
+        <AlertDialog.Content maxWidth="480px">
+          <AlertDialog.Title>Resume your previous run?</AlertDialog.Title>
+          <AlertDialog.Description size="2">
+            {resumeSectionLabel
+              ? `An earlier session of this workflow is still running in the background${
+                  resumeSectionLabel ? ` (last on "${resumeSectionLabel}")` : ''
+                }. Resume where you left off, or discard it and start fresh?`
+              : 'An earlier session of this workflow is still running in the background. Resume where you left off, or discard it and start fresh?'}
+          </AlertDialog.Description>
+          <Flex gap="3" mt="4" justify="end" wrap="wrap">
+            <AlertDialog.Action>
+              <Button
+                variant="soft"
+                color="gray"
+                onClick={(): void => {
+                  void engine.declineResume()
+                }}
+              >
+                Start fresh
+              </Button>
+            </AlertDialog.Action>
+            <AlertDialog.Action>
+              <Button
+                variant="solid"
+                onClick={(): void => {
+                  void engine.acceptResume()
+                }}
+              >
+                Resume
+              </Button>
+            </AlertDialog.Action>
+          </Flex>
+        </AlertDialog.Content>
+      </AlertDialog.Root>
+      <WizardShell
+        open={open}
+        onClose={engine.handleClose}
+        title={engine.definition?.description || workflowName}
+        steps={wizardSteps.length > 0 ? wizardSteps : [{ label: 'Loading workflow…' }]}
+        currentStep={engine.currentSection}
+        onStepChange={engine.goToSection}
+        onNext={engine.handleNext}
+        canProceed={!isPreparing && !isRunning && engine.missingInputs.length === 0}
+        disabledReason={disabledReason}
+        loading={isRunning}
+        runningLabel={`Running ${sections[engine.currentSection]?.title || 'workflow'}…`}
+        lastStepLabel={sections[engine.currentSection]?.buttonText || 'Run workflow'}
+        onComplete={inPostCompletionSection ? engine.handleClose : handleComplete}
+        hideFooter={isCompleted && !inPostCompletionSection}
+        requireConfirmOnClose={isRunning}
+        onCloseKeepingRun={isRunning ? engine.handleCloseKeepingRun : undefined}
+        disableEscape={disableEscape}
+      >
+        {/* Preparing state */}
+        {isPreparing && (
+          <div className="flex items-center justify-center py-16">
+            <div className="text-center">
+              <Spinner size="lg" tone="accent" className="mx-auto mb-3 block" />
+              <Text size="2" className="text-neutral-9">
+                Preparing workflow…
+              </Text>
+            </div>
+          </div>
         )}
 
-      {/* Auto-generated form for missing inputs not already shown in the current section */}
-      {(() => {
-        const currentFields = new Set(sections[engine.currentSection]?.fields || [])
-        const extraMissing = engine.missingInputs.filter(
-          (m) => !m.contextField || !currentFields.has(m.contextField)
-        )
-        return (
-          extraMissing.length > 0 &&
-          !isPreparing &&
-          !isRunning &&
-          !isCompleted && (
-            <div className="mt-6 flex flex-col gap-4">
-              <div className="flex items-center gap-2">
-                <ExclamationTriangleIcon className="text-[var(--yellow-9)]" />
-                <Heading size="3" className="text-neutral-12">
-                  Required Fields
-                </Heading>
-              </div>
-              <div className="flex flex-col gap-3">
-                {extraMissing.map((m) => {
-                  const currentValue = m.contextField
-                    ? (engine.context[m.contextField] as string) || ''
-                    : ''
+        {/* Form content — also rendered while in a postCompletion section so
+          its custom component (e.g. BIDS View) gets the just-populated
+          context (bids_dir from the write step's outputMappings). */}
+        {!isPreparing &&
+          engine.definition &&
+          sections[engine.currentSection] &&
+          (!isCompleted || inPostCompletionSection) && (
+            <FormSection
+              section={sections[engine.currentSection]}
+              definition={engine.definition}
+              context={engine.context}
+              stepOutputs={engine.stepOutputs}
+              onFieldChange={engine.handleFieldChange}
+              heuristicLoading={engine.heuristicLoading}
+              onLoadFile={handleLoadFile}
+              componentRegistry={COMPONENT_REGISTRY}
+              fieldErrors={fieldErrors}
+            />
+          )}
 
-                  // Prefer the workflow author's description; fall back to a
-                  // humanized version of the input name so end users never see
-                  // raw `output_dir` / `dicom-folder` identifiers.
-                  const label = m.description || humanizeFieldName(m.inputName)
-                  return (
-                    <div key={`${m.stepName}-${m.inputName}`} className="flex flex-col gap-1">
-                      <Text size="2" weight="medium" className="text-neutral-11">
-                        {label}
-                      </Text>
-                      {m.type === 'directory' || m.type === 'dicom-folder' ? (
-                        <div className="flex items-center gap-2">
+        {/* Auto-generated form for missing inputs not already shown in the current section */}
+        {(() => {
+          const currentFields = new Set(sections[engine.currentSection]?.fields || [])
+          const extraMissing = engine.missingInputs.filter(
+            (m) => !m.contextField || !currentFields.has(m.contextField)
+          )
+          return (
+            extraMissing.length > 0 &&
+            !isPreparing &&
+            !isRunning &&
+            !isCompleted && (
+              <div className="mt-6 flex flex-col gap-4">
+                <div className="flex items-center gap-2">
+                  <ExclamationTriangleIcon className="text-[var(--yellow-9)]" />
+                  <Heading size="3" className="text-neutral-12">
+                    Required Fields
+                  </Heading>
+                </div>
+                <div className="flex flex-col gap-3">
+                  {extraMissing.map((m) => {
+                    const currentValue = m.contextField
+                      ? (engine.context[m.contextField] as string) || ''
+                      : ''
+
+                    // Prefer the workflow author's description; fall back to a
+                    // humanized version of the input name so end users never see
+                    // raw `output_dir` / `dicom-folder` identifiers.
+                    const label = m.description || humanizeFieldName(m.inputName)
+                    return (
+                      <div key={`${m.stepName}-${m.inputName}`} className="flex flex-col gap-1">
+                        <Text size="2" weight="medium" className="text-neutral-11">
+                          {label}
+                        </Text>
+                        {m.type === 'directory' || m.type === 'dicom-folder' ? (
+                          <div className="flex items-center gap-2">
+                            <TextField.Root
+                              value={currentValue}
+                              onChange={(e) => {
+                                if (m.contextField) {
+                                  void engine.handleFieldChange(m.contextField, e.target.value)
+                                }
+                              }}
+                              placeholder="Select a directory…"
+                              size="2"
+                              className="flex-1"
+                            />
+                            <Button
+                              variant="soft"
+                              size="2"
+                              onClick={async (): Promise<void> => {
+                                const dir = await electron.ipcRenderer.invoke(
+                                  'workflow:select-directory',
+                                  { title: m.description }
+                                )
+                                if (dir && m.contextField) {
+                                  void engine.handleFieldChange(m.contextField, dir)
+                                }
+                              }}
+                            >
+                              Browse…
+                            </Button>
+                          </div>
+                        ) : (
                           <TextField.Root
                             value={currentValue}
                             onChange={(e) => {
@@ -716,107 +807,80 @@ export function WorkflowDialog({
                                 void engine.handleFieldChange(m.contextField, e.target.value)
                               }
                             }}
-                            placeholder="Select a directory…"
+                            placeholder={m.description}
                             size="2"
-                            className="flex-1"
                           />
-                          <Button
-                            variant="soft"
-                            size="2"
-                            onClick={async (): Promise<void> => {
-                              const dir = await electron.ipcRenderer.invoke(
-                                'workflow:select-directory',
-                                { title: m.description }
-                              )
-                              if (dir && m.contextField) {
-                                void engine.handleFieldChange(m.contextField, dir)
-                              }
-                            }}
-                          >
-                            Browse…
-                          </Button>
-                        </div>
-                      ) : (
-                        <TextField.Root
-                          value={currentValue}
-                          onChange={(e) => {
-                            if (m.contextField) {
-                              void engine.handleFieldChange(m.contextField, e.target.value)
-                            }
-                          }}
-                          placeholder={m.description}
-                          size="2"
-                        />
-                      )}
-                    </div>
-                  )
-                })}
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
               </div>
-            </div>
+            )
           )
-        )
-      })()}
+        })()}
 
-      {/* Error display */}
-      {engine.error && (
-        <Callout.Root color="red" size="2" className="mt-4">
-          <Callout.Icon>
-            <ExclamationTriangleIcon />
-          </Callout.Icon>
-          <Callout.Text>{engine.error}</Callout.Text>
-        </Callout.Root>
-      )}
+        {/* Error display */}
+        {engine.error && (
+          <Callout.Root color="red" size="2" className="mt-4">
+            <Callout.Icon>
+              <ExclamationTriangleIcon />
+            </Callout.Icon>
+            <Callout.Text>{engine.error}</Callout.Text>
+          </Callout.Root>
+        )}
 
-      {/* Non-fatal update-context failure — surfaced separately because it
+        {/* Non-fatal update-context failure — surfaced separately because it
           doesn't tear the wizard down; the user can keep editing and either
           retry or dismiss. */}
-      {engine.updateError && (
-        <Callout.Root color="amber" size="2" className="mt-4">
-          <Callout.Icon>
-            <ExclamationTriangleIcon />
-          </Callout.Icon>
-          <Callout.Text>
-            <div className="flex items-center justify-between gap-3">
-              <span>Couldn’t apply your edit: {engine.updateError}</span>
-              <button
-                type="button"
-                className="text-xs underline text-[var(--amber-12)] shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)] rounded-sm"
-                onClick={engine.dismissUpdateError}
-                aria-label="Dismiss this edit error"
-              >
-                Dismiss
-              </button>
-            </div>
-          </Callout.Text>
-        </Callout.Root>
-      )}
+        {engine.updateError && (
+          <Callout.Root color="amber" size="2" className="mt-4">
+            <Callout.Icon>
+              <ExclamationTriangleIcon />
+            </Callout.Icon>
+            <Callout.Text>
+              <div className="flex items-center justify-between gap-3">
+                <span>Couldn’t apply your edit: {engine.updateError}</span>
+                <button
+                  type="button"
+                  className="text-xs underline text-[var(--amber-12)] shrink-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--accent-9)] rounded-sm"
+                  onClick={engine.dismissUpdateError}
+                  aria-label="Dismiss this edit error"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </Callout.Text>
+          </Callout.Root>
+        )}
 
-      {/* Running indicator — determinate when the executor emits current/total
+        {/* Running indicator — determinate when the executor emits current/total
           (e.g. dcm2niix per-series), indeterminate while waiting for the first
           progress event or for executors that don't emit counts. */}
-      {isRunning && <RunningIndicator progress={engine.progress} />}
+        {isRunning && <RunningIndicator progress={engine.progress} />}
 
-      {/* Completion screen — only when there is no postCompletion section
+        {/* Completion screen — only when there is no postCompletion section
           (the postCompletion section IS the completion view for workflows
           that define one). */}
-      {isCompleted && !inPostCompletionSection && (
-        <CompletionScreen
-          context={engine.context}
-          outputs={engine.completedOutputs}
-          stepOutputs={engine.completedStepOutputs}
-          onClose={engine.handleClose}
-          onLoadFile={handleLoadFile}
-          onLoadFiles={onLoadFiles}
-          onEditWorkflow={
-            onEditWorkflow
-              ? () => {
-                  engine.handleClose()
-                  onEditWorkflow(workflowName)
-                }
-              : undefined
-          }
-        />
-      )}
-    </WizardShell>
+        {isCompleted && !inPostCompletionSection && (
+          <CompletionScreen
+            context={engine.context}
+            outputs={engine.completedOutputs}
+            stepOutputs={engine.completedStepOutputs}
+            onClose={engine.handleClose}
+            onLoadFile={handleLoadFile}
+            onLoadFiles={onLoadFiles}
+            onEditWorkflow={
+              onEditWorkflow
+                ? () => {
+                    engine.handleClose()
+                    onEditWorkflow(workflowName)
+                  }
+                : undefined
+            }
+          />
+        )}
+      </WizardShell>
+    </>
   )
 }

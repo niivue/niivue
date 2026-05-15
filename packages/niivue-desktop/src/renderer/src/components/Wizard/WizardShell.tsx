@@ -39,6 +39,12 @@ interface WizardShellProps {
    */
   requireConfirmOnClose?: boolean
   /**
+   * Optional third confirm-on-close action: close the wizard but leave the
+   * run executing in the background, so the next open can offer to resume.
+   * When omitted the AlertDialog falls back to a two-option prompt.
+   */
+  onCloseKeepingRun?: () => void
+  /**
    * Suppress the window-level Escape-to-close handler. Used when another
    * shell (e.g. the designer) is stacked over the wizard and owns Escape;
    * without this, both handlers fire and both shells unmount on one press.
@@ -64,6 +70,7 @@ export function WizardShell({
   hideFooter = false,
   allowStepClick = true,
   requireConfirmOnClose = false,
+  onCloseKeepingRun,
   disableEscape = false,
   children
 }: WizardShellProps): React.ReactElement | null {
@@ -230,19 +237,33 @@ export function WizardShell({
       </WizardProvider>
 
       <AlertDialog.Root open={cancelRunOpen} onOpenChange={(o): void => setCancelRunOpen(o)}>
-        <AlertDialog.Content maxWidth="480px">
-          <AlertDialog.Title>Cancel the running step?</AlertDialog.Title>
+        <AlertDialog.Content maxWidth="520px">
+          <AlertDialog.Title>A workflow step is still running</AlertDialog.Title>
           <AlertDialog.Description size="2">
-            A workflow step is still running. Cancelling now aborts the step immediately &mdash; any
-            files it has already written to disk will stay where they are (not rolled back) and may
-            be partial or invalid.
+            {onCloseKeepingRun
+              ? 'You can close the panel and leave the step running in the background — reopen the workflow later to pick up where you left off — or cancel the run now. Cancelled steps leave any files they have already written on disk (not rolled back).'
+              : 'Cancelling now aborts the step immediately — any files it has already written to disk will stay where they are (not rolled back) and may be partial or invalid.'}
           </AlertDialog.Description>
-          <Flex gap="3" mt="4" justify="end">
+          <Flex gap="3" mt="4" justify="end" wrap="wrap">
             <AlertDialog.Cancel>
               <Button variant="soft" color="gray">
-                Keep running
+                Keep working
               </Button>
             </AlertDialog.Cancel>
+            {onCloseKeepingRun && (
+              <AlertDialog.Action>
+                <Button
+                  variant="soft"
+                  color="blue"
+                  onClick={(): void => {
+                    setCancelRunOpen(false)
+                    onCloseKeepingRun()
+                  }}
+                >
+                  Close, keep running
+                </Button>
+              </AlertDialog.Action>
+            )}
             <AlertDialog.Action>
               <Button
                 variant="solid"

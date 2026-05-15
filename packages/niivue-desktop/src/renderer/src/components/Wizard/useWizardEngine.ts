@@ -3,14 +3,23 @@ import type {
   WorkflowDefinition,
   FormSectionDef,
   ToolDefinition,
+  WorkflowRunState,
   WorkflowStepProgress
 } from '../../../../common/workflowTypes.js'
 import {
   validateUserProvidedInputs,
   type MissingInput
 } from '../../../../common/workflowValidator.js'
+import { readStoredRun, writeStoredRun, clearStoredRun } from './wizardRunStorage.js'
 
 const electron = window.electron
+
+export interface ResumeOffer {
+  runId: string
+  definition: WorkflowDefinition
+  runState: WorkflowRunState
+  currentSection: number
+}
 
 export interface WizardEngineState {
   runId: string | null
@@ -35,6 +44,10 @@ export interface WizardEngineState {
   /** Latest progress event for the currently running step. Null when no
    *  step is running or the step hasn't emitted progress yet. */
   progress: WorkflowStepProgress | null
+  /** When non-null, a previous run for this workflow is still alive in the
+   *  main process and the user is being asked whether to resume it. The
+   *  wizard renders a Resume / Start fresh prompt instead of the form. */
+  resumeOffer: ResumeOffer | null
 }
 
 export interface WizardEngineActions {
@@ -43,6 +56,12 @@ export interface WizardEngineActions {
   handleNext: () => Promise<void>
   handleBack: () => void
   handleClose: () => void
+  /** Close the wizard but leave the active run executing in the main
+   *  process. The run id stays in localStorage so the next open offers a
+   *  Resume prompt. Used by the close-during-run AlertDialog. */
+  handleCloseKeepingRun: () => void
+  acceptResume: () => Promise<void>
+  declineResume: () => Promise<void>
   dismissUpdateError: () => void
 }
 
@@ -74,8 +93,13 @@ export function useWizardEngine(
   const [updateError, setUpdateError] = useState<string | null>(null)
   const [progress, setProgress] = useState<WorkflowStepProgress | null>(null)
   const [tools, setTools] = useState<ToolDefinition[]>([])
+  const [resumeOffer, setResumeOffer] = useState<ResumeOffer | null>(null)
   const runIdRef = useRef<string | null>(null)
   const closingRef = useRef(false)
+  // When set, the unmount cleanup skips the workflow:cancel so the run keeps
+  // executing in the main process and can be resumed on reopen. Reset on every
+  // init so a previous keep-alive close doesn't leak into a fresh open.
+  const keepAliveRef = useRef(false)
 
   // Load tools once when dialog opens
   useEffect(() => {
@@ -131,48 +155,83 @@ export function useWizardEngine(
     if (!open || !workflowName) return
 
     let cancelled = false
+    keepAliveRef.current = false
+
+    const startFresh = async (): Promise<void> => {
+      setStatus('preparing')
+      setError(null)
+
+      const startResult = await electron.ipcRenderer.invoke('workflow:start', {
+        name: workflowName,
+        inputs
+      })
+      if (cancelled) return
+
+      const rid = startResult.runId as string
+      setRunId(rid)
+      runIdRef.current = rid
+      setDefinition(startResult.definition)
+      setContext(startResult.runState.context)
+      setCurrentSection(0)
+      writeStoredRun({ runId: rid, workflowName, currentSection: 0 })
+
+      // Run auto-runnable steps
+      const hasAutoSteps = (startResult.autoSteps as string[])?.length > 0
+      if (hasAutoSteps) {
+        const autoResult = await electron.ipcRenderer.invoke('workflow:run-auto-steps', {
+          runId: rid
+        })
+        if (cancelled) return
+        if (autoResult.runState?.context) {
+          setContext(autoResult.runState.context)
+        }
+        if (autoResult.runState?.stepOutputs) {
+          setStepOutputs(autoResult.runState.stepOutputs)
+        }
+      }
+
+      if (cancelled) return
+      setStatus('form')
+
+      // Run heuristics for the first section
+      const firstSection = startResult.definition.form?.sections?.[0]
+      if (firstSection) {
+        await runSectionHeuristics(rid, startResult.definition, firstSection)
+      }
+    }
 
     const init = async (): Promise<void> => {
       try {
         setStatus('preparing')
         setError(null)
 
-        const startResult = await electron.ipcRenderer.invoke('workflow:start', {
-          name: workflowName,
-          inputs
-        })
-        if (cancelled) return
-
-        const rid = startResult.runId as string
-        setRunId(rid)
-        runIdRef.current = rid
-        setDefinition(startResult.definition)
-        setContext(startResult.runState.context)
-        setCurrentSection(0)
-
-        // Run auto-runnable steps
-        const hasAutoSteps = (startResult.autoSteps as string[])?.length > 0
-        if (hasAutoSteps) {
-          const autoResult = await electron.ipcRenderer.invoke('workflow:run-auto-steps', {
-            runId: rid
-          })
-          if (cancelled) return
-          if (autoResult.runState?.context) {
-            setContext(autoResult.runState.context)
+        // Look for a still-alive run from a previous wizard session. If the
+        // main-process state has been GC'd (cancelled, app restart) we silently
+        // fall through to a fresh start. If it's alive we surface a Resume
+        // prompt and wait — startFresh runs only after the user picks one.
+        const stored = readStoredRun(workflowName)
+        if (stored) {
+          try {
+            const probe = await electron.ipcRenderer.invoke('workflow:get-state', {
+              runId: stored.runId
+            })
+            if (cancelled) return
+            if (probe?.runState && probe?.definition) {
+              setResumeOffer({
+                runId: stored.runId,
+                runState: probe.runState as WorkflowRunState,
+                definition: probe.definition as WorkflowDefinition,
+                currentSection: stored.currentSection
+              })
+              return
+            }
+          } catch {
+            // probe failure means the run is gone; clear and fall through
           }
-          if (autoResult.runState?.stepOutputs) {
-            setStepOutputs(autoResult.runState.stepOutputs)
-          }
+          clearStoredRun()
         }
 
-        if (cancelled) return
-        setStatus('form')
-
-        // Run heuristics for the first section
-        const firstSection = startResult.definition.form?.sections?.[0]
-        if (firstSection) {
-          await runSectionHeuristics(rid, startResult.definition, firstSection)
-        }
+        await startFresh()
       } catch (err) {
         if (!cancelled) {
           setError(err instanceof Error ? err.message : String(err))
@@ -182,9 +241,9 @@ export function useWizardEngine(
     }
     void init()
 
-    return () => {
+    return (): void => {
       cancelled = true
-      if (runIdRef.current) {
+      if (runIdRef.current && !keepAliveRef.current) {
         void electron.ipcRenderer.invoke('workflow:cancel', { runId: runIdRef.current })
         runIdRef.current = null
       }
@@ -318,6 +377,10 @@ export function useWizardEngine(
         setCompletedOutputs(result.outputs ?? null)
         setCompletedStepOutputs(result.stepOutputs ?? null)
         setProgress(null)
+        // The run is over — main-process activeRuns has been cleared by
+        // executeAllSteps. Drop the storage entry so a future reopen doesn't
+        // probe a dead runId and show a misleading Resume prompt.
+        clearStoredRun()
         if (firstPostCompletionIdx > currentSection) {
           setCurrentSection(firstPostCompletionIdx)
         }
@@ -352,13 +415,22 @@ export function useWizardEngine(
     setStatus('form')
     const nextSection = currentSection + 1
     setCurrentSection(nextSection)
+    writeStoredRun({ runId, workflowName, currentSection: nextSection })
 
     // Run heuristics for the next section — these populate context fields
     // with subject exclusion propagation, classification, etc.
     if (definition && sections[nextSection]) {
       await runSectionHeuristics(runId, definition, sections[nextSection])
     }
-  }, [currentSection, isLastSection, runId, definition, sections, firstPostCompletionIdx])
+  }, [
+    currentSection,
+    isLastSection,
+    runId,
+    definition,
+    sections,
+    firstPostCompletionIdx,
+    workflowName
+  ])
 
   const handleBack = useCallback((): void => {
     if (currentSection > 0) {
@@ -366,13 +438,7 @@ export function useWizardEngine(
     }
   }, [currentSection])
 
-  const handleClose = useCallback((): void => {
-    if (closingRef.current) return
-    closingRef.current = true
-    if (runIdRef.current) {
-      void electron.ipcRenderer.invoke('workflow:cancel', { runId: runIdRef.current })
-      runIdRef.current = null
-    }
+  const resetWizardState = useCallback((): void => {
     setRunId(null)
     setDefinition(null)
     setContext({})
@@ -383,21 +449,133 @@ export function useWizardEngine(
     setProgress(null)
     setCompletedOutputs(null)
     setCompletedStepOutputs(null)
+    setResumeOffer(null)
+  }, [])
+
+  const handleClose = useCallback((): void => {
+    if (closingRef.current) return
+    closingRef.current = true
+    if (runIdRef.current) {
+      void electron.ipcRenderer.invoke('workflow:cancel', { runId: runIdRef.current })
+      runIdRef.current = null
+    }
+    clearStoredRun()
+    resetWizardState()
     onClose()
     setTimeout(() => {
       closingRef.current = false
     }, 0)
-  }, [onClose])
+  }, [onClose, resetWizardState])
+
+  // Detach from the run without cancelling it. The main-process engine keeps
+  // executing; the runId stays in localStorage so the next open offers a
+  // Resume prompt. Used by the close-during-run AlertDialog's third option.
+  const handleCloseKeepingRun = useCallback((): void => {
+    if (closingRef.current) return
+    closingRef.current = true
+    if (runIdRef.current) {
+      // Refresh the timestamp so the resume TTL starts from "now" rather than
+      // the start-of-run; a long-running step shouldn't expire mid-flight.
+      writeStoredRun({
+        runId: runIdRef.current,
+        workflowName,
+        currentSection
+      })
+    }
+    keepAliveRef.current = true
+    runIdRef.current = null
+    resetWizardState()
+    onClose()
+    setTimeout(() => {
+      closingRef.current = false
+    }, 0)
+  }, [onClose, resetWizardState, workflowName, currentSection])
+
+  const acceptResume = useCallback(async (): Promise<void> => {
+    if (!resumeOffer) return
+    setStatus('preparing')
+    setError(null)
+    setRunId(resumeOffer.runId)
+    runIdRef.current = resumeOffer.runId
+    setDefinition(resumeOffer.definition)
+    setContext(resumeOffer.runState.context)
+    setStepOutputs(resumeOffer.runState.stepOutputs ?? {})
+    setCurrentSection(resumeOffer.currentSection)
+    writeStoredRun({
+      runId: resumeOffer.runId,
+      workflowName,
+      currentSection: resumeOffer.currentSection
+    })
+    setResumeOffer(null)
+
+    // Match startFresh's post-init contract: if the resumed run is sitting at
+    // a form section, re-run that section's heuristics so any context fields
+    // whose heuristic depends on disk state (e.g. dicom_series scans) refresh
+    // rather than carrying stale values from the snapshotted state.
+    const section = resumeOffer.definition.form?.sections?.[resumeOffer.currentSection]
+    setStatus('form')
+    if (section) {
+      await runSectionHeuristics(resumeOffer.runId, resumeOffer.definition, section)
+    }
+  }, [resumeOffer, workflowName])
+
+  const declineResume = useCallback(async (): Promise<void> => {
+    if (!resumeOffer) return
+    try {
+      await electron.ipcRenderer.invoke('workflow:cancel', { runId: resumeOffer.runId })
+    } catch {
+      // run may already be gone; clearing storage is the important part
+    }
+    clearStoredRun()
+    setResumeOffer(null)
+    // Now perform the deferred fresh start. Re-running the init effect would
+    // require toggling `open`, so trigger the same flow inline.
+    try {
+      setStatus('preparing')
+      setError(null)
+      const startResult = await electron.ipcRenderer.invoke('workflow:start', {
+        name: workflowName,
+        inputs
+      })
+      const rid = startResult.runId as string
+      setRunId(rid)
+      runIdRef.current = rid
+      setDefinition(startResult.definition)
+      setContext(startResult.runState.context)
+      setCurrentSection(0)
+      writeStoredRun({ runId: rid, workflowName, currentSection: 0 })
+
+      const hasAutoSteps = (startResult.autoSteps as string[])?.length > 0
+      if (hasAutoSteps) {
+        const autoResult = await electron.ipcRenderer.invoke('workflow:run-auto-steps', {
+          runId: rid
+        })
+        if (autoResult.runState?.context) setContext(autoResult.runState.context)
+        if (autoResult.runState?.stepOutputs) setStepOutputs(autoResult.runState.stepOutputs)
+      }
+      setStatus('form')
+      const firstSection = startResult.definition.form?.sections?.[0]
+      if (firstSection) {
+        await runSectionHeuristics(rid, startResult.definition, firstSection)
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err))
+      setStatus('error')
+    }
+  }, [resumeOffer, workflowName, inputs])
 
   const goToSection = useCallback(
     async (section: number): Promise<void> => {
       const isForward = section > currentSection
       setCurrentSection(section)
+      if (runId) {
+        writeStoredRun({ runId, workflowName, currentSection: section })
+      }
       if (isForward && runId && definition && sections[section]) {
         await runSectionHeuristics(runId, definition, sections[section])
       }
     },
-    [currentSection, runId, definition, sections]
+    [currentSection, runId, definition, sections, workflowName]
   )
 
   return {
@@ -415,11 +593,15 @@ export function useWizardEngine(
     updateError,
     missingInputs,
     progress,
+    resumeOffer,
     goToSection,
     handleFieldChange,
     handleNext,
     handleBack,
     handleClose,
+    handleCloseKeepingRun,
+    acceptResume,
+    declineResume,
     dismissUpdateError
   }
 }
