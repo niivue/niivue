@@ -8,21 +8,21 @@ import { Zip } from '@/nvutilities'
  * @returns Byte size of the data type
  */
 function getTypeSize(dtype: string): number {
-    if (dtype.length < 2) {   
+    if (dtype.length < 2) {
         throw new Error(`Invalid NPY dtype: ${dtype}`)
     }
 
     const dtypeWithoutEndian = dtype.slice(1)
     const sizeMap: Record<string, number> = {
-        'b1': 1, // Boolean
-        'i1': 1, // Int8
-        'u1': 1, // UInt8
-        'i2': 2, // Int16
-        'u2': 2, // UInt16
-        'i4': 4, // Int32
-        'u4': 4, // UInt32
-        'f4': 4, // Float32
-        'f8': 8 // Float64
+        b1: 1, // Boolean
+        i1: 1, // Int8
+        u1: 1, // UInt8
+        i2: 2, // Int16
+        u2: 2, // UInt16
+        i4: 4, // Int32
+        u4: 4, // UInt32
+        f4: 4, // Float32
+        f8: 8 // Float64
     }
 
     const typeSize = sizeMap[dtypeWithoutEndian]
@@ -40,21 +40,21 @@ function getTypeSize(dtype: string): number {
  * @returns NIfTI datatype code
  */
 function getDataTypeCode(dtype: string): number {
-    if (dtype.length < 2) {   
+    if (dtype.length < 2) {
         throw new Error(`Invalid NPY dtype: ${dtype}`)
     }
     const dtypeWithoutEndian = dtype.slice(1)
 
     const typeMap: Record<string, number> = {
-        b1: 2,   // DT_BINARY / uint8-compatible
+        b1: 2, // DT_BINARY / uint8-compatible
         i1: 256, // DT_INT8
-        u1: 2,   // DT_UINT8
-        i2: 4,   // DT_INT16
+        u1: 2, // DT_UINT8
+        i2: 4, // DT_INT16
         u2: 512, // DT_UINT16
-        i4: 8,   // DT_INT32
+        i4: 8, // DT_INT32
         u4: 768, // DT_UINT32
-        f4: 16,  // DT_FLOAT32
-        f8: 64   // DT_FLOAT64
+        f4: 16, // DT_FLOAT32
+        f8: 64 // DT_FLOAT64
     }
 
     const datatypeCode = typeMap[dtypeWithoutEndian]
@@ -66,8 +66,6 @@ function getDataTypeCode(dtype: string): number {
     return datatypeCode
 }
 
-
-
 /**
  * Reads NumPy NPY format file, modifying the provided NVImage header
  * and returning the raw image data buffer.
@@ -77,7 +75,6 @@ function getDataTypeCode(dtype: string): number {
  * @throws Error if the file is not a valid NPY file.
  */
 export async function readNPY(nvImage: NVImage, buffer: ArrayBuffer): Promise<ArrayBuffer> {
-    
     // offset   size        meaning
     // ------   ---------   -------------------------------
     // 0        6 bytes     magic string: \x93NUMPY
@@ -86,9 +83,9 @@ export async function readNPY(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     // 8        2 or 4      header length, little-endian
     // 10/12    header_len  header data
     // ...      ...         array data
-    
+
     const dv = new DataView(buffer)
-    
+
     // Verify magic number (first 6 bytes should be: 0x93, 'N', 'U', 'M', 'P', 'Y')
     const magicBytes = [dv.getUint8(0), dv.getUint8(1), dv.getUint8(2), dv.getUint8(3), dv.getUint8(4), dv.getUint8(5)]
     const expectedMagic = [0x93, 0x4e, 0x55, 0x4d, 0x50, 0x59]
@@ -104,7 +101,7 @@ export async function readNPY(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     let headerEncoding: string
 
     if (majorVersionByte === 1) {
-        // Version 1.0: header length is a 2-byte little-endian unsigned short 
+        // Version 1.0: header length is a 2-byte little-endian unsigned short
         headerLen = dv.getUint16(8, true)
         headerStart = 10
         headerEncoding = 'latin1'
@@ -116,7 +113,7 @@ export async function readNPY(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     } else {
         throw new Error(`Unsupported NPY version: ${majorVersionByte}.${minorVersionByte}`)
     }
-    
+
     // check that header fits within the buffer
     const dataStart = headerStart + headerLen
     if (dataStart > buffer.byteLength) {
@@ -124,10 +121,8 @@ export async function readNPY(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     }
 
     // Parse header text to extract shape and data type information
-    const headerText = new TextDecoder(headerEncoding).decode(
-        buffer.slice(headerStart, dataStart)
-    )
-    
+    const headerText = new TextDecoder(headerEncoding).decode(buffer.slice(headerStart, dataStart))
+
     // Extract shape from header
     const shapeMatch = headerText.match(/'shape': \((.*?)\)/)
     if (!shapeMatch) {
@@ -143,11 +138,9 @@ export async function readNPY(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     if (shape.length === 0 || shape.some((value) => !Number.isInteger(value) || value <= 0)) {
         throw new Error(`Invalid NPY header: invalid shape (${shapeMatch[1]})`)
     }
-    
+
     if (shape.length < 2 || shape.length > 4) {
-        throw new Error(
-            `Unsupported NPY shape: expected 2D, 3D, or 4D array, got (${shape.join(', ')})`
-        )
+        throw new Error(`Unsupported NPY shape: expected 2D, 3D, or 4D array, got (${shape.join(', ')})`)
     }
 
     // Determine data type (assumes '|b1' (bool), '<f4' (float32), etc.)
@@ -158,34 +151,32 @@ export async function readNPY(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     const dtype = dtypeMatch[1]
     const endianPrefix = dtype[0]
     const isHostLittleEndian = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1
-    
+
     if (!['<', '>', '|', '='].includes(endianPrefix)) {
         throw new Error(`Invalid NPY dtype endian prefix: ${dtype}`)
     }
-    
+
     // Compute number of elements
     const numElements = shape.reduce((a, b) => a * b, 1)
-    
+
     // Read data as an ArrayBuffer
-    
+
     const bytesPerElement = getTypeSize(dtype)
     const expectedBytes = numElements * bytesPerElement
     const availableBytes = buffer.byteLength - dataStart
-    if (availableBytes < expectedBytes){
+    if (availableBytes < expectedBytes) {
         throw new Error('Invalid .npy file: not enough data bytes for specified shape and data type')
     }
 
     const dataBuffer = buffer.slice(dataStart, dataStart + expectedBytes)
-    
-    
-    
+
     const niftiDimCount = shape.length
     const width = shape[shape.length - 1]
     const height = shape[shape.length - 2]
     const slices = shape.length >= 3 ? shape[shape.length - 3] : 1
     const timepoints = shape.length === 4 ? shape[0] : 1
-    
-    // create & set up the dummy NIFTI header 
+
+    // create & set up the dummy NIFTI header
     nvImage.hdr = new NIFTI1()
     const hdr = nvImage.hdr
 
@@ -200,11 +191,8 @@ export async function readNPY(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
     hdr.numBitsPerVoxel = bytesPerElement * 8
     hdr.datatypeCode = getDataTypeCode(dtype)
     // Tell downstream NIfTI processing whether the raw NPY payload is little-endian.
-    hdr.littleEndian =
-        endianPrefix === '<' ||
-        endianPrefix === '|' ||
-        (endianPrefix === '=' && isHostLittleEndian)
-    
+    hdr.littleEndian = endianPrefix === '<' || endianPrefix === '|' || (endianPrefix === '=' && isHostLittleEndian)
+
     return dataBuffer
 }
 
@@ -226,10 +214,9 @@ export async function readNPZ(nvImage: NVImage, buffer: ArrayBuffer): Promise<Ar
         const entry = zip.entries[i]
         if (entry.fileName.toLowerCase().endsWith('.npy')) {
             const data = await entry.extract()
-            
+
             const npyBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength) as ArrayBuffer
             return await readNPY(nvImage, npyBuffer)
-            
         }
     }
 }
