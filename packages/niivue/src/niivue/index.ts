@@ -91,6 +91,37 @@ import { log } from '@/logger'
 import { deg2rad, img2ras16, intensityRaw2Scaled, isRadiological, negMinMax, swizzleVec3, tickSpacing, unProject, unpackFloatFromVec4i, readFileAsDataURL } from '@/utils'
 import NVSerializer from '@/nvserializer'
 const { version } = packageJson
+type FontMetricsJsonBounds = {
+    left: number
+    bottom: number
+    right: number
+    top: number
+}
+type FontMetricsJson = {
+    atlas: {
+        type: string
+        distanceRange: number
+        size: number
+        width: number
+        height: number
+        yOrigin: string
+    }
+    metrics: {
+        emSize: number
+        lineHeight: number
+        ascender: number
+        descender: number
+        underlineY: number
+        underlineThickness: number
+    }
+    glyphs: Array<{
+        unicode: number
+        advance: number
+        planeBounds?: FontMetricsJsonBounds
+        atlasBounds?: FontMetricsJsonBounds
+    }>
+    kerning: unknown[]
+}
 export { NVMesh, NVMeshFromUrlOptions, NVMeshLayerDefaults } from '@/nvmesh'
 export { ColorTables as colortables, cmapper } from '@/colortables'
 
@@ -234,8 +265,8 @@ export class Niivue extends EventTarget {
     unusedVAO = null
     crosshairs3D: NiivueObject3D | null = null
     private DEFAULT_FONT_GLYPH_SHEET = defaultFontPNG // "/fonts/Roboto-Regular.png";
-    private DEFAULT_FONT_METRICS = defaultFontMetrics // "/fonts/Roboto-Regular.json";
-    private fontMetrics?: typeof defaultFontMetrics
+    private DEFAULT_FONT_METRICS: FontMetricsJson = defaultFontMetrics // "/fonts/Roboto-Regular.json";
+    private fontMetrics?: FontMetricsJson
     private fontMets: FontMetrics | null = null
     private fontPx = 12
     private legendFontScaling = 1
@@ -6270,16 +6301,17 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
      * niivue.loadFont("./Roboto.png","./Roboto.json")
      * @see {@link https://niivue.com/demos/features/selectfont.html | live demo usage}
      */
-    async loadFont(fontSheetUrl = defaultFontPNG, metricsUrl = defaultFontMetrics): Promise<void> {
+    async loadFont(fontSheetUrl = defaultFontPNG, metricsUrl: string | FontMetricsJson = defaultFontMetrics): Promise<void> {
         await this.loadFontTexture(fontSheetUrl)
-        // @ts-expect-error FIXME this doesn't look right - metricsUrl is a huge object
-        const response = await fetch(metricsUrl)
-        if (!response.ok) {
-            throw Error(response.statusText)
+        if (typeof metricsUrl === 'string') {
+            const response = await fetch(metricsUrl)
+            if (!response.ok) {
+                throw Error(response.statusText)
+            }
+            this.fontMetrics = (await response.json()) as FontMetricsJson
+        } else {
+            this.fontMetrics = metricsUrl
         }
-
-        const jsonText = await response.text()
-        this.fontMetrics = JSON.parse(jsonText)
 
         this.initFontMets()
 
