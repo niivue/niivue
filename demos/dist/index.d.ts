@@ -2442,6 +2442,38 @@ declare class NVMeshUtilities {
     static generateNormals(pts: number[] | Float32Array, tris: number[] | Uint32Array): Float32Array;
 }
 
+type FontMetricsJsonBounds = {
+    left: number;
+    bottom: number;
+    right: number;
+    top: number;
+};
+type FontMetricsJson = {
+    atlas: {
+        type: string;
+        distanceRange: number;
+        size: number;
+        width: number;
+        height: number;
+        yOrigin: string;
+    };
+    metrics: {
+        emSize: number;
+        lineHeight: number;
+        ascender: number;
+        descender: number;
+        underlineY: number;
+        underlineThickness: number;
+    };
+    glyphs: Array<{
+        unicode: number;
+        advance: number;
+        planeBounds?: FontMetricsJsonBounds;
+        atlasBounds?: FontMetricsJsonBounds;
+    }>;
+    kerning: unknown[];
+};
+
 type DicomLoaderInput = DicomLoaderInput$1;
 type DicomLoader = DicomLoader$1;
 /**
@@ -4265,46 +4297,7 @@ declare class Niivue extends EventTarget {
      * niivue.loadFont("./Roboto.png","./Roboto.json")
      * @see {@link https://niivue.com/demos/features/selectfont.html | live demo usage}
      */
-    loadFont(fontSheetUrl?: any, metricsUrl?: {
-        atlas: {
-            type: string;
-            distanceRange: number;
-            size: number;
-            width: number;
-            height: number;
-            yOrigin: string;
-        };
-        metrics: {
-            emSize: number;
-            lineHeight: number;
-            ascender: number;
-            descender: number;
-            underlineY: number;
-            underlineThickness: number;
-        };
-        glyphs: ({
-            unicode: number;
-            advance: number;
-            planeBounds?: undefined;
-            atlasBounds?: undefined;
-        } | {
-            unicode: number;
-            advance: number;
-            planeBounds: {
-                left: number;
-                bottom: number;
-                right: number;
-                top: number;
-            };
-            atlasBounds: {
-                left: number;
-                bottom: number;
-                right: number;
-                top: number;
-            };
-        })[];
-        kerning: any[];
-    }): Promise<void>;
+    loadFont(fontSheetUrl?: any, metricsUrl?: string | FontMetricsJson): Promise<void>;
     /**
      * Loads the default MatCap texture.
      * @internal

@@ -5249,7 +5249,7 @@ var forEach3 = (function() {
 // package.json
 var package_default = {
   name: "@niivue/niivue",
-  version: "0.68.2",
+  version: "0.69.0",
   description: "minimal webgl2 nifti image viewer",
   types: "./build/niivue/index.d.ts",
   main: "./build/niivue/index.js",
@@ -27497,50 +27497,66 @@ __export(numpy_exports, {
   readNPZ: () => readNPZ
 });
 function getTypeSize(dtype) {
-  const typeMap = {
-    "|b1": 1,
+  if (dtype.length < 2) {
+    throw new Error(`Invalid NPY dtype: ${dtype}`);
+  }
+  const dtypeWithoutEndian = dtype.slice(1);
+  const sizeMap = {
+    b1: 1,
     // Boolean
-    "<i1": 1,
+    i1: 1,
     // Int8
-    "<u1": 1,
+    u1: 1,
     // UInt8
-    "<i2": 2,
+    i2: 2,
     // Int16
-    "<u2": 2,
+    u2: 2,
     // UInt16
-    "<i4": 4,
+    i4: 4,
     // Int32
-    "<u4": 4,
+    u4: 4,
     // UInt32
-    "<f4": 4,
+    f4: 4,
     // Float32
-    "<f8": 8
+    f8: 8
     // Float64
   };
-  return typeMap[dtype] ?? 1;
+  const typeSize = sizeMap[dtypeWithoutEndian];
+  if (typeSize === void 0) {
+    throw new Error(`Unsupported NPY dtype: ${dtype}`);
+  }
+  return typeSize;
 }
 function getDataTypeCode(dtype) {
+  if (dtype.length < 2) {
+    throw new Error(`Invalid NPY dtype: ${dtype}`);
+  }
+  const dtypeWithoutEndian = dtype.slice(1);
   const typeMap = {
-    "|b1": 2,
-    // DT_BINARY
-    "<i1": 256,
+    b1: 2,
+    // DT_BINARY / uint8-compatible
+    i1: 256,
     // DT_INT8
-    "<u1": 2,
+    u1: 2,
     // DT_UINT8
-    "<i2": 4,
+    i2: 4,
     // DT_INT16
-    "<u2": 512,
+    u2: 512,
     // DT_UINT16
-    "<i4": 8,
+    i4: 8,
     // DT_INT32
-    "<u4": 768,
+    u4: 768,
     // DT_UINT32
-    "<f4": 16,
+    f4: 16,
     // DT_FLOAT32
-    "<f8": 64
+    f8: 64
     // DT_FLOAT64
   };
-  return typeMap[dtype] ?? 16;
+  const datatypeCode = typeMap[dtypeWithoutEndian];
+  if (datatypeCode === void 0) {
+    throw new Error(`Unsupported NPY dtype: ${dtype}`);
+  }
+  return datatypeCode;
 }
 async function readNPY(nvImage, buffer) {
   const dv = new DataView(buffer);
@@ -27549,36 +27565,74 @@ async function readNPY(nvImage, buffer) {
   if (!magicBytes.every((byte, i) => byte === expectedMagic[i])) {
     throw new Error("Not a valid NPY file: Magic number mismatch");
   }
-  const headerLen = dv.getUint16(8, true);
-  const headerText = new TextDecoder("utf-8").decode(buffer.slice(10, 10 + headerLen));
+  const majorVersionByte = dv.getUint8(6);
+  const minorVersionByte = dv.getUint8(7);
+  let headerLen;
+  let headerStart;
+  let headerEncoding;
+  if (majorVersionByte === 1) {
+    headerLen = dv.getUint16(8, true);
+    headerStart = 10;
+    headerEncoding = "latin1";
+  } else if (majorVersionByte === 2 || majorVersionByte === 3) {
+    headerLen = dv.getUint32(8, true);
+    headerStart = 12;
+    headerEncoding = majorVersionByte === 3 ? "utf-8" : "latin1";
+  } else {
+    throw new Error(`Unsupported NPY version: ${majorVersionByte}.${minorVersionByte}`);
+  }
+  const dataStart = headerStart + headerLen;
+  if (dataStart > buffer.byteLength) {
+    throw new Error("Invalid NPY file: Header length exceeds buffer size");
+  }
+  const headerText = new TextDecoder(headerEncoding).decode(buffer.slice(headerStart, dataStart));
   const shapeMatch = headerText.match(/'shape': \((.*?)\)/);
   if (!shapeMatch) {
     throw new Error("Invalid NPY header: Shape not found");
   }
   const shape = shapeMatch[1].split(",").map((s) => s.trim()).filter((s) => s !== "").map(Number);
+  if (shape.length === 0 || shape.some((value) => !Number.isInteger(value) || value <= 0)) {
+    throw new Error(`Invalid NPY header: invalid shape (${shapeMatch[1]})`);
+  }
+  if (shape.length < 2 || shape.length > 4) {
+    throw new Error(`Unsupported NPY shape: expected 2D, 3D, or 4D array, got (${shape.join(", ")})`);
+  }
   const dtypeMatch = headerText.match(/'descr': '([^']+)'/);
   if (!dtypeMatch) {
     throw new Error("Invalid NPY header: Data type not found");
   }
   const dtype = dtypeMatch[1];
+  const endianPrefix = dtype[0];
+  const isHostLittleEndian = new Uint8Array(new Uint16Array([1]).buffer)[0] === 1;
+  if (!["<", ">", "|", "="].includes(endianPrefix)) {
+    throw new Error(`Invalid NPY dtype endian prefix: ${dtype}`);
+  }
   const numElements = shape.reduce((a, b) => a * b, 1);
-  const dataStart = 10 + headerLen;
-  const dataBuffer = buffer.slice(dataStart, dataStart + numElements * getTypeSize(dtype));
-  const width = shape.length > 0 ? shape[shape.length - 1] : 1;
-  const height = shape.length > 1 ? shape[shape.length - 2] : 1;
-  const slices = shape.length > 2 ? shape[shape.length - 3] : 1;
+  const bytesPerElement = getTypeSize(dtype);
+  const expectedBytes = numElements * bytesPerElement;
+  const availableBytes = buffer.byteLength - dataStart;
+  if (availableBytes < expectedBytes) {
+    throw new Error("Invalid .npy file: not enough data bytes for specified shape and data type");
+  }
+  const dataBuffer = buffer.slice(dataStart, dataStart + expectedBytes);
+  const niftiDimCount = shape.length;
+  const width = shape[shape.length - 1];
+  const height = shape[shape.length - 2];
+  const slices = shape.length >= 3 ? shape[shape.length - 3] : 1;
+  const timepoints = shape.length === 4 ? shape[0] : 1;
   nvImage.hdr = new NIFTI1();
   const hdr = nvImage.hdr;
-  hdr.dims = [3, width, height, slices, 0, 0, 0, 0];
-  hdr.pixDims = [1, 1, 1, 1, 1, 0, 0, 0];
+  hdr.dims = [niftiDimCount, width, height, slices, timepoints, 1, 1, 1];
+  hdr.pixDims = [1, 1, 1, 1, 1, 1, 1, 1];
   hdr.affine = [
     [hdr.pixDims[1], 0, 0, -(hdr.dims[1] - 2) * 0.5 * hdr.pixDims[1]],
     [0, -hdr.pixDims[2], 0, (hdr.dims[2] - 2) * 0.5 * hdr.pixDims[2]],
     [0, 0, -hdr.pixDims[3], (hdr.dims[3] - 2) * 0.5 * hdr.pixDims[3]],
     [0, 0, 0, 1]
   ];
-  hdr.numBitsPerVoxel = getTypeSize(dtype) * 8;
+  hdr.numBitsPerVoxel = bytesPerElement * 8;
   hdr.datatypeCode = getDataTypeCode(dtype);
+  hdr.littleEndian = endianPrefix === "<" || endianPrefix === "|" || endianPrefix === "=" && isHostLittleEndian;
   return dataBuffer;
 }
 async function readNPZ(nvImage, buffer) {
@@ -27587,7 +27641,8 @@ async function readNPZ(nvImage, buffer) {
     const entry = zip.entries[i];
     if (entry.fileName.toLowerCase().endsWith(".npy")) {
       const data = await entry.extract();
-      return await readNPY(nvImage, data.buffer);
+      const npyBuffer = data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+      return await readNPY(nvImage, npyBuffer);
     }
   }
 }
@@ -48856,12 +48911,15 @@ var Niivue = class extends EventTarget {
    */
   async loadFont(fontSheetUrl = Roboto_Regular_default, metricsUrl = Roboto_Regular_default2) {
     await this.loadFontTexture(fontSheetUrl);
-    const response = await fetch(metricsUrl);
-    if (!response.ok) {
-      throw Error(response.statusText);
+    if (typeof metricsUrl === "string") {
+      const response = await fetch(metricsUrl);
+      if (!response.ok) {
+        throw Error(response.statusText);
+      }
+      this.fontMetrics = await response.json();
+    } else {
+      this.fontMetrics = metricsUrl;
     }
-    const jsonText = await response.text();
-    this.fontMetrics = JSON.parse(jsonText);
     this.initFontMets();
     this.fontShader.use(this.gl);
     this.drawScene();
