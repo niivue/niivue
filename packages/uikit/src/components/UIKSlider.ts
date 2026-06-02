@@ -1,6 +1,6 @@
 import { UIKRenderer } from '../uikrenderer'
 import { UIKFont } from '../assets/uikfont'
-import { Vec4, Color, Vec2 } from '../types'
+import { Vec4, Color } from '../types'
 
 /**
  * Configuration interface for UIKSlider component
@@ -81,7 +81,6 @@ export class UIKSlider {
   private config: UIKSliderConfig
   private state: UIKSliderState = UIKSliderState.NORMAL
   private isDragging: boolean = false
-  private dragOffset: number = 0
   
   // Default styling
   private defaultStyle: UIKSliderStyle = {
@@ -122,15 +121,24 @@ export class UIKSlider {
   public setValue(value: number): void {
     const min = this.config.min!
     const max = this.config.max!
-    
+
+    // Coerce NaN/Infinity (including a non-finite initial config.value from
+    // construction) to the minimum rather than letting it reach config.value
+    // and the change callback.
+    if (!Number.isFinite(value)) {
+      value = min
+    }
+
     // Clamp value to range
     value = Math.max(min, Math.min(max, value))
-    
-    // Apply step if specified
+
+    // Apply step if specified, then re-clamp: rounding can push the value back
+    // outside [min, max] (e.g. min=0.05, max=0.95, step=0.5 → 1.0).
     if (this.config.step) {
       value = Math.round(value / this.config.step) * this.config.step
+      value = Math.max(min, Math.min(max, value))
     }
-    
+
     this.config.value = value
   }
 
@@ -147,6 +155,15 @@ export class UIKSlider {
   public setEnabled(enabled: boolean): void {
     this.config.enabled = enabled
     this.state = enabled ? UIKSliderState.NORMAL : UIKSliderState.DISABLED
+  }
+
+  /**
+   * Update some or all of the slider's style colors at runtime. Useful for
+   * themed UIs (e.g. flipping a page from a dark to a light palette) without
+   * recreating the component or its WebGL context.
+   */
+  public setColors(partial: Partial<UIKSliderStyle>): void {
+    this.config.style = { ...(this.config.style ?? {}), ...partial }
   }
 
   /**
@@ -189,6 +206,15 @@ export class UIKSlider {
           return true
         }
         break
+
+      // Cursor left the canvas: clear the hover highlight (no further
+      // mousemove events arrive to do it). Leave an in-progress drag alone.
+      case 'mouseleave':
+      case 'mouseout':
+        if (!this.isDragging) {
+          this.state = UIKSliderState.NORMAL
+        }
+        break
     }
 
     return false
@@ -200,16 +226,7 @@ export class UIKSlider {
   private startDrag(mouseX: number, mouseY: number): void {
     this.isDragging = true
     this.state = UIKSliderState.DRAGGING
-    
-    const [x, y, width, height] = this.config.bounds
-    const isHorizontal = this.config.orientation === 'horizontal'
-    
-    if (isHorizontal) {
-      this.dragOffset = mouseX - x
-    } else {
-      this.dragOffset = mouseY - y
-    }
-    
+
     this.updateValueFromPosition(mouseX, mouseY)
     
     if (this.config.onDragStart) {
@@ -246,15 +263,20 @@ export class UIKSlider {
     const max = this.config.max!
     
     let normalizedValue: number
-    
+    // 2 * 1px = both endpoints inset by the thumb's outline overshoot, so
+    // the hit math matches the rendered track positions exactly.
+    const thumbExtent = this.config.style!.thumbSize! + 2
+
     if (isHorizontal) {
-      const trackWidth = width - this.config.style!.thumbSize!
-      const relativeX = mouseX - x - (this.config.style!.thumbSize! / 2)
-      normalizedValue = Math.max(0, Math.min(1, relativeX / trackWidth))
+      const trackWidth = width - thumbExtent
+      // Degenerate bounds (track <= 0) would divide by zero → NaN; treat a
+      // collapsed track as "at minimum" rather than poisoning the value.
+      const relativeX = mouseX - x - (thumbExtent / 2)
+      normalizedValue = trackWidth > 0 ? Math.max(0, Math.min(1, relativeX / trackWidth)) : 0
     } else {
-      const trackHeight = height - this.config.style!.thumbSize!
-      const relativeY = mouseY - y - (this.config.style!.thumbSize! / 2)
-      normalizedValue = 1 - Math.max(0, Math.min(1, relativeY / trackHeight))
+      const trackHeight = height - thumbExtent
+      const relativeY = mouseY - y - (thumbExtent / 2)
+      normalizedValue = trackHeight > 0 ? 1 - Math.max(0, Math.min(1, relativeY / trackHeight)) : 1
     }
     
     const newValue = min + normalizedValue * (max - min)
@@ -311,14 +333,18 @@ export class UIKSlider {
       thumbColor = style.disabledColor!
       textColor = style.disabledColor!
     } else if (this.state === UIKSliderState.HOVER || this.state === UIKSliderState.DRAGGING) {
+      // Only tint the fill on interaction. Keeping the thumb color steady
+      // avoids the "thumb flashes white" z-order surprise: the thumb identity
+      // shouldn't change just because the cursor is over it.
       fillColor = style.hoverColor!
-      thumbColor = style.hoverColor!
     }
 
-    // Calculate value position
+    // Calculate value position. Guard a degenerate range (max === min) which
+    // would divide by zero and feed NaN into the thumb/fill geometry.
     const min = this.config.min!
     const max = this.config.max!
-    const normalizedValue = (this.config.value - min) / (max - min)
+    const range = max - min
+    const normalizedValue = range > 0 ? (this.config.value - min) / range : 0
     
     if (isHorizontal) {
       this.renderHorizontalSlider(x, y, width, height, normalizedValue, 
@@ -338,10 +364,15 @@ export class UIKSlider {
     const style = this.config.style!
     const trackThickness = style.trackThickness!
     const thumbRadius = style.thumbSize! * 0.5
-    
+    // drawCircularThumb draws a border ring at (radius + 1), so the visible
+    // thumb extends 1 pixel beyond the disc radius. Inset the track endpoints
+    // by that overshoot so the outline isn't clipped at min/max value.
+    const THUMB_BORDER_EXTRA = 1
+    const thumbExtent = thumbRadius + THUMB_BORDER_EXTRA
+
     // Calculate positions
-    const trackStart = x + thumbRadius
-    const trackEnd = x + width - thumbRadius
+    const trackStart = x + thumbExtent
+    const trackEnd = x + width - thumbExtent
     const trackWidth = trackEnd - trackStart
     const centerY = y + height / 2
     
@@ -401,10 +432,12 @@ export class UIKSlider {
     const style = this.config.style!
     const trackThickness = style.trackThickness!
     const thumbRadius = style.thumbSize! * 0.5
-    
+    const THUMB_BORDER_EXTRA = 1
+    const thumbExtent = thumbRadius + THUMB_BORDER_EXTRA
+
     // Calculate positions
-    const trackStart = y + thumbRadius
-    const trackEnd = y + height - thumbRadius
+    const trackStart = y + thumbExtent
+    const trackEnd = y + height - thumbExtent
     const trackHeight = trackEnd - trackStart
     const centerX = x + width / 2
     

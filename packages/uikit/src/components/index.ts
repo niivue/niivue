@@ -1,16 +1,10 @@
-// Interactive UIKit Components
+// Interactive UIKit Components (extensionless, matching the type re-exports below)
 export * from './UIKButton'
 export * from './UIKSlider'
 export * from './UIKToggle'
 export * from './UIKPanel'
-
-// Interactive components
-export * from './UIKButton.js'
-export * from './UIKSlider.js'
-export * from './UIKToggle.js'
-export * from './UIKPanel.js'
-export * from './UIKColormapSelector.js'
-export * from './UIKViewModeSelector.js'
+export * from './UIKColormapSelector'
+export * from './UIKViewModeSelector'
 
 // Component type definitions and interfaces
 export type {

@@ -1,6 +1,6 @@
 import { UIKShader } from '../uikshader.js'
-import bitmapVertShader from '../shaders/vert/bitmap.glsl'
-import bitmapFragShader from '../shaders/frag/bitmap.glsl'
+import bitmapVertShader from '../shaders/vert/bitmap.vert.glsl'
+import bitmapFragShader from '../shaders/frag/bitmap.frag.glsl'
 import { UIKAsset } from './uikasset.js'
 
 export class UIKBitmap extends UIKAsset {

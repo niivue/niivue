@@ -1,6 +1,6 @@
 import { UIKRenderer } from '../uikrenderer'
 import { UIKFont } from '../assets/uikfont'
-import { Vec4, Color, Vec2 } from '../types'
+import { Vec4, Color } from '../types'
 
 /**
  * Configuration interface for UIKPanel component

@@ -2,12 +2,7 @@ import { mat4, vec2, vec4 } from "gl-matrix"
 import { UIKShader } from "./uikshader.js"
 import circleVert from "./shaders/vert/circle.vert.glsl"
 import circleFrag from "./shaders/frag/circle.frag.glsl"
-import colorbarVert from "./shaders/vert/colorbar.vert.glsl"
-import colorbarFrag from "./shaders/frag/colorbar.frag.glsl"
-import ellipseVert from "./shaders/vert/elliptical-fill.vert.glsl"
-import ellipseFrag from "./shaders/frag/elliptical-fill.frag.glsl"
 import lineVert from "./shaders/vert/line.vert.glsl"
-import projectedLineVert from "./shaders/vert/projected-line.vert.glsl"
 import rectVert from "./shaders/vert/rect.vert.glsl"
 import solidColorFrag from "./shaders/frag/solid-color.frag.glsl"
 import roundedRectFrag from "./shaders/frag/rounded-rect.frag.glsl"
@@ -18,17 +13,25 @@ import rotatedFontFrag from "./shaders/frag/rotated-font.frag.glsl"
 import { Vec4, Color, LineTerminator, LineStyle, Vec2, RoundedRectConfig } from "./types.js"
 import { UIKFont } from "./assets/uikfont.js"
 
+// Snapshot of the WebGL state the 2D primitives mutate (blend enable + func,
+// depth test, face cull), captured before a draw and restored after.
+interface GLState {
+  blend: boolean
+  depth: boolean
+  cull: boolean
+  srcRGB: number
+  dstRGB: number
+  srcAlpha: number
+  dstAlpha: number
+}
+
 export class UIKRenderer {
   private gl: WebGL2RenderingContext
   private lineShader: UIKShader
   private circleShader: UIKShader
-  private rectShader: UIKShader
   private roundedRectShader: UIKShader
   private triangleShader: UIKShader
   private rotatedFontShader: UIKShader
-  private colorbarShader: UIKShader
-  private projectedLineShader: UIKShader
-  private ellipticalFillShader: UIKShader
   private genericVAO: WebGLVertexArrayObject
   private triangleVertexBuffer: WebGLBuffer
 
@@ -37,14 +40,10 @@ export class UIKRenderer {
     
     // Create shaders for this specific WebGL context
     this.lineShader = new UIKShader(gl, lineVert, solidColorFrag)
-    this.rectShader = new UIKShader(gl, rectVert, solidColorFrag)
     this.roundedRectShader = new UIKShader(gl, rectVert, roundedRectFrag)
     this.circleShader = new UIKShader(gl, circleVert, circleFrag)
     this.triangleShader = new UIKShader(gl, triangleVert, triangleFrag)
     this.rotatedFontShader = new UIKShader(gl, rotatedFontVert, rotatedFontFrag)
-    this.colorbarShader = new UIKShader(gl, colorbarVert, colorbarFrag)
-    this.projectedLineShader = new UIKShader(gl, projectedLineVert, solidColorFrag)
-    this.ellipticalFillShader = new UIKShader(gl, ellipseVert, ellipseFrag)
 
     // Create VAO for this specific WebGL context
       const rectStrip = [
@@ -77,31 +76,11 @@ export class UIKRenderer {
       gl.vertexAttribPointer(0, 3, gl.FLOAT, false, 0, 0)
 
       gl.bindVertexArray(null)
-      const texCoordData = [
-        1.0,
-        1.0, // Top-right
-        1.0,
-        0.0, // Bottom-right
-        0.0,
-        1.0, // Top-left
-        0.0,
-        0.0, // Bottom-left
-      ]
+      // (Removed a dead texture-coordinate buffer + attribute-1 setup here: it
+      // was created after the VAO was unbound, so it only touched the default
+      // VAO that no draw uses, was never stored for disposal, and no active
+      // shader reads attribute 1 / a_texcoord.)
 
-      const texCoordBuffer = gl.createBuffer()
-      gl.bindBuffer(gl.ARRAY_BUFFER, texCoordBuffer)
-      gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Float32Array(texCoordData),
-        gl.STATIC_DRAW
-      )
-
-      // Assign a_texcoord (location = 1)
-      gl.enableVertexAttribArray(1)
-      gl.vertexAttribPointer(1, 2, gl.FLOAT, false, 0, 0)
-
-      gl.bindVertexArray(null) // Unbind VAO when done
-      
     this.genericVAO = vao
 
     // Create triangle vertex buffer for this specific WebGL context
@@ -120,12 +99,42 @@ export class UIKRenderer {
       this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null)
   }
 
-  private setup2D() {
+  // Snapshot the WebGL state that the 2D primitives mutate, so it can be
+  // restored after drawing. Without this, drawing a UIK primitive leaves
+  // DEPTH_TEST/CULL_FACE disabled and BLEND enabled in the context — fine for
+  // the demo (each control owns its own context) but corrupting for any host
+  // that shares one GL context between its own rendering and these primitives.
+  private saveGLState(): GLState {
     const gl = this.gl
+    return {
+      blend: gl.isEnabled(gl.BLEND),
+      depth: gl.isEnabled(gl.DEPTH_TEST),
+      cull: gl.isEnabled(gl.CULL_FACE),
+      srcRGB: gl.getParameter(gl.BLEND_SRC_RGB) as number,
+      dstRGB: gl.getParameter(gl.BLEND_DST_RGB) as number,
+      srcAlpha: gl.getParameter(gl.BLEND_SRC_ALPHA) as number,
+      dstAlpha: gl.getParameter(gl.BLEND_DST_ALPHA) as number
+    }
+  }
+
+  private restoreGLState(s: GLState): void {
+    const gl = this.gl
+    gl.blendFuncSeparate(s.srcRGB, s.dstRGB, s.srcAlpha, s.dstAlpha)
+    s.blend ? gl.enable(gl.BLEND) : gl.disable(gl.BLEND)
+    s.depth ? gl.enable(gl.DEPTH_TEST) : gl.disable(gl.DEPTH_TEST)
+    s.cull ? gl.enable(gl.CULL_FACE) : gl.disable(gl.CULL_FACE)
+  }
+
+  // Captures state, then applies the 2D blend/depth/cull setup. Pair the
+  // returned snapshot with restoreGLState() at the end of the draw call.
+  private setup2D(): GLState {
+    const gl = this.gl
+    const snapshot = this.saveGLState()
     gl.disable(gl.DEPTH_TEST)
     gl.disable(gl.CULL_FACE)
     gl.enable(gl.BLEND)
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+    return snapshot
   }
 
   /**
@@ -151,7 +160,6 @@ export class UIKRenderer {
     z?: number
   }): void {
     const canvas = this.gl.canvas as HTMLCanvasElement
-    this.setup2D()
     // Convert screen points to WebGL coordinates
     const hp = Array.isArray(headPoint)
       ? headPoint
@@ -169,12 +177,17 @@ export class UIKRenderer {
       console.error('Vertex buffer is not defined at draw time')
       return
     }
-    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.triangleVertexBuffer)
 
     // Calculate left and right base vertices
     const directionX = webglHeadX - webglBaseMidX
     const directionY = webglHeadY - webglBaseMidY
     const length = Math.sqrt(directionX * directionX + directionY * directionY)
+    // Coincident head/base (zero length) would divide by zero and push NaN
+    // vertices into the buffer; nothing visible to draw, so bail.
+    if (length === 0) {
+      return
+    }
+    const glState = this.setup2D()
     const unitPerpX = -directionY / length
     const unitPerpY = directionX / length
     const baseLengthNormalizedX = (baseLength / canvas.width) * 2
@@ -194,12 +207,19 @@ export class UIKRenderer {
       rightBaseY, // Right base vertex
     ])
 
+    // Bind only now (after the degeneracy guard) so a zero-length early-return
+    // doesn't leave ARRAY_BUFFER bound to the triangle buffer.
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, this.triangleVertexBuffer)
     this.gl.bufferSubData(this.gl.ARRAY_BUFFER, 0, vertices)
     // Use the shader program
     this.triangleShader.use(this.gl)
 
-    // Bind the position attribute
-    const positionLocation = this.triangleShader.uniforms.a_position as GLuint
+    // Bind the position attribute. a_position is an ATTRIBUTE, not a uniform,
+    // so it is not in UIKShader.uniforms (that map only records uniforms).
+    // triangle.vert.glsl pins it to `layout(location = 0)`, so use 0 directly
+    // rather than the previous `uniforms.a_position` (which was undefined and
+    // only coerced to 0 by accident).
+    const positionLocation = 0
     this.gl.enableVertexAttribArray(positionLocation)
     this.gl.vertexAttribPointer(positionLocation, 2, this.gl.FLOAT, false, 0, 0)
 
@@ -216,6 +236,8 @@ export class UIKRenderer {
     // Draw the triangle
     this.gl.drawArrays(this.gl.TRIANGLES, 0, 3)
     this.gl.bindVertexArray(null)
+    this.gl.bindBuffer(this.gl.ARRAY_BUFFER, null)
+    this.restoreGLState(glState)
   }
 
   /**
@@ -242,7 +264,7 @@ export class UIKRenderer {
     }
 
     this.circleShader.use(this.gl)
-    this.setup2D()
+    const glState = this.setup2D()
     this.gl.uniform4fv(this.circleShader.uniforms.circleColor, circleColor as Float32List)
     this.gl.uniform2fv(this.circleShader.uniforms.canvasWidthHeight, [
       this.gl.canvas.width,
@@ -264,6 +286,7 @@ export class UIKRenderer {
     this.gl.bindVertexArray(this.genericVAO)
     this.gl.drawArrays(this.gl.TRIANGLE_STRIP, 0, 4)
     this.gl.bindVertexArray(null) // Unbind to avoid side effects
+    this.restoreGLState(glState)
   }
 
   /**
@@ -296,7 +319,7 @@ export class UIKRenderer {
       dashDotLength = 5,
     } = config
     const gl = this.gl
-    this.setup2D()
+    const glState = this.setup2D()
     // Extract start and end points
     const lineCoords = Array.isArray(startEnd)
       ? vec4.fromValues(startEnd[0], startEnd[1], startEnd[2], startEnd[3])
@@ -322,7 +345,9 @@ export class UIKRenderer {
       const lineLength = vec2.distance([startX, startY], [endX, endY])
       const segmentSpacing =
         style === LineStyle.DASHED ? dashDotLength * 1.5 : dashDotLength * 2
-      const segmentCount = Math.floor(lineLength / segmentSpacing)
+      // Guard against a non-positive spacing (e.g. dashDotLength <= 0), which
+      // would make segmentCount Infinity and hang the loop.
+      const segmentCount = segmentSpacing > 0 ? Math.floor(lineLength / segmentSpacing) : 0
 
       for (let i = 0; i <= segmentCount; i++) {
         const segmentStart = vec2.scaleAndAdd(
@@ -435,6 +460,7 @@ export class UIKRenderer {
         })
         break
     }
+    this.restoreGLState(glState)
   }
 
   /**
@@ -454,6 +480,11 @@ export class UIKRenderer {
 
     this.lineShader.use(gl)
     gl.uniform4fv(this.lineShader.uniforms.lineColor, color as Float32List)
+    // canvasWidthHeight is required by line.vert.glsl. Set it here rather than
+    // relying on a prior solid drawLine having set it on the shared program —
+    // a dashed line drawn first (or after a resize) would otherwise use stale
+    // or zero dimensions and render incorrectly.
+    gl.uniform2fv(this.lineShader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
     gl.uniform1f(this.lineShader.uniforms.thickness, thickness)
     gl.uniform4fv(this.lineShader.uniforms.startXYendXY, segmentCoords)
 
@@ -475,10 +506,11 @@ export class UIKRenderer {
     if (!shader) throw new Error('roundedRectShader undefined')
 
     shader.use(gl)
-
-    // enable blending for smooth corners
-    gl.enable(gl.BLEND)
-    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA)
+    // Establish the 2D blend state AND disable depth-test/face-cull, matching
+    // the other primitives — otherwise a host with depth/cull enabled would
+    // depth-reject or cull the 2D quad. setup2D() returns the snapshot to
+    // restore at the end.
+    const glState = this.setup2D()
 
     // decide radius
     const radius = cornerRadius === -1 ? thickness * 2 : cornerRadius
@@ -504,6 +536,7 @@ export class UIKRenderer {
     gl.bindVertexArray(this.genericVAO)
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4)
     gl.bindVertexArray(null)
+    this.restoreGLState(glState)
   }
 
   /**
@@ -581,12 +614,27 @@ export class UIKRenderer {
     gl.uniform4fv(shader.uniforms.outlineColor, outlineColor as Float32List)
     gl.uniform1f(shader.uniforms.outlineThickness, outlineThickness)
     gl.uniform1i(shader.uniforms.fontTexture, 0)
-    gl.uniform1i(shader.uniforms.u_isMTSDF, font.isMTSDF ? 1 : 0)
+    // The shader uniform is named `isMTSDF` (not `u_isMTSDF`); using the wrong
+    // key set `undefined`, leaving it at its default `false` so MTSDF atlases
+    // would decode through the MSDF path.
+    gl.uniform1i(shader.uniforms.isMTSDF, font.isMTSDF ? 1 : 0)
+    // Required by the outline math (outlineThickness / max(canvasWidthHeight)).
+    // Unset it defaults to (0,0) → divide-by-zero → NaN outline alpha and dead
+    // outlineColor/outlineThickness params.
+    gl.uniform2fv(shader.uniforms.canvasWidthHeight, [gl.canvas.width, gl.canvas.height])
 
-    // Calculate screenPxRange based on scale and font metrics
-    const canvasSize = Math.min(gl.canvas.width, gl.canvas.height)
+    // Pixel size of one em of text. This is what every glyph quad and
+    // every text-measurement API (getTextWidth/getTextHeight) is keyed
+    // off, so drawRotatedText must use the same definition or the
+    // rendered glyphs will disagree with the centering math. Mirrors
+    // niivue's drawText: `size = fontPx * scale`, expressed here as
+    // `scale * atlasEm` since callers pass scale as a fraction of em.
+    const size = scale * font.fontMetrics.size
+    // msdfgen's screenPxRange = output_em_px * (distanceRange / atlas_em).
+    // The clamp to 1.0 keeps the edge ramp at least a pixel wide at very
+    // small text sizes; anything finer aliases on most displays.
     const screenPxRange = Math.max(
-      (scale / font.fontMetrics.size) * font.fontMetrics.distanceRange,
+      (size / font.fontMetrics.size) * font.fontMetrics.distanceRange,
       1.0
     )
     gl.uniform1f(shader.uniforms.screenPxRange, screenPxRange)
@@ -601,7 +649,6 @@ export class UIKRenderer {
     // Draw characters
     let x = xy[0]
     let y = xy[1]
-    const size = canvasSize * scale
     const chars = Array.from(str)
 
     for (const char of chars) {
@@ -687,24 +734,19 @@ export class UIKRenderer {
     scale?: number
     showTickmarkNumbers?: boolean
   }): void {
-    const gl = this.gl
-    const canvasHeight = gl.canvas.height
-    const fontSize = canvasHeight * scale
-    const getTextWidth = (text: string): number => {
-      return Array.from(text).reduce((sum, char) => {
-        const glyph = font.fontMetrics.mets[char]
-        return glyph ? sum + glyph.xadv * fontSize : sum
-      }, 0)
-    }
-
-    const getTextHeight = (): number => {
-      const m = font.fontMetrics
-      return (m.ascender - m.descender) * fontSize
-    }
+    // Measure via the font's own metrics (scale * em) so label placement
+    // matches what drawRotatedText actually renders. Each label is measured
+    // at its own scale (length at `scale`, units at `scale/2`, tick numbers
+    // at `scale/5`) rather than a single canvas-relative font size.
 
     const deltaX = pointB[0] - pointA[0]
     const deltaY = pointB[1] - pointA[1]
     const actualLength = Math.sqrt(deltaX * deltaX + deltaY * deltaY)
+    // Coincident endpoints would divide by zero below (parallel-line offset,
+    // hash-mark spacing) and push NaN into the line buffers; nothing to draw.
+    if (actualLength === 0) {
+      return
+    }
     let angle = Math.atan2(deltaY, deltaX)
 
     const midPoint: Vec2 = [
@@ -712,8 +754,8 @@ export class UIKRenderer {
       (pointA[1] + pointB[1]) / 2,
     ]
     const text = `${length.toFixed(2)}`
-    const textWidth = getTextWidth(text)
-    const textHeight = getTextHeight()
+    const textWidth = font.getTextWidth(text, scale)
+    const textHeight = font.getTextHeight(text, scale)
     const halfTextWidth = textWidth / 2
     const halfTextHeight = textHeight / 2
 
@@ -750,7 +792,7 @@ export class UIKRenderer {
     })
 
     const unitsScale = scale / 2
-    const unitsTextWidth = getTextWidth(units)
+    const unitsTextWidth = font.getTextWidth(units, unitsScale)
     const unitsTextPosition: Vec2 = [
       textPosition[0] + (textWidth + unitsTextWidth / 4) * Math.cos(angle),
       textPosition[1] + (textWidth + unitsTextWidth / 4) * Math.sin(angle),
@@ -796,7 +838,10 @@ export class UIKRenderer {
       terminator: LineTerminator.ARROW,
     })
 
-    const numHashMarks = Math.floor(length)
+    // One hash mark per unit length, but clamp so a huge or non-finite `length`
+    // can't spin up a runaway (or infinite) loop of draw calls.
+    const MAX_HASH_MARKS = 1000
+    const numHashMarks = Number.isFinite(length) ? Math.min(Math.floor(length), MAX_HASH_MARKS) : 0
     const hashLength = 8
     const parallelOffset = offset / 4
 
@@ -810,7 +855,7 @@ export class UIKRenderer {
       if (i % 5 === 0) {
         const hashText = `${i}`
         const hashTextScale = scale / 5
-        const hashTextWidth = getTextWidth(hashText)
+        const hashTextWidth = font.getTextWidth(hashText, hashTextScale)
         const hashTextPosition: Vec2 = [
           hashPoint[0] +
             perpOffsetX -
