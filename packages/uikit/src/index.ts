@@ -8,7 +8,7 @@ import defaultFontJSON from "./fonts/Roboto-Regular.json" assert { type: "json" 
 
 // Core UIKit exports
 export { UIKRenderer } from './uikrenderer'
-export { UIKFont } from './assets/uikfont'
+export { UIKFont, MIN_TEXT_DEVICE_PX } from './assets/uikfont'
 export { UIKShader } from './uikshader'
 
 // Type definitions
@@ -135,7 +135,10 @@ window.addEventListener("load", async () => {
     lineColor: [0.2, 0.2, 0.2, 1],
     lineThickness: 2,
     offset: 40,
-    scale: 0.03,
+    // scale is an atlas-em fraction (size = scale * fontMetrics.size, ~60px),
+    // so ~0.3 yields ~18px text. (Previously 0.03 under the old
+    // canvas-relative contract; that now renders ~1.8px.)
+    scale: 0.3,
   })
 
   // Draw rotated text
@@ -143,7 +146,7 @@ window.addEventListener("load", async () => {
     font,
     xy: [300, 100],
     str: "Rotated Text",
-    scale: 0.03,
+    scale: 0.3,
     color: [0.2, 0.2, 0.2, 1],
     rotation: Math.PI / 8,
   })

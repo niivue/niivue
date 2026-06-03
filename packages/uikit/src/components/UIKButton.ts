@@ -118,259 +118,32 @@ export class UIKButton {
   public render(): void {
     const style = this.getCurrentStyle()
     const bounds = this.config.bounds
-    const [x, y, width, height] = bounds
-    
-    // Draw shadow first (behind the button)
-    this.drawButtonShadow(x, y, width, height)
-    
-    // Draw main button background with gradient
-    this.drawButtonBackground(x, y, width, height, style)
-    
-    // Draw border with proper styling
-    if (style.borderWidth > 0) {
-      this.drawStylishBorder(bounds, style)
-    }
-    
-    // Add modern button effects (highlights, depth)
-    this.drawButtonEffects(bounds, style)
 
-    // Draw text if provided
+    // Body: one anti-aliased rounded-rect call. Replaces the earlier
+    // shadow + per-row gradient + multi-pass border + corner stubs +
+    // highlight stripes pipeline, which was both visually noisy and
+    // prone to overdraw bugs (text getting hidden under late effect
+    // passes). The renderer's SDF rect already handles AA corners and
+    // the optional border via thickness/outlineColor.
+    //
+    // Clamp the corner radius to half the smaller dimension so callers
+    // can pass a huge value (or just `Infinity`) to opt into a pure
+    // capsule shape without computing the exact radius themselves.
+    const maxRadius = Math.min(bounds[2], bounds[3]) / 2
+    const radius = Math.min(style.borderRadius ?? 2, maxRadius)
+    const borderWidth = (style.borderWidth ?? 0) > 0 ? style.borderWidth : 0
+    this.renderer.drawRoundedRect({
+      bounds,
+      fillColor: style.backgroundColor,
+      outlineColor: borderWidth > 0 ? style.borderColor : style.backgroundColor,
+      cornerRadius: radius,
+      thickness: borderWidth
+    })
+
+    // Text last so it always sits on top, regardless of body color.
     if (this.config.text && this.config.font) {
       this.renderText(style)
     }
-  }
-
-  /**
-   * Draw button shadow for depth
-   */
-  private drawButtonShadow(x: number, y: number, width: number, height: number): void {
-    if (this.state === UIKButtonState.ACTIVE) return // No shadow when pressed
-    
-    const shadowOffset = 2
-    const shadowColor: Color = [0, 0, 0, 0.2]
-    
-    // Draw shadow rectangle slightly offset
-    for (let i = 0; i < 3; i++) {
-      this.renderer.drawLine({
-        startEnd: [x + shadowOffset, y + height + i, x + width + shadowOffset, y + height + i],
-        thickness: 1,
-        color: [shadowColor[0], shadowColor[1], shadowColor[2], shadowColor[3] * (1 - i * 0.3)]
-      })
-    }
-  }
-
-  /**
-   * Draw button background with gradient effect
-   */
-  private drawButtonBackground(x: number, y: number, width: number, height: number, style: UIKButtonStyle): void {
-    const isPressed = this.state === UIKButtonState.ACTIVE
-    const baseColor = style.backgroundColor
-    
-    // Create gradient effect by drawing horizontal lines with varying colors
-    for (let i = 0; i < height; i++) {
-      const progress = i / height
-      
-      let gradientColor: Color
-      if (isPressed) {
-        // Inverted gradient when pressed
-        gradientColor = [
-          Math.max(baseColor[0] - progress * 0.1, 0),
-          Math.max(baseColor[1] - progress * 0.1, 0),
-          Math.max(baseColor[2] - progress * 0.1, 0),
-          baseColor[3]
-        ]
-      } else {
-        // Normal gradient (lighter at top, darker at bottom)
-        gradientColor = [
-          Math.min(baseColor[0] + (1 - progress) * 0.15, 1),
-          Math.min(baseColor[1] + (1 - progress) * 0.15, 1),
-          Math.min(baseColor[2] + (1 - progress) * 0.15, 1),
-          baseColor[3]
-        ]
-      }
-      
-      this.renderer.drawLine({
-        startEnd: [x, y + i, x + width, y + i],
-        thickness: 1,
-        color: gradientColor
-      })
-    }
-  }
-
-  /**
-   * Draw stylish border with rounded corners effect
-   */
-  private drawStylishBorder(bounds: Vec4, style: UIKButtonStyle): void {
-    const [x, y, width, height] = bounds
-    const borderColor = style.borderColor
-    const borderWidth = style.borderWidth
-    
-    // Draw main border lines
-    for (let i = 0; i < borderWidth; i++) {
-      // Top border
-      this.renderer.drawLine({
-        startEnd: [x + i, y + i, x + width - i, y + i],
-        thickness: 1,
-        color: borderColor
-      })
-      
-      // Right border
-      this.renderer.drawLine({
-        startEnd: [x + width - i, y + i, x + width - i, y + height - i],
-        thickness: 1,
-        color: borderColor
-      })
-      
-      // Bottom border
-      this.renderer.drawLine({
-        startEnd: [x + width - i, y + height - i, x + i, y + height - i],
-        thickness: 1,
-        color: borderColor
-      })
-      
-      // Left border
-      this.renderer.drawLine({
-        startEnd: [x + i, y + height - i, x + i, y + i],
-        thickness: 1,
-        color: borderColor
-      })
-    }
-    
-    // Add corner rounding effect
-    this.drawRoundedCorners(x, y, width, height, style.borderRadius, borderColor)
-  }
-
-  /**
-   * Draw rounded corners for modern button appearance
-   */
-  private drawRoundedCorners(x: number, y: number, width: number, height: number, radius: number, color: Color): void {
-    if (radius <= 0) return
-    
-    const cornerRadius = Math.min(radius, Math.min(width, height) / 4)
-    
-    // Simple corner rounding by drawing small diagonal lines
-    for (let i = 0; i < cornerRadius; i++) {
-      const alpha = 1 - (i / cornerRadius)
-      const cornerColor: Color = [color[0], color[1], color[2], color[3] * alpha]
-      
-      // Top-left corner
-      this.renderer.drawLine({
-        startEnd: [x + i, y + cornerRadius - i, x + i + 1, y + cornerRadius - i],
-        thickness: 1,
-        color: cornerColor
-      })
-      
-      // Top-right corner
-      this.renderer.drawLine({
-        startEnd: [x + width - i - 1, y + cornerRadius - i, x + width - i, y + cornerRadius - i],
-        thickness: 1,
-        color: cornerColor
-      })
-      
-      // Bottom-left corner
-      this.renderer.drawLine({
-        startEnd: [x + i, y + height - cornerRadius + i, x + i + 1, y + height - cornerRadius + i],
-        thickness: 1,
-        color: cornerColor
-      })
-      
-      // Bottom-right corner
-      this.renderer.drawLine({
-        startEnd: [x + width - i - 1, y + height - cornerRadius + i, x + width - i, y + height - cornerRadius + i],
-        thickness: 1,
-        color: cornerColor
-      })
-    }
-  }
-
-  /**
-   * Draw modern button effects (highlights, inner shadows)
-   */
-  private drawButtonEffects(bounds: Vec4, style: UIKButtonStyle): void {
-    const [x, y, width, height] = bounds
-    const isPressed = this.state === UIKButtonState.ACTIVE
-    const isHovered = this.state === UIKButtonState.HOVER
-    
-    if (!isPressed) {
-      // Top highlight for 3D effect
-      const highlightColor: Color = [1, 1, 1, 0.3]
-      this.renderer.drawLine({
-        startEnd: [x + 2, y + 1, x + width - 2, y + 1],
-        thickness: 1,
-        color: highlightColor
-      })
-      
-      // Inner highlight
-      this.renderer.drawLine({
-        startEnd: [x + 3, y + 2, x + width - 3, y + 2],
-        thickness: 1,
-        color: [highlightColor[0], highlightColor[1], highlightColor[2], highlightColor[3] * 0.5]
-      })
-    } else {
-      // Inner shadow when pressed
-      const shadowColor: Color = [0, 0, 0, 0.4]
-      this.renderer.drawLine({
-        startEnd: [x + 1, y + 1, x + width - 1, y + 1],
-        thickness: 1,
-        color: shadowColor
-      })
-      
-      this.renderer.drawLine({
-        startEnd: [x + 1, y + 1, x + 1, y + height - 1],
-        thickness: 1,
-        color: shadowColor
-      })
-    }
-    
-    // Hover glow effect
-    if (isHovered && !isPressed) {
-      const glowColor: Color = [
-        Math.min(style.backgroundColor[0] + 0.2, 1),
-        Math.min(style.backgroundColor[1] + 0.2, 1),
-        Math.min(style.backgroundColor[2] + 0.2, 1),
-        0.1
-      ]
-      
-      // Outer glow
-      for (let i = 1; i <= 2; i++) {
-        this.drawBorder([x - i, y - i, width + 2*i, height + 2*i], glowColor, 1)
-      }
-    }
-  }
-
-  /**
-   * Draw border using lines (helper method for effects)
-   */
-  private drawBorder(bounds: Vec4, borderColor: Color, borderWidth: number): void {
-    const [x, y, width, height] = bounds
-    
-    // Top border
-    this.renderer.drawLine({
-      startEnd: [x, y, x + width, y],
-      thickness: borderWidth,
-      color: borderColor
-    })
-    
-    // Right border
-    this.renderer.drawLine({
-      startEnd: [x + width, y, x + width, y + height],
-      thickness: borderWidth,
-      color: borderColor
-    })
-    
-    // Bottom border
-    this.renderer.drawLine({
-      startEnd: [x + width, y + height, x, y + height],
-      thickness: borderWidth,
-      color: borderColor
-    })
-    
-    // Left border
-    this.renderer.drawLine({
-      startEnd: [x, y + height, x, y],
-      thickness: borderWidth,
-      color: borderColor
-    })
   }
 
   /**
@@ -487,28 +260,39 @@ export class UIKButton {
   }
 
   /**
-   * Render button text centered within bounds
+   * Render button text centered within bounds.
+   *
+   * The MSDF font ships at a large native em size (~32 px). Scale 1.0
+   * placed the baseline at the button's lower edge and pushed glyphs
+   * off the top, leaving only descender stubs visible — the cause of
+   * "buttons render but no text" bug reports. The scale below targets
+   * roughly 40% of the button height so a typical 35-px button shows
+   * comfortably-sized text well within bounds.
    */
   private renderText(style: UIKButtonStyle): void {
     if (!this.config.font) return
 
     const [x, y, width, height] = this.config.bounds
-    const [padX, padY] = style.padding
-    
-    // Calculate text dimensions
-    const textWidth = this.config.font.getTextWidth(this.config.text, 1.0)
-    const textHeight = this.config.font.getTextHeight(this.config.text, 1.0)
-    
-    // Center text within button bounds (accounting for padding)
+
+    // Target ~40% of the button height for the em size, but never below the
+    // crisp-MSDF device-pixel floor (see MIN_TEXT_DEVICE_PX). The 0.45 cap
+    // matches the view-mode and colormap selectors so all label text reads at
+    // a consistent size and stays sharp on standard-resolution monitors.
+    const scale = this.config.font.fitTextScale(height, 0.4, 0.45)
+    const textWidth = this.config.font.getTextWidth(this.config.text, scale)
+    const textHeight = this.config.font.getTextHeight(this.config.text, scale)
+
+    // Center horizontally; bias baseline a quarter-textHeight below
+    // vertical center so the visual x-height sits in the middle.
     const textX = x + (width - textWidth) / 2
-    const textY = y + (height - textHeight) / 2 + textHeight * 0.3 // Adjust for baseline
-    
+    const textY = y + height / 2 + textHeight * 0.25
+
     this.renderer.drawRotatedText({
       font: this.config.font,
       xy: vec2.fromValues(textX, textY),
       str: this.config.text,
       color: style.textColor,
-      scale: 1.0,
+      scale,
       rotation: 0
     })
   }
@@ -585,4 +369,13 @@ export class UIKButton {
   public setBounds(bounds: Vec4): void {
     vec4.copy(this.config.bounds, bounds)
   }
-} 
+
+  /**
+   * Merge a partial style record into the button's user-supplied style.
+   * Useful for themed UIs that want to update colors at runtime without
+   * recreating the button or its WebGL context.
+   */
+  public setStyle(partial: Partial<UIKButtonStyle>): void {
+    this.config.style = { ...(this.config.style ?? {}), ...partial } as UIKButtonStyle
+  }
+}

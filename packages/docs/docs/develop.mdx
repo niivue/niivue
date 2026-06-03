@@ -41,6 +41,21 @@ npm run dev:docs
 
 Note the embedded [JSDoc](https://jsdoc.app/) annotations that describe the API and include links to live demos are also compiled by `build:niivue` into [web pages](./api/niivue/classes/Niivue#methods).
 
+## UIKit Demo Development
+
+The `@niivue/niivue-uikit` package is a demo that pairs NiiVue rendering with [@niivue/uikit](https://github.com/niivue/niivue/tree/main/packages/uikit) UI components. Unlike the core dev server, the demo imports the **built** bundles of `@niivue/niivue` (`../niivue/dist/index.js`) and `@niivue/uikit` (`../uikit/dist/index.es.js`) rather than their source. On a fresh clone these `dist/` folders do not exist, so the dev server would otherwise fail with `Failed to resolve import "../niivue/dist/index.js"`.
+
+The `dev:uikit` script has a `predev:uikit` hook that builds both packages first, so the following works on a clean checkout:
+
+```
+git clone git@github.com:niivue/niivue.git
+cd niivue
+npm install
+npm run dev:uikit
+```
+
+Because the demo consumes the built bundles, changes to the `@niivue/niivue` or `@niivue/uikit` source require rebuilding those packages (`npm run build:niivue` and `npm run build:uikit`) to be reflected in the demo.
+
 ## Alternatives
 
 What makes NiiVue unique is its ability to simultaneously display all major neuroimaging data types in the browser—including volumetric voxels, surface meshes, tractography streamlines, statistical overlays, and connectomes. This versatility makes it a strong candidate for integrated web-based visualization. However, before committing development resources to a single platform, it may be worth considering whether an alternative tool better suits your specific needs. Below are some alternative voxel-based web tools worth exploring:

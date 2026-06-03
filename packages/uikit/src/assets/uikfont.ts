@@ -1,5 +1,24 @@
 import { UIKAsset } from "./uikasset.js"
 
+/**
+ * Minimum rendered em height, in *device* pixels, for crisp MSDF text.
+ *
+ * The bundled atlases bake `distanceRange: 2`, so once the em drops much
+ * below ~20 device px the font shader's `screenPxRange` hits its 1.0 floor
+ * and glyph curves staircase — there simply aren't enough interior pixels to
+ * resolve them. Core NiiVue avoids this for its colorbar by sizing text from
+ * `fontMinPx` (a device-pixel floor), which keeps those labels sharp.
+ *
+ * Components size label text as a fraction of their box height. When the
+ * canvas backing store is snapped to device pixels (as the demo does), a
+ * high-DPR display makes that box — and therefore the text — large enough
+ * that this floor is never reached, so it only raises text on standard
+ * resolution monitors, exactly where MSDF aliasing appears. Retina rendering
+ * is left unchanged. Tunable: raise for crisper (larger) labels, lower to
+ * pack more text into short elements.
+ */
+export const MIN_TEXT_DEVICE_PX = 20
+
 export type GlyphMetrics = {
   xadv: number
   uv_lbwh: [number, number, number, number]
@@ -232,17 +251,63 @@ export class UIKFont extends UIKAsset {
   }
 
   /**
+   * Pick a text scale (as a fraction of the atlas em) for a UI element of the
+   * given pixel height. Targets `fraction` of the element height but never
+   * renders below {@link MIN_TEXT_DEVICE_PX} so MSDF text stays crisp on
+   * standard-resolution displays — unless the element is too short to fit that
+   * floor, in which case the line is shrunk to fit. Mirrors the device-pixel
+   * minimum that keeps the core NiiVue colorbar labels sharp.
+   *
+   * @param heightPx - element height in the same (device) pixel space the
+   *   renderer draws into, i.e. `gl.canvas`-relative bounds
+   * @param fraction - target em height as a fraction of `heightPx`
+   * @param maxScale - hard upper bound on the returned scale
+   * @returns scale to pass to drawRotatedText / getTextWidth / getTextHeight
+   */
+  public fitTextScale(heightPx: number, fraction: number, maxScale: number): number {
+    if (!this.isFontLoaded) {
+      return 0
+    }
+    const em = this.fontMetrics.size
+    const lineSpan = this.fontMetrics.ascender - this.fontMetrics.descender
+    // Guard degenerate/malformed metrics (zero, negative, or non-finite size /
+    // line span, e.g. from bad deserialized font data) that would otherwise
+    // yield Infinity/NaN/negative scales.
+    if (!(em > 0) || !(lineSpan > 0)) {
+      return 0
+    }
+    // Largest scale whose full line box still fits within 95% of the element.
+    const fitMax = Math.min(maxScale, (heightPx * 0.95) / (lineSpan * em))
+    const byFraction = (heightPx * fraction) / em
+    const byFloor = MIN_TEXT_DEVICE_PX / em
+    return Math.min(fitMax, Math.max(byFraction, byFloor))
+  }
+
+  /**
    * Load the default font for UIKit components
    * This uses Roboto Regular font that's commonly available
    */
   public async loadDefaultFont(): Promise<void> {
     try {
-      // Create a simple white 1x1 pixel texture for text rendering
-      // This is a minimal fallback when actual font files aren't available
+      // Import the bundled Roboto MSDF atlas + metrics. Vite emits the PNG
+      // as a base64 data URL at build time (?inline) so the asset ships
+      // inside the library bundle — consumers don't need to copy font
+      // files into their app's public/. The JSON import gives us a
+      // pre-parsed object.
+      const [textureUrl, metrics] = await Promise.all([
+        import('../fonts/Roboto-Regular.png?inline').then((m) => m.default as string),
+        import('../fonts/Roboto-Regular.json').then((m) => m.default as RawFontFile)
+      ])
+      await this.loadTexture(textureUrl)
+      this.initFontMetrics(metrics)
+      this.family = 'Roboto'
+      this.style = 'Regular'
+      this.isFontLoaded = true
+    } catch (error) {
+      console.error('Failed to load default font:', error)
+      // Fallback so consumers don't crash — drawRotatedText silently
+      // skips when the texture is 1x1, which is what we want here.
       this.createBasicFontTexture()
-      
-      // For now, we'll create a minimal font metrics for testing
-      // In production, you would load actual font files
       this.fontMetrics = {
         distanceRange: 4,
         size: 48,
@@ -254,15 +319,13 @@ export class UIKFont extends UIKAsset {
         underlineThickness: 0.05,
         mets: this.createBasicGlyphMetrics()
       }
-      
       this.isFontLoaded = true
-      this.family = "Roboto"
-      this.style = "Regular"
-      
-      console.log('Default font loaded successfully for UIKit')
-    } catch (error) {
-      console.error('Failed to load default font:', error)
-      throw error
+      this.family = 'Roboto'
+      this.style = 'Regular'
+      // Do not rethrow: the fallback state above is fully populated, so the
+      // component stays usable (drawRotatedText silently skips the 1x1
+      // texture). Rethrowing here would abort the caller's component
+      // creation, contradicting the fallback's purpose.
     }
   }
 
