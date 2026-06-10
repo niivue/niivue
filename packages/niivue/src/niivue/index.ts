@@ -60,7 +60,7 @@ import {
 } from '@/nvdocument'
 import { LabelTextAlignment, LabelLineTerminator, NVLabel3D, NVLabel3DStyle, LabelAnchorPoint, LabelAnchorFlag } from '@/nvlabel'
 import { FreeSurferConnectome, NVConnectome } from '@/nvconnectome'
-import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions } from '@/nvimage'
+import { NVImage, NVImageFromUrlOptions, NiiDataType, NiiIntentCode, ImageFromUrlOptions, TypedVoxelArray } from '@/nvimage'
 import { AffineTransform } from '@/nvimage/affineUtils'
 import { NVUtilities } from '@/nvutilities'
 import { NiivueEventMap, NiivueEvent, NiivueEventListener, NiivueEventListenerOptions } from '@/events'
@@ -196,6 +196,10 @@ export class Niivue extends EventTarget {
     colormapTexture: WebGLTexture | null = null // the GPU memory storage of the colormap
     colormapLists: ColormapListEntry[] = [] // one entry per colorbar: min, max, tic
     volumeTexture: WebGLTexture | null = null // the GPU memory storage of the volume
+    // per-layer cache of the raw (pre-orient) volume texture: refreshLayers() runs on every
+    // display-parameter change (cal_min/cal_max, opacity, colormap), but the voxel data only
+    // changes when the img array or the displayed 4D frame does - reuse the uploaded texture
+    rawVolumeTextureCache: Map<number, { tex: WebGLTexture; src: TypedVoxelArray; frame4D: number }> = new Map()
     gradientTexture: WebGLTexture | null = null // 3D texture for volume rendering lighting
     gradientTextureAmount = 0.0
     useCustomGradientTexture = false // flag to indicate if a custom gradient texture is used
@@ -6727,6 +6731,13 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             this.refreshLayers(this.volumes[i], visibleLayers)
             visibleLayers++
         }
+        // free cached raw volume textures of layers that no longer exist
+        for (const [cachedLayer, cached] of this.rawVolumeTextureCache) {
+            if (cachedLayer >= visibleLayers) {
+                this.gl.deleteTexture(cached.tex)
+                this.rawVolumeTextureCache.delete(cachedLayer)
+            }
+        }
         this.furthestVertexFromOrigin = 0.0
         if (numLayers > 0) {
             this.furthestVertexFromOrigin = this.volumeObject3D?.furthestVertexFromOrigin ?? 0
@@ -6956,11 +6967,28 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         const fb = VolumeLayerRenderer.setupFramebuffer(this.gl)
         this.gl.viewport(0, 0, this.back.dims![1], this.back.dims![2]) // output in background dimensions
 
-        // Create temporary 3D texture for volume data
-        const tempTex3D = VolumeLayerRenderer.createTemporaryTexture({
-            gl: this.gl,
-            TEXTURE9_ORIENT: TEXTURE_CONSTANTS.TEXTURE9_ORIENT
-        })
+        // Reuse the raw volume texture when the voxel data is unchanged: refreshLayers()
+        // also runs for display-parameter changes (cal_min/cal_max, opacity, colormap),
+        // where re-converting and re-uploading the full volume is wasted work.
+        // RGBA32 volumes are excluded: their upload path mutates shared PAQD state.
+        const cachedRawTexture = this.rawVolumeTextureCache.get(layer)
+        const canReuseRawTexture = !!cachedRawTexture && cachedRawTexture.src === overlayItem.img && cachedRawTexture.frame4D === overlayItem.frame4D && hdr.datatypeCode !== NiiDataType.DT_RGBA32
+        let tempTex3D: WebGLTexture | null
+        if (canReuseRawTexture) {
+            tempTex3D = cachedRawTexture.tex
+            this.gl.activeTexture(TEXTURE_CONSTANTS.TEXTURE9_ORIENT)
+            this.gl.bindTexture(this.gl.TEXTURE_3D, tempTex3D)
+        } else {
+            if (cachedRawTexture) {
+                this.gl.deleteTexture(cachedRawTexture.tex)
+                this.rawVolumeTextureCache.delete(layer)
+            }
+            // Create temporary 3D texture for volume data
+            tempTex3D = VolumeLayerRenderer.createTemporaryTexture({
+                gl: this.gl,
+                TEXTURE9_ORIENT: TEXTURE_CONSTANTS.TEXTURE9_ORIENT
+            })
+        }
 
         if (!hdr) {
             throw new Error('hdr undefined')
@@ -6995,6 +7023,18 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
             if (rgba32Result.paqdTexture !== null) {
                 this.paqdTexture = rgba32Result.paqdTexture
             }
+        } else if (canReuseRawTexture) {
+            // Voxel data already on the GPU: select the matching shader without re-uploading
+            orientShader = VolumeLayerRenderer.selectVolumeOrientShader({
+                gl: this.gl,
+                hdr,
+                orientShaderU: this.orientShaderU!,
+                orientShaderI: this.orientShaderI!,
+                orientShaderF: this.orientShaderF!,
+                orientShaderRGBU: this.orientShaderRGBU!,
+                orientShaderAtlasU: this.orientShaderAtlasU!,
+                orientShaderAtlasI: this.orientShaderAtlasI!
+            })
         } else {
             // All other datatypes
             const uploadResult = VolumeLayerRenderer.setupVolumeTextureData({
@@ -7009,6 +7049,7 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
                 orientShaderAtlasI: this.orientShaderAtlasI!
             })
             orientShader = uploadResult.orientShader
+            this.rawVolumeTextureCache.set(layer, { tex: tempTex3D!, src: overlayItem.img!, frame4D: overlayItem.frame4D })
         }
         if (overlayItem.global_min === undefined) {
             // only once, first time volume is loaded
@@ -7098,7 +7139,10 @@ if (perm[0] === 1 && perm[1] === 2 && perm[2] === 3) {
         })
         log.debug('back dims: ', this.back.dims)
         this.gl.bindVertexArray(this.unusedVAO)
-        this.gl.deleteTexture(tempTex3D)
+        const retainedRawTexture = this.rawVolumeTextureCache.get(layer)
+        if (!retainedRawTexture || retainedRawTexture.tex !== tempTex3D) {
+            this.gl.deleteTexture(tempTex3D)
+        }
         this.gl.deleteTexture(modulateTexture)
         this.gl.deleteTexture(blendTexture)
         this.gl.viewport(0, 0, this.gl.canvas.width, this.gl.canvas.height)

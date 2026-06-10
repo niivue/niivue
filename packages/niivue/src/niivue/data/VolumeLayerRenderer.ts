@@ -474,13 +474,28 @@ export interface SetupVolumeTextureDataResult {
 }
 
 /**
- * Setup volume texture data based on datatype.
- * Allocates GPU texture storage, transfers image data, and selects appropriate shader.
- * @param params - Setup parameters
+ * Parameters for selecting the orient shader for non-RGBA32 volume data
+ */
+export interface SelectVolumeOrientShaderParams {
+    gl: WebGL2RenderingContext
+    hdr: any
+    orientShaderU: Shader
+    orientShaderI: Shader
+    orientShaderF: Shader
+    orientShaderRGBU: Shader
+    orientShaderAtlasU: Shader
+    orientShaderAtlasI: Shader
+}
+
+/**
+ * Select the orient shader matching the volume datatype and intent code.
+ * Shared by setupVolumeTextureData() and the cached-texture path in
+ * refreshLayers(), which skips the GPU upload but still needs the shader.
+ * @param params - Shader selection parameters
  * @returns Selected orient shader
  */
-export function setupVolumeTextureData(params: SetupVolumeTextureDataParams): SetupVolumeTextureDataResult {
-    const { gl, hdr, img, orientShaderU, orientShaderI, orientShaderF, orientShaderRGBU, orientShaderAtlasU, orientShaderAtlasI } = params
+export function selectVolumeOrientShader(params: SelectVolumeOrientShaderParams): Shader {
+    const { gl, hdr, orientShaderU, orientShaderI, orientShaderF, orientShaderRGBU, orientShaderAtlasU, orientShaderAtlasI } = params
 
     let orientShader = orientShaderU
 
@@ -488,34 +503,55 @@ export function setupVolumeTextureData(params: SetupVolumeTextureDataParams): Se
         if (hdr.intent_code === NII_INTENT_LABEL) {
             orientShader = orientShaderAtlasU
         }
-        gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
-        gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RED_INTEGER, gl.UNSIGNED_BYTE, img)
     } else if (hdr.datatypeCode === NII_DT_INT16) {
         orientShader = orientShaderI
         if (hdr.intent_code === NII_INTENT_LABEL) {
             orientShader = orientShaderAtlasI
         }
+    } else if (hdr.datatypeCode === NII_DT_FLOAT32 || hdr.datatypeCode === NII_DT_FLOAT64) {
+        orientShader = orientShaderF
+    } else if (hdr.datatypeCode === NII_DT_RGB24) {
+        orientShader = orientShaderRGBU
+        orientShader.use(gl)
+        // orientShaderRGBU is shared with the RGBA32 path, which sets hasAlpha to 1
+        gl.uniform1i(orientShader.uniforms.hasAlpha, 0)
+    } else if (hdr.datatypeCode === NII_DT_UINT16) {
+        if (hdr.intent_code === NII_INTENT_LABEL) {
+            orientShader = orientShaderAtlasU
+        }
+    }
+
+    return orientShader
+}
+
+/**
+ * Setup volume texture data based on datatype.
+ * Allocates GPU texture storage, transfers image data, and selects appropriate shader.
+ * @param params - Setup parameters
+ * @returns Selected orient shader
+ */
+export function setupVolumeTextureData(params: SetupVolumeTextureDataParams): SetupVolumeTextureDataResult {
+    const { gl, hdr, img } = params
+
+    const orientShader = selectVolumeOrientShader(params)
+
+    if (hdr.datatypeCode === NII_DT_UINT8) {
+        gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
+        gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RED_INTEGER, gl.UNSIGNED_BYTE, img)
+    } else if (hdr.datatypeCode === NII_DT_INT16) {
         gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R16I, hdr.dims[1], hdr.dims[2], hdr.dims[3])
         gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RED_INTEGER, gl.SHORT, img)
     } else if (hdr.datatypeCode === NII_DT_FLOAT32) {
         gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3])
         gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RED, gl.FLOAT, img)
-        orientShader = orientShaderF
     } else if (hdr.datatypeCode === NII_DT_FLOAT64) {
         const img32f = Float32Array.from(img)
         gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R32F, hdr.dims[1], hdr.dims[2], hdr.dims[3])
         gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RED, gl.FLOAT, img32f)
-        orientShader = orientShaderF
     } else if (hdr.datatypeCode === NII_DT_RGB24) {
-        orientShader = orientShaderRGBU
-        orientShader.use(gl)
-        gl.uniform1i(orientShader.uniforms.hasAlpha, 0)
         gl.texStorage3D(gl.TEXTURE_3D, 1, gl.RGB8UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
         gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RGB_INTEGER, gl.UNSIGNED_BYTE, img)
     } else if (hdr.datatypeCode === NII_DT_UINT16) {
-        if (hdr.intent_code === NII_INTENT_LABEL) {
-            orientShader = orientShaderAtlasU
-        }
         gl.texStorage3D(gl.TEXTURE_3D, 1, gl.R16UI, hdr.dims[1], hdr.dims[2], hdr.dims[3])
         gl.texSubImage3D(gl.TEXTURE_3D, 0, 0, 0, 0, hdr.dims[1], hdr.dims[2], hdr.dims[3], gl.RED_INTEGER, gl.UNSIGNED_SHORT, img)
     }
