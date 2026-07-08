@@ -22,6 +22,7 @@ npm run dev
 # Projects using NiiVue
 
 - [Analysis of Functional NeuroImages (AFNI)](https://afni.nimh.nih.gov/) uses NiiVue for [afni_proc.py](https://pubmed.ncbi.nlm.nih.gov/39257641/)
+- [BIDSvue](https://bidsvue.org/) to create, curate, de-identify, and share BIDS datasets.
 - [BOOSTLET.js](https://boostlet.org/) image processing plugins work with NiiVue.
 - [brain2print](https://brain2print.org/) uses NiiVue for showing both volume data and converted meshes
 - [brainchop](https://github.com/neuroneural/brainchop) uses NiiVue for [drag-and-drop segmentation, brain extraction and parcellation tool](https://neuroneural.github.io/brainchop/)
