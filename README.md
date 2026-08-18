@@ -21,42 +21,58 @@ npm run dev
 
 # Projects using NiiVue
 
-- [Analysis of Functional NeuroImages (AFNI)](https://afni.nimh.nih.gov/) uses NiiVue for [afni_proc.py](https://pubmed.ncbi.nlm.nih.gov/39257641/)
-- [BIDSvue](https://bidsvue.org/) to create, curate, de-identify, and share BIDS datasets.
-- [BOOSTLET.js](https://boostlet.org/) image processing plugins work with NiiVue.
-- [brain2print](https://brain2print.org/) uses NiiVue for showing both volume data and converted meshes
-- [brainchop](https://github.com/neuroneural/brainchop) uses NiiVue for [drag-and-drop segmentation, brain extraction and parcellation tool](https://neuroneural.github.io/brainchop/)
-- [BrainLife.io](https://brainlife.io/about/) integrates NiiVue into [ezbids](https://brainlife.io/ezbids/)
-- [CACTAS](https://github.com/mpsych/CACTAS) is extending NiiVue drawing and segmentation capabilities
-- [ChRIS Research Integration System (ChRIS)](https://chrisproject.org/) uses [NiiVue](https://app.chrisproject.org/niivue)
-- [ct2print](https://ct2print.org/) uses NiiVue for showing volume and mesh data
+- [Analysis of Functional NeuroImages (AFNI)](https://afni.nimh.nih.gov/) neuroimaging analysis suite that uses NiiVue for [afni_proc.py](https://pubmed.ncbi.nlm.nih.gov/39257641/)
+- [BIDSvue](https://bidsvue.org/) create, curate, de-identify, and share BIDS datasets
+- [BOOSTLET.js](https://boostlet.org/) image processing plugins for NiiVue
+- [brain2print](https://brain2print.org/) browser-based conversion of voxels to printable meshes
+- [brainchop](https://github.com/neuroneural/brainchop) [drag-and-drop segmentation, brain extraction and parcellation](https://neuroneural.github.io/brainchop/)
+- [BrainLife.io](https://brainlife.io/about/) cloud platform that embeds NiiVue in [ezbids](https://brainlife.io/ezbids/)
+- [BrowserQC](https://browserqc.org/) quality metrics for NIfTI and DICOM images
+- [CACTAS](https://github.com/mpsych/CACTAS) extends NiiVue drawing and segmentation
+- [CALMaR](https://calmar.neurodesk.org/) co-designed automated lesion mapping and reporting
+- [CanlabCore](https://github.com/canlab/canlabcore) MATLAB toolbox for interactive analysis of neuroimaging data
+- [ChRIS](https://chrisproject.org/) research integration system with a [NiiVue viewer](https://app.chrisproject.org/niivue)
+- [ct2print](https://ct2print.org/) browser-based viewing of volume and mesh data
 - [deepsyence](https://iishiishii.github.io/deepsyence/) by [Thuy Dao](https://github.com/iishiishii/deepsyence)
-- FMRIB's Software Library (FSL) uses NiiVue for cloud tools and [documentation](https://fsl.fmrib.ox.ac.uk/fsl/docs/#/structural/bet/)
-- [FSL Clinical](https://fslclinical.com/) is using NiiVue in brain imaging reports
-- [fideus](https://fideus.io/) has developed the [ITK-Wasm](https://docs.itk.org/projects/wasm/en/latest/) plugins.
-- FreeSurfer [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/) uses NiiVue for [FreeBrowse](https://github.com/freesurfer/freebrowse)
-- [Galaxy](https://github.com/galaxyproject/galaxy) is a web platform for research that embeds [NiiVue](https://github.com/galaxyproject/galaxy/pull/19995)
-- [huggingface](https://github.com/huggingface/datasets/pull/7885) integrates NiiVue.
-- [The Insight Journal](https://insight-journal.org/) uses NiiVue to embed interactive illustrations
-- [ipyniivue](https://github.com/niivue/ipyniivue) allows NiiVue to be used in Jupyter Notebooks including [py.cafe](https://py.cafe/kolibril13/niivue-neuroimaging-with-python)
-- [LAMBADA (OpenBrainAtlas)](https://lambada.icm-institute.org/) – A reference [atlas](https://lambada.icm-institute.org/atlases/5) of the developing postnatal mouse brain, created using tissue clearing and light-sheet microscopy at the Paris Brain Institute (Institut du Cerveau). It uses NiiVue for 2D/3D visualization of brain structures, volume overlays, and mesh rendering.
-- [LINC Gallery](https://gallery.lincbrain.org) uses NiiVue to showcase data from [LINC](https://connects.mgh.harvard.edu), an [NIH BRAIN CONNECTS](https://www.brain-connects.org) center focused on mapping brain connections.
-- [neurodesk](https://www.neurodesk.org/) uses NiiVue for their [QSMxT Quantitative Susceptibility Mapping toolbox](https://github.com/QSMxT/QSMxT-UI)
-- [NeuroFLAME](https://github.com/NeuroFlame/NeuroFLAME) uses federated learning to train models across locations while keeping data securely on-site.
+- [deface](https://niivue.github.io/deface/) browser-based drag-and-drop defacing for DICOM and NIfTI images
+- [dwi2trx](https://rordenlab.github.io/dwi2trx/) browser-based diffusion visualization and streamline creation
+- [Easy-MP2RAGE-T1-Map](https://mp2rage.neurodesk.org/) B1-corrected T1 mapping at 3T and 7T
+- [EdgeReg](https://www.edgereg.org/) fast client-side medical image registration
+- [fideus](https://fideus.io/) develops the [ITK-Wasm](https://docs.itk.org/projects/wasm/en/latest/) plugins
+- [FMRIB's Software Library (FSL)](https://fsl.fmrib.ox.ac.uk/) cloud tools and [documentation](https://fsl.fmrib.ox.ac.uk/fsl/docs/#/structural/bet/)
+- [FreeBrowse](https://github.com/freesurfer/freebrowse) FreeSurfer viewer from the [Laboratories for Computational Neuroimaging](https://lcn.martinos.org/)
+- [FSL Clinical](https://fslclinical.com/) brain imaging reports
+- [Galaxy](https://github.com/galaxyproject/galaxy) web platform for research that embeds [NiiVue](https://github.com/galaxyproject/galaxy/pull/19995)
+- [huggingface](https://github.com/huggingface/datasets/pull/7885) dataset previews with NiiVue
+- [The Insight Journal](https://insight-journal.org/) interactive illustrations embedded in articles
+- [ipyniivue](https://github.com/niivue/ipyniivue) NiiVue for Jupyter notebooks, including [py.cafe](https://py.cafe/kolibril13/niivue-neuroimaging-with-python)
+- [JetBrains NiiVue viewer](https://plugins.jetbrains.com/plugin/32824-niivue-viewer) plugin for IntelliJ IDEs
+- [LAMBADA (OpenBrainAtlas)](https://lambada.icm-institute.org/) [atlas](https://lambada.icm-institute.org/atlases/5) of the developing postnatal mouse brain from the Paris Brain Institute
+- [LINC Gallery](https://gallery.lincbrain.org) showcases data from [LINC](https://connects.mgh.harvard.edu), an [NIH BRAIN CONNECTS](https://www.brain-connects.org) center
+- [MuscleMap](https://musclemap.neurodesk.org/) whole-body muscle MRI segmentation in your browser
+- [neurodesk](https://www.neurodesk.org/) browser-based [QSMxT quantitative susceptibility mapping](https://github.com/QSMxT/QSMxT-UI)
+- [NeuroFLAME](https://github.com/NeuroFlame/NeuroFLAME) federated learning across sites while keeping data securely on-site
 - [Neuroinformatics Research and Development Group](http://neuroinformatics.uw.edu/) embeds NiiVue in [tractoscope](https://github.com/nrdg/tractoscope)
 - [neurosift](https://github.com/flatironinstitute/neurosift) NWB visualization and DANDI exploration
-- [neurosynth compose](https://compose.neurosynth.org/) uses NiiVue for [display](https://compose.neurosynth.org/meta-analyses/qKZkqm5STSqo)
-- [nilearn](https://nilearn.github.io/stable/index.html) is extending [ipyniivue](https://github.com/niivue/ipyniivue)
-- [niivue-vscode](https://github.com/niivue/niivue-vscode) is a VSCode extension for displaying images
-- [NiiVue Desktop](https://github.com/niivue/desktop) uses NiiVue in a crossplatform Electron app
-- [NiiVue iOS](https://github.com/niivue/ios) is a Swift tool [available on the Apple App store for MacOS and iOS](https://apps.apple.com/kw/app/niivue/id6497066801)
-- [NiiVue Neglect](https://niivue.github.io/niivue-neglect/) uses NiiVue to visualise stroke lesion data in the spatial neglect severity prediction tool
-- [OpenMedView](https://github.com/erosmontin/OpenMedView) uses NiiVue to valid [image registration](https://link.springer.com/article/10.1007/s11517-019-02109-4)
-- [OpenNeuro.org](https://openneuro.org) uses NiiVue to visualize datasets
-- [Plurimedia](https://www.plurimedia.it/) uses NiiVue in client work for medical image visualization
-- [QuantCo](https://www.quantco.com/) is using NiiVue in medical imaging workflows
-- [Slice:Drop Reloaded](https://gaiborjosue.github.io/slicedrop.github.com/reload/) uses NiiVue to extend the original [slicedrop](https://slicedrop.com/)
-- [T2Lesion](https://niivue.github.io/T2lesion/) uses NiiVue to show input data and segmented lesion masks
+- [neurosynth compose](https://compose.neurosynth.org/) meta-analysis [display](https://compose.neurosynth.org/meta-analyses/qKZkqm5STSqo)
+- [niimath](https://niivue.github.io/niimath/) fast image processing
+- [NiiNav](https://niivue.github.io/niinav/) brain stimulation navigation
+- [nilearn](https://nilearn.github.io/stable/index.html) extends [ipyniivue](https://github.com/niivue/ipyniivue)
+- [niivue-vscode](https://github.com/niivue/niivue-vscode) VSCode extension for displaying images
+- [NiiVue Desktop](https://github.com/niivue/desktop) crossplatform Electron app
+- [NiiVue iOS](https://github.com/niivue/ios) Swift app [on the Apple App Store for macOS and iOS](https://apps.apple.com/kw/app/niivue/id6497066801)
+- [NiiVue Neglect](https://niivue.github.io/niivue-neglect/) stroke lesion data in a spatial neglect severity prediction tool
+- [OpenMedView](https://github.com/erosmontin/OpenMedView) validates [image registration](https://link.springer.com/article/10.1007/s11517-019-02109-4)
+- [OpenNeuro.org](https://openneuro.org) visualizes shared datasets
+- [Plurimedia](https://www.plurimedia.it/) medical image visualization in client work
+- [qmrust](https://qmrlab.org/qmrust/app/) native-Rust toolkit for quantitative MRI
+- [QSMbly](https://qsmbly.neurodesk.org/) quantitative susceptibility mapping in your browser
+- [QuantCo](https://www.quantco.com/) medical imaging workflows
+- [SeedSeg](https://seedseg.neurodesk.org/) prostate gold seed segmentation
+- [Slice:Drop Reloaded](https://gaiborjosue.github.io/slicedrop.github.com/reload/) extends the original [slicedrop](https://slicedrop.com/)
+- [SpinalCordToolbox](https://sct.neurodesk.org/) spinal cord MRI segmentation in the browser
+- [T2Lesion](https://niivue.github.io/T2lesion/) input data and segmented lesion masks
+- [VesselBoost](https://vesselboost.neurodesk.org/) blood vessel segmentation
 - [VoxLogicA-UI](https://voxlogica-project.github.io/VoxLogicA-UI/) makes advanced medical imaging analysis intuitive
 
 # Funding
