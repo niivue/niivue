@@ -4,6 +4,7 @@
  */
 
 import { mat4, vec3 } from 'gl-matrix'
+import { COLORMAP_TYPE } from '@/colortables'
 import { NVImage } from '@/nvimage'
 import { NiivueObject3D } from '@/niivue-object3D'
 import { toNiivueObject3D } from '@/nvimage/RenderingUtils'
@@ -209,7 +210,7 @@ export function configureColormapUniforms(params: ConfigureColormapUniformsParam
 
     // Handle colormap type
     const isColorbarFromZero = overlayItem.colormapType !== 0 ? 1 : 0 // COLORMAP_TYPE.MIN_TO_MAX = 0
-    const isAlphaThreshold = overlayItem.colormapType === 1 ? 1 : 0 // COLORMAP_TYPE.ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN = 1
+    const isAlphaThreshold = overlayItem.colormapType === COLORMAP_TYPE.ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN ? 1 : 0
 
     gl.uniform1i(orientShader.uniforms.isAlphaThreshold, isAlphaThreshold)
     gl.uniform1i(orientShader.uniforms.isColorbarFromZero, isColorbarFromZero)
