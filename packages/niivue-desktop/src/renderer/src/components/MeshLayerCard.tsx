@@ -674,7 +674,7 @@ export function MeshLayerCard({ image, idx, parentMesh }: MeshLayerCardProps): J
                 {!hasNegativeRange && (
                   <Text size="1" color="gray">
                     No negative values detected — you can still enable negative mapping and
-                    pre-select a negative colormap.
+                    preselect a negative colormap.
                   </Text>
                 )}
               </div>
