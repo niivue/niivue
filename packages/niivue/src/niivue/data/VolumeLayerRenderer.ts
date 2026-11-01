@@ -8,6 +8,7 @@ import { NVImage } from '@/nvimage'
 import { NiivueObject3D } from '@/niivue-object3D'
 import { toNiivueObject3D } from '@/nvimage/RenderingUtils'
 import { Shader } from '@/shader'
+import { COLORMAP_TYPE } from '@/colortables'
 
 // Texture unit constants (matching index.ts)
 const TEXTURE0_BACK_VOL = 33984
@@ -208,8 +209,9 @@ export function configureColormapUniforms(params: ConfigureColormapUniformsParam
     const { gl, overlayItem, orientShader, layer, isAdditiveBlend } = params
 
     // Handle colormap type
-    const isColorbarFromZero = overlayItem.colormapType !== 0 ? 1 : 0 // COLORMAP_TYPE.MIN_TO_MAX = 0
-    const isAlphaThreshold = overlayItem.colormapType === 1 ? 1 : 0 // COLORMAP_TYPE.ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN = 1
+    const isColorbarFromZero = overlayItem.colormapType !== COLORMAP_TYPE.MIN_TO_MAX ? 1 : 0
+    // the shader fades values below cal_min with isAlphaThreshold, i.e. translucent
+    const isAlphaThreshold = overlayItem.colormapType === COLORMAP_TYPE.ZERO_TO_MAX_TRANSLUCENT_BELOW_MIN ? 1 : 0
 
     gl.uniform1i(orientShader.uniforms.isAlphaThreshold, isAlphaThreshold)
     gl.uniform1i(orientShader.uniforms.isColorbarFromZero, isColorbarFromZero)
