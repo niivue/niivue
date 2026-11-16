@@ -1,13 +1,15 @@
 > [!IMPORTANT]
-> **This repository will be archived on January 15, 2027. NiiVue lives on in [niivue/mono](https://github.com/niivue/mono).**
+> **NiiVue is alive and under very active development. We have simply moved development to a new repository: [niivue/mono](https://github.com/niivue/mono).**
 >
-> All active NiiVue development has moved to the monorepo. Its `@niivue/niivue` 1.0 is a ground-up rewrite and a significant improvement over the 0.x releases built here, better in every way: WebGPU rendering with a WebGL2 fallback, smaller bundles, a simpler property-based API, and extensions for drawing, image processing and DICOM conversion. React bindings, a web component and the ipyniivue Jupyter widget are developed alongside it, and the documentation, live demos and gallery are at [niivue.com](https://niivue.com/docs/).
+> Only this repository is being retired: it will be archived (made read-only) on January 15, 2027. The NiiVue project, its team and its releases all continue in niivue/mono, where new features, fixes and releases ship every week.
+>
+> `@niivue/niivue` 1.0, built in the monorepo, is a ground-up rewrite and a significant improvement over the 0.x releases built here, better in every way: WebGPU rendering with a WebGL2 fallback, smaller bundles, a simpler property-based API, and extensions for drawing, image processing and DICOM conversion. React bindings, a web component and the ipyniivue Jupyter widget are developed alongside it, and the documentation, live demos and gallery are at [niivue.com](https://niivue.com/docs/).
 >
 > - **Install:** `npm install @niivue/niivue@next` (the 1.0 releases; 0.x releases from this repository stay below 1.0).
 > - **Migrate:** start with [Coming from NiiVue 0.x](https://niivue.com/docs/guide/#coming-from-niivue-0x) and the [migration table](https://niivue.com/docs/reference/migrating/).
 > - **Get help:** if you build on NiiVue, we want to help you move your app. [Open an issue in niivue/mono](https://github.com/niivue/mono/issues/new?title=Migration%20help%3A%20) and tell us about it.
 >
-> After January 15, 2027 this repository is read-only. Existing 0.x releases on npm keep working, and we will keep helping with migrations in niivue/mono after that date.
+> Existing 0.x releases on npm keep working after this repository is archived, and we will keep helping with migrations in niivue/mono after that date.
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.5786269-blue)](https://doi.org/10.5281/zenodo.5786269) [![App Store](https://img.shields.io/badge/App%20Store-NiiVue-blue)](https://apps.apple.com/gb/app/niivue/id6497066801) [![npm](https://img.shields.io/npm/v/@niivue/niivue)](https://www.npmjs.com/package/@niivue/niivue)
 
