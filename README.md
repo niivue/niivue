@@ -1,5 +1,13 @@
 > [!IMPORTANT]
-> **NiiVue is moving to [niivue/mono](https://github.com/niivue/mono).** The new monorepo contains a rewritten `@niivue/niivue` package with WebGPU and WebGL2 support, smaller bundle sizes, and a more extensible architecture. The monorepo package will be our **v1.0.0** release candidate. All releases in this repository will remain below v1.0.0 so the two packages can co-exist. Most functionality has been ported and new development will focus on the monorepo. We will continue to maintain this repository for a transition period, but encourage users to migrate when ready.
+> **This repository will be archived on January 15, 2027. NiiVue lives on in [niivue/mono](https://github.com/niivue/mono).**
+>
+> All active NiiVue development has moved to the monorepo. Its `@niivue/niivue` 1.0 is a ground-up rewrite and a significant improvement over the 0.x releases built here, better in every way: WebGPU rendering with a WebGL2 fallback, smaller bundles, a simpler property-based API, and extensions for drawing, image processing and DICOM conversion. React bindings, a web component and the ipyniivue Jupyter widget are developed alongside it, and the documentation, live demos and gallery are at [niivue.com](https://niivue.com/docs/).
+>
+> - **Install:** `npm install @niivue/niivue@next` (the 1.0 releases; 0.x releases from this repository stay below 1.0).
+> - **Migrate:** start with [Coming from NiiVue 0.x](https://niivue.com/docs/guide/#coming-from-niivue-0x) and the [migration table](https://niivue.com/docs/reference/migrating/).
+> - **Get help:** if you build on NiiVue, we want to help you move your app. [Open an issue in niivue/mono](https://github.com/niivue/mono/issues/new?title=Migration%20help%3A%20) and tell us about it.
+>
+> After January 15, 2027 this repository is read-only. Existing 0.x releases on npm keep working, and we will keep helping with migrations in niivue/mono after that date.
 
 [![DOI](https://img.shields.io/badge/DOI-10.5281%2Fzenodo.5786269-blue)](https://doi.org/10.5281/zenodo.5786269) [![App Store](https://img.shields.io/badge/App%20Store-NiiVue-blue)](https://apps.apple.com/gb/app/niivue/id6497066801) [![npm](https://img.shields.io/npm/v/@niivue/niivue)](https://www.npmjs.com/package/@niivue/niivue)
 
